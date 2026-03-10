@@ -11,24 +11,39 @@ DATASETS_DIR="datasets/terminal-bench-2"
 REGISTRY="ghcr.io"
 OWNER="vals-ai"
 REPO="terminal-bench-benchmark-service"
-TARGET_TASK="${1:-}"  # Optional: specific task to build, or empty for all
+TARGET_TASK=""
+PARALLEL_JOBS=5
 
-# Print usage if help is requested
-if [ "$TARGET_TASK" = "-h" ] || [ "$TARGET_TASK" = "--help" ]; then
-    echo "Usage: $0 [TASK_ID]"
-    echo ""
-    echo "Build and push Docker images to GitHub Container Registry"
-    echo ""
-    echo "Arguments:"
-    echo "  (none)     Build and push all tasks"
-    echo "  TASK_ID    Build and push only the specified task (e.g., 'build-pov-ray')"
-    echo "  -h, --help Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  $0                    # Build all environments"
-    echo "  $0 build-pov-ray      # Test with just build-pov-ray"
-    exit 0
-fi
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            echo "Usage: $0 [TASK_ID] [--parallel JOBS]"
+            echo ""
+            echo "Build and push Docker images to GitHub Container Registry"
+            echo ""
+            echo "Arguments:"
+            echo "  (none)            Build and push all tasks"
+            echo "  TASK_ID           Build and push only the specified task (e.g., 'build-pov-ray')"
+            echo "  --parallel JOBS   Number of concurrent builds (default: 5)"
+            echo "  -h, --help        Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                          # Build all environments (5 concurrent)"
+            echo "  $0 build-pov-ray            # Test with just build-pov-ray"
+            echo "  $0 --parallel 3             # Build all with 3 concurrent jobs"
+            exit 0
+            ;;
+        --parallel)
+            PARALLEL_JOBS="$2"
+            shift 2
+            ;;
+        *)
+            TARGET_TASK="$1"
+            shift
+            ;;
+    esac
+done
 
 if [ ! -d "$DATASETS_DIR" ]; then
     echo "Error: $DATASETS_DIR directory not found"
@@ -61,17 +76,20 @@ current=0
 
 echo "Found $total task environment(s) to build and push"
 echo "Registry: $REGISTRY/$OWNER/$REPO"
+echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
 
-# Iterate through each task directory
-for task_dir in "${task_dirs[@]}"; do
-    task_id=$(basename "$task_dir")
-    current=$((current + 1))
+# Function to build and push a single task
+build_task() {
+    local task_dir=$1
+    local task_id=$2
+    local current=$3
+    local total=$4
 
     # Skip if no Dockerfile exists
     if [ ! -f "$task_dir/environment/Dockerfile" ]; then
         echo "[$current/$total] SKIP: $task_id (no Dockerfile found)"
-        continue
+        return 0
     fi
 
     echo "[$current/$total] Building and pushing: $task_id"
@@ -83,22 +101,53 @@ for task_dir in "${task_dirs[@]}"; do
 
     if docker build \
         --platform linux/amd64 \
+        --label "org.opencontainers.image.source=https://github.com/$OWNER/$REPO" \
+        --label "org.opencontainers.image.url=https://github.com/$OWNER/$REPO" \
         -f "$task_dir/environment/Dockerfile" \
         -t "$image_name" \
-        "$task_dir/environment"; then
+        "$task_dir/environment" > /tmp/build_$task_id.log 2>&1; then
         echo "  ✓ Successfully built $task_id"
 
         # Push to GHCR
-        if docker push "$image_name"; then
+        if docker push "$image_name" > /tmp/push_$task_id.log 2>&1; then
             echo "  ✓ Successfully pushed $image_name"
         else
             echo "  ✗ Failed to push $image_name"
+            cat /tmp/push_$task_id.log
+            return 1
         fi
     else
         echo "  ✗ Failed to build $task_id"
+        cat /tmp/build_$task_id.log
+        return 1
     fi
-    echo ""
+}
+
+export -f build_task
+export REGISTRY OWNER REPO
+
+# Run builds in parallel
+active_jobs=0
+failed_tasks=()
+
+for task_dir in "${task_dirs[@]}"; do
+    task_id=$(basename "$task_dir")
+    current=$((current + 1))
+
+    # Start build in background
+    build_task "$task_dir" "$task_id" "$current" "$total" &
+    active_jobs=$((active_jobs + 1))
+
+    # Wait for a job to finish if we've reached max parallel jobs
+    if [ $active_jobs -ge $PARALLEL_JOBS ]; then
+        wait -n
+        active_jobs=$((active_jobs - 1))
+    fi
 done
 
+# Wait for remaining jobs to finish
+wait
+
+echo ""
 echo "Build and push process complete!"
 echo "Images are available at: $REGISTRY/$OWNER/$REPO"
