@@ -5,7 +5,7 @@ import tomllib
 from collections import defaultdict
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from benchmark_service import BenchmarkService
 from benchmark_service.schemas import (
@@ -53,20 +53,13 @@ class TerminalBenchBenchmark(BenchmarkService):
     _DATASET_LOCATION: Path = Path("datasets/terminal-bench-2")
 
     async def _retrieve_reward(self, sandbox: AsyncSandbox) -> dict[str, Any] | None:
-        rewards: dict[str, Any] | None = None
         try:
-            reward_file = "/logs/verifier/reward.txt"
-            result: ExecuteResponse = await sandbox.process.exec(f"cat {reward_file}")
+            result: ExecuteResponse = await sandbox.process.exec("cat /logs/verifier/reward.txt")
             if result.exit_code == 0:
-                reward_value = result.result.strip()
-                try:
-                    rewards = {"score": float(reward_value)}
-                except (ValueError, TypeError):
-                    pass
-        except Exception:
+                return {"score": float(result.result.strip())}
+        except (ValueError, TypeError, Exception):
             pass
-
-        return rewards
+        return None
 
     def _parse_rewards_from_output(self, output: str) -> dict[str, Any] | None:
         """Parse Harbor-style rewards from test output.
@@ -100,6 +93,10 @@ class TerminalBenchBenchmark(BenchmarkService):
                     continue
 
         return None
+
+    def _should_skip_result(self, result: dict[str, Any]) -> bool:
+        """Check if result should be skipped from aggregation."""
+        return not result or result.get("exception_info") or not result.get("verifier_result", {}).get("rewards")
 
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
@@ -234,10 +231,8 @@ class TerminalBenchBenchmark(BenchmarkService):
                 if not rewards:
                     rewards = self._parse_rewards_from_output(test_output)
 
-                yield StreamMessageChunk(
-                    type="message",
-                    data=f"✓ Tests passed {'with rewards: ' + str(rewards) if rewards else '(no rewards found)'}",
-                )
+                reward_msg = f"with rewards: {rewards}" if rewards else "(no rewards found)"
+                yield StreamMessageChunk(type="message", data=f"✓ Tests passed {reward_msg}")
 
                 # Format final result
                 verifier_result = {
@@ -286,30 +281,19 @@ class TerminalBenchBenchmark(BenchmarkService):
         reward_stats: dict[str, list[float | int]] = defaultdict(list)
 
         for result in evaluation_results.values():
-            # If task incurred an exception \ nothing to parse we skip
-            if (
-                not result
-                or result.get("exception_info")
-                or not result.get("verifier_result")
-                or not result.get("verifier_result").get("rewards")
-            ):
+            if self._should_skip_result(result):
                 continue
 
-            # Increment if resolved
             resolved += 1
-
             verifier = result["verifier_result"]
-            rewards: dict[str, Any] | int | float = verifier.get("rewards")
+            rewards = verifier.get("rewards")
 
             # Parse the rewards covering multiple return formats
             if isinstance(rewards, dict):
-                for key, value in rewards.items():
+                for key, value in cast(dict[str, Any], rewards).items():
                     if isinstance(value, (int, float)):
-                        key_str: str = str(key)
-                        val_num: float | int = value
-                        reward_stats[key_str].append(val_num)
+                        reward_stats[str(key)].append(value)
             else:
-                # Fallback, use the raw response
                 reward_stats["reward"].append(rewards)
 
         # Calculate aggregated metrics
