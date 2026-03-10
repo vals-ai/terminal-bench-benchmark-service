@@ -1,0 +1,26 @@
+# terminal-bench Service
+
+## Getting started
+
+Edit `src/terminal_bench_benchmark_service/benchmark_service.py` and implement the six abstract methods on `ExampleBenchmark`:
+
+| Method | What to do |
+|--------|------------|
+| `load_datasets()` | Return `dict[dataset_name, dict[task_id, ...]]` of all datasets |
+| `retrieve_task()` | Return docker image, problem statement, and resource requirements |
+| `setup_task()` | Prepare the sandbox before evaluation (upload files, run install commands) |
+| `evaluate_response()` | Score a plain-text response without a sandbox |
+| `evaluate_instance()` | Run tests / evaluation scripts in the sandbox |
+| `calculate_final_score()` | Aggregate per-task results into a single score |
+
+`setup_task` and `evaluate_instance` are async generators — yield `StreamMessageChunk`, `StreamErrorChunk`, and finally `StreamResultChunk`.
+
+## Development
+
+```bash
+make install   # install dependencies
+make dev       # run local server
+make test      # run tests
+make help      # list all commands
+make install-submodules # Install the datasets
+```
