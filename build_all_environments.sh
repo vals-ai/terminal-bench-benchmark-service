@@ -10,9 +10,15 @@ set -e  # Exit on error
 DATASETS_DIR="datasets/terminal-bench-2"
 REGISTRY="ghcr.io"
 OWNER="vals-ai"
-REPO="terminal-bench-benchmark-service"
 TARGET_TASK=""
 PARALLEL_JOBS=5
+
+# Get version from git commit hash, or use date if not in a git repo
+if git rev-parse --short HEAD &> /dev/null; then
+    VERSION=$(git rev-parse --short HEAD)
+else
+    VERSION=$(date +%Y%m%d)
+fi
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -75,7 +81,8 @@ total=${#task_dirs[@]}
 current=0
 
 echo "Found $total task environment(s) to build and push"
-echo "Registry: $REGISTRY/$OWNER/$REPO"
+echo "Registry: $REGISTRY/$OWNER"
+echo "Version: $VERSION"
 echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
 
@@ -95,25 +102,42 @@ build_task() {
     echo "[$current/$total] Building and pushing: $task_id"
 
     # Build and push the Docker image
-    # Using GHCR image naming convention
+    # Using GHCR image naming convention: ghcr.io/owner/task-id:tag
     # --platform linux/amd64 specifies x86-64 architecture
-    image_name="$REGISTRY/$OWNER/$REPO:$task_id"
+    base_image="$REGISTRY/$OWNER/$task_id"
+    image_latest="$base_image:latest"
+    image_versioned="$base_image:$VERSION"
 
     if docker build \
         --platform linux/amd64 \
-        --label "org.opencontainers.image.source=https://github.com/$OWNER/$REPO" \
-        --label "org.opencontainers.image.url=https://github.com/$OWNER/$REPO" \
+        --label "org.opencontainers.image.source=https://github.com/$OWNER/terminal-bench-benchmark-service" \
+        --label "org.opencontainers.image.url=https://github.com/$OWNER/terminal-bench-benchmark-service" \
+        --label "org.opencontainers.image.version=$VERSION" \
         -f "$task_dir/environment/Dockerfile" \
-        -t "$image_name" \
+        -t "$image_latest" \
+        -t "$image_versioned" \
         "$task_dir/environment" > /tmp/build_$task_id.log 2>&1; then
         echo "  ✓ Successfully built $task_id"
 
-        # Push to GHCR
-        if docker push "$image_name" > /tmp/push_$task_id.log 2>&1; then
-            echo "  ✓ Successfully pushed $image_name"
+        # Push both tags to GHCR
+        local push_failed=0
+        if docker push "$image_latest" > /tmp/push_$task_id.log 2>&1; then
+            echo "  ✓ Pushed $image_latest"
         else
-            echo "  ✗ Failed to push $image_name"
+            echo "  ✗ Failed to push $image_latest"
             cat /tmp/push_$task_id.log
+            push_failed=1
+        fi
+
+        if docker push "$image_versioned" >> /tmp/push_$task_id.log 2>&1; then
+            echo "  ✓ Pushed $image_versioned"
+        else
+            echo "  ✗ Failed to push $image_versioned"
+            cat /tmp/push_$task_id.log
+            push_failed=1
+        fi
+
+        if [ $push_failed -eq 1 ]; then
             return 1
         fi
     else
@@ -150,4 +174,10 @@ wait
 
 echo ""
 echo "Build and push process complete!"
-echo "Images are available at: $REGISTRY/$OWNER/$REPO"
+echo "Images are available at: $REGISTRY/$OWNER/<task-id>"
+echo ""
+echo "Each image is tagged with:"
+echo "  - latest: $REGISTRY/$OWNER/<task-id>:latest"
+echo "  - versioned: $REGISTRY/$OWNER/<task-id>:$VERSION"
+echo ""
+echo "Example: $REGISTRY/$OWNER/build-pov-ray:latest"
