@@ -1,0 +1,11 @@
+# Build Docker Images for Terminal Bench Environments
+
+## Build all environments and push to GHCR
+./build_all_environments.sh
+
+## Test with a single environment before building all
+./build_all_environments.sh build-pov-ray
+
+## Additional options
+# Show help message
+./build_all_environments.sh -h
