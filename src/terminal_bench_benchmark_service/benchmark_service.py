@@ -288,12 +288,15 @@ class TerminalBenchBenchmark(BenchmarkService):
         for result in evaluation_results.values():
             # If task incurred an exception \ nothing to parse we skip
             if (
-                not not result
+                not result
                 or result.get("exception_info")
                 or not result.get("verifier_result")
                 or not result.get("verifier_result").get("rewards")
             ):
                 continue
+
+            # Increment if resolved
+            resolved += 1
 
             verifier = result["verifier_result"]
             rewards: dict[str, Any] | int | float = verifier.get("rewards")
