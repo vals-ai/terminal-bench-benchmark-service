@@ -16,31 +16,48 @@ from benchmark_service.schemas import (
     StreamChunk,
     StreamErrorChunk,
     StreamMessageChunk,
+    StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
-from daytona import AsyncSandbox
+from daytona import AsyncSandbox, FileUpload
 from daytona.common.process import ExecuteResponse
 from pydantic import model_validator
 
 
 class OverrideResources(Resources):
+    @staticmethod
+    def _normalize_resource(value: Any, fallback_key: str | None, data: dict[str, Any]) -> int | None:
+        """Normalize resource value: handle string with 'G' suffix or _mb variant."""
+        if value is not None:
+            if isinstance(value, str):
+                return int(value.strip("G"))
+            return value
+
+        if fallback_key:
+            mb_value = data.get(fallback_key)
+            if mb_value is not None:
+                return mb_value // 1024
+
+        return None
+
     @model_validator(mode="before")
     @classmethod
     def align_resources(cls, data: Any) -> Any:
-        vcpu = data.get("cpus")
-        memory = data.get("memory")
-        storage = data.get("storage")
+        # Handle both input formats and field names
+        vcpu = data.get("cpus") or data.get("vcpu")
+        memory = data.get("memory") or data.get("memory_mb")
+        storage = data.get("storage") or data.get("storage_mb")
+
+        # Normalize memory and storage if needed
+        memory = cls._normalize_resource(memory, "memory_mb" if "memory_mb" in data else None, data)
+        storage = cls._normalize_resource(storage, "storage_mb" if "storage_mb" in data else None, data)
 
         # Validate all resources are specified
-        resources = [vcpu, memory, storage]
-        if any(resource is None for resource in [vcpu, memory, storage]):
-            raise ValueError("All resource values must be specified", resources)
+        if vcpu is None or memory is None or storage is None:
+            raise ValueError("All resource values must be specified")
 
-        # Parse out the string
-        memory = int(memory.strip("G"))
-        storage = int(storage.strip("G"))
-
-        return cls(vcpu=vcpu, memory=memory, disk=storage)
+        # Return dict with field names that match the model
+        return {"vcpu": vcpu, "memory": memory, "disk": storage}
 
 
 class TerminalBenchBenchmark(BenchmarkService):
@@ -51,6 +68,42 @@ class TerminalBenchBenchmark(BenchmarkService):
     """
 
     _DATASET_LOCATION: Path = Path("datasets/terminal-bench-2")
+
+    async def _upload_test_files(self, sandbox: AsyncSandbox, tests_path: Path) -> None:
+        """Upload test files from local dataset to sandbox /tests directory."""
+        files_to_upload: list[FileUpload] = []
+        for test_file in tests_path.iterdir():
+            if test_file.is_file():
+                with open(test_file, "rb") as f:
+                    files_to_upload.append(
+                        FileUpload(
+                            source=f.read(),
+                            destination=f"/tests/{test_file.name}",
+                        )
+                    )
+
+        if files_to_upload:
+            await sandbox.fs.upload_files(files_to_upload)
+
+    async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str) -> str:
+        """Copy test files from local dataset into sandbox /tests directory.
+
+        Returns the test command to run (test.sh path or default).
+        """
+        task_path = self._DATASET_LOCATION / task_id
+        tests_path = task_path / "tests"
+
+        # Create /tests directory
+        await sandbox.fs.create_folder("/tests", "755")
+
+        # Upload test files
+        await self._upload_test_files(sandbox, tests_path)
+
+        # Use test.sh if it exists, otherwise default to pytest
+
+        await sandbox.process.exec("chmod +x /tests/test.sh")
+
+        return "bash /tests/test.sh"
 
     async def _retrieve_reward(self, sandbox: AsyncSandbox) -> dict[str, Any] | None:
         try:
@@ -105,11 +158,15 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         dataset: dict[str, Any] = {}
         for task_path in self._DATASET_LOCATION.iterdir():
+            # Skip hidden directories and non-directories
+            if task_path.name.startswith(".") or not task_path.is_dir():
+                continue
+
             task: dict[str, Any] = {}
 
             # Read the problem statement
-            problem_path: Path = Path(task_path / "instruction.md")
-            task_toml_path: Path = Path(task_path / "task.toml")
+            problem_path: Path = task_path / "instruction.md"
+            task_toml_path: Path = task_path / "task.toml"
 
             # Parse the problem
             if not problem_path.exists():
@@ -127,7 +184,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             dataset[task_path.stem] = task
 
-        return dataset
+        return {"default": dataset}
 
     async def retrieve_task(
         self, task_id: str, skip_validation: bool = False, dataset: str | None = None
@@ -143,7 +200,8 @@ class TerminalBenchBenchmark(BenchmarkService):
         if not problem_statement:
             raise ValueError(f"Missing problem statement for `{task_id}`")
 
-        environment: dict[str, Any] = task.get("environment", {})
+        task_def = task.get("task_definition", {})
+        environment: dict[str, Any] = task_def.get("environment", {})
 
         # Validate resources are correctly set
         resources: OverrideResources = OverrideResources.model_validate(environment)
@@ -203,12 +261,8 @@ class TerminalBenchBenchmark(BenchmarkService):
             # Notification that we are starting evaluation
             yield StreamMessageChunk(type="message", data=f"Starting evaluation for task: {task_id}")
 
-            # Fetch the data for the task
-            task_data = self.get_dataset(dataset)[task_id]
-            task_def = task_data.get("task_definition", {})
-
-            # Get test script from task definition
-            test_script = task_def.get("tests", {}).get("command", "pytest")
+            # Copy test files from dataset into sandbox and get test command
+            test_script = await self._copy_test_files(sandbox, task_id)
 
             # Start running the tests
             yield StreamMessageChunk(type="message", data=f"Running tests for {task_id}...")
@@ -267,7 +321,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             "exception_info": exception_info,
         }
 
-        yield StreamMessageChunk(type="message", data=json.dumps(trial_result, indent=4))
+        yield StreamResultChunk(type="result", data=(trial_result))
 
     async def calculate_final_score(
         self, evaluation_results: dict[str, Any], dataset: str | None = None
