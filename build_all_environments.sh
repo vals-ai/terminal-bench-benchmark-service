@@ -81,11 +81,11 @@ for task_dir in "${task_dirs[@]}"; do
     # --platform linux/amd64 specifies x86-64 architecture
     image_name="$REGISTRY/$OWNER/$REPO:$task_id"
 
-    if (cd "$task_dir" && docker build \
+    if docker build \
         --platform linux/amd64 \
-        -f environment/Dockerfile \
+        -f "$task_dir/environment/Dockerfile" \
         -t "$image_name" \
-        .); then
+        "$task_dir/environment"; then
         echo "  ✓ Successfully built $task_id"
 
         # Push to GHCR
