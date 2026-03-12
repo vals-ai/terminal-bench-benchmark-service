@@ -335,7 +335,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                     rewards = self._parse_rewards_from_output(test_output)
 
                 reward_msg = f"with rewards: {rewards}" if rewards else "(no rewards found)"
-                yield StreamMessageChunk(type="message", data=f"✓ Tests passed {reward_msg}")
+                yield StreamMessageChunk(type="message", data=f"✓ Tests finished {reward_msg}")
 
                 # Format final result
                 verifier_result = {
