@@ -215,11 +215,20 @@ class TerminalBenchBenchmark(BenchmarkService):
         # Use the full url
         formatted_docker_image: str = f"docker.io/{docker_image}"
 
+        # Extract agent timeout from task definition
+        agent_config: dict[str, Any] = task_def.get("agent", {})
+        agent_timeout_value = agent_config.get("timeout_sec")
+
+        if agent_timeout_value is None:
+            raise ValueError(f"Agent timeout_sec not found in task definition for `{task_id}`")
+
+        agent_timeout: float = agent_timeout_value
+
         return RetrieveTaskResponse(
             docker_image=formatted_docker_image,
-            problem_statement=problem_statement,
-            request_setup=False,
+            problem_path="/problem.md",
             cwd="/app",
+            agent_timeout=agent_timeout,
             resources=resources,
         )
 
