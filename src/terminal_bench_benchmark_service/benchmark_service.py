@@ -32,6 +32,9 @@ class OverrideResources(Resources):
         if value is not None:
             if isinstance(value, str):
                 return int(value.strip("G"))
+            # If the actual key is memory_mb/storage_mb, convert from MB to GB
+            if fallback_key and fallback_key in data:
+                return value // 1024
             return value
 
         if fallback_key:
@@ -206,7 +209,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             with open(task_toml_path, "rb") as f:
                 task["task_definition"] = tomllib.load(f)
 
-            dataset[task_path.stem] = task
+            dataset[task_path.name] = task
 
         return {"default": dataset}
 
@@ -421,7 +424,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                 aggregated_rewards[key] = sum(values) / len(values)
 
         # Average of all aggregated rewards
-        overall_score = sum(aggregated_rewards.values()) / len(aggregated_rewards) if aggregated_rewards else 0.0
+        overall_score = (
+            (sum(aggregated_rewards.values()) / len(aggregated_rewards) * 100) if aggregated_rewards else 0.0
+        )
 
         # Metadata about the run
         metadata = {
