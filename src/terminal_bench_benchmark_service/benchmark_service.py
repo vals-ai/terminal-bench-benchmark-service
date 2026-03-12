@@ -3,10 +3,9 @@
 import asyncio
 import json
 import tomllib
-from collections import defaultdict
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from benchmark_service import BenchmarkService
 from benchmark_service.schemas import (
@@ -168,15 +167,20 @@ class TerminalBenchBenchmark(BenchmarkService):
             if line and not line.startswith("["):
                 try:
                     value: float = float(line)
-                    return {"reward": value}
+                    return {"score": value}
                 except (ValueError, TypeError):
                     continue
 
         return None
 
-    def _should_skip_result(self, result: dict[str, Any]) -> bool:
-        """Check if result should be skipped from aggregation."""
-        return not result or result.get("exception_info") or not result.get("verifier_result", {}).get("rewards")
+    def _extract_score(self, result: dict[str, Any] | None) -> float:
+        """Extract the score from a single evaluation result. Returns 0.0 for errored/missing tasks."""
+        if not result or result.get("exception_info"):
+            return 0.0
+
+        verifier: dict[str, Any] = result.get("verifier_result") or {}
+        rewards: dict[str, Any] = verifier.get("rewards") or {}
+        return float(rewards.get("score", 0.0))
 
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
@@ -342,7 +346,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
                 # Format final result
                 verifier_result = {
-                    "rewards": rewards if rewards else {"passed": 1.0},
+                    "rewards": rewards if rewards else {"score": 1.0},
                     "test_output": test_output,
                     "passed": True,
                 }
@@ -382,59 +386,22 @@ class TerminalBenchBenchmark(BenchmarkService):
         if not evaluation_results:
             raise ValueError("There must be at least one evaluation result")
 
-        resolved: int = 0
-        total_count: int = len(evaluation_results)
-        reward_stats: dict[str, list[float | int]] = defaultdict(list)
+        # Map each task to its score (errored/missing tasks get 0.0)
+        task_scores: dict[str, float] = {
+            task_id: self._extract_score(result) for task_id, result in evaluation_results.items()
+        }
 
-        for result in evaluation_results.values():
-            if self._should_skip_result(result):
-                continue
-
-            verifier = result["verifier_result"]
-            rewards = verifier.get("rewards")
-
-            # Check if task is resolved (perfect score of 1.0)
-            is_resolved = False
-            rewards_dict = cast(dict[str, Any], rewards) if isinstance(rewards, dict) else {}
-
-            if isinstance(rewards, dict):
-                # For dict rewards, check if score is 1.0
-                score_val = rewards_dict.get("score")
-                if score_val is not None and isinstance(score_val, (int, float)) and abs(float(score_val) - 1.0) < 1e-6:
-                    is_resolved = True
-                for key, value in rewards_dict.items():
-                    if isinstance(value, (int, float)):
-                        reward_stats[str(key)].append(value)
-            else:
-                # For single value rewards, check if it's 1.0
-                if isinstance(rewards, (int, float)) and abs(float(rewards) - 1.0) < 1e-6:
-                    is_resolved = True
-                reward_stats["reward"].append(rewards)
-
-            if is_resolved:
-                resolved += 1
-
-        # Calculate aggregated metrics
+        total_count = len(task_scores)
+        resolved = sum(1 for s in task_scores.values() if abs(s - 1.0) < 1e-6)
+        mean_score = sum(task_scores.values()) / total_count
         success_rate = resolved / total_count * 100
 
-        # Compute mean for each reward key
-        aggregated_rewards: dict[str, float] = {}
-        for key, values in reward_stats.items():
-            if values:
-                aggregated_rewards[key] = sum(values) / len(values)
-
-        # Average of all aggregated rewards
-        overall_score = (
-            (sum(aggregated_rewards.values()) / len(aggregated_rewards) * 100) if aggregated_rewards else 0.0
-        )
-
-        # Metadata about the run
         metadata = {
             "total_tasks": total_count,
             "resolved_tasks": resolved,
             "unresolved_tasks": total_count - resolved,
-            "reward_stats": aggregated_rewards,
+            "reward_stats": {"score": mean_score},
             "success_rate": success_rate,
         }
 
-        return FinalScoreResult(score=overall_score, metadata=metadata)
+        return FinalScoreResult(score=mean_score * 100, metadata=metadata)
