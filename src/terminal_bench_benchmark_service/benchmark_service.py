@@ -273,6 +273,8 @@ class TerminalBenchBenchmark(BenchmarkService):
         else:
             yield StreamErrorChunk(type="error", data=f"Missing problem statement for task {task_id}")
 
+        yield StreamResultChunk(type="result", data={"Finished": True})
+
     async def evaluate_response(self, request: EvaluateResponseRequest, dataset: str | None = None) -> Any:
         """Evaluate a text response."""
         task = self.get_dataset(dataset)[request.task_id]
