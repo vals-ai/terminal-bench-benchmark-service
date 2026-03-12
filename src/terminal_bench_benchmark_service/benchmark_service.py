@@ -1,5 +1,6 @@
 """Example benchmark service implementation."""
 
+import asyncio
 import json
 import tomllib
 from collections import defaultdict
@@ -113,6 +114,29 @@ class TerminalBenchBenchmark(BenchmarkService):
         except (ValueError, TypeError, Exception):
             pass
         return None
+
+    def _get_verifier_timeout(self, task_id: str, dataset: str | None = None) -> float:
+        """Extract verifier timeout from task definition."""
+        task = self.get_dataset(dataset)[task_id]
+        task_def = task.get("task_definition", {})
+        verifier_config: dict[str, Any] = task_def.get("verifier", {})
+        verifier_timeout_value = verifier_config.get("timeout_sec")
+
+        if verifier_timeout_value is None:
+            raise ValueError(f"Verifier timeout_sec not found in task definition for `{task_id}`")
+
+        return float(verifier_timeout_value)
+
+    async def _stream_command_with_timeout(
+        self, sandbox: AsyncSandbox, command: str, cwd: str, timeout: float
+    ) -> AsyncGenerator[str, None]:
+        """Stream command output with timeout."""
+        start_time = asyncio.get_event_loop().time()
+        async for line in stream_command(sandbox, command, cwd, ignore_error=True):
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed > timeout:
+                raise TimeoutError(f"Command execution exceeded timeout of {timeout}s")
+            yield line
 
     def _parse_rewards_from_output(self, output: str) -> dict[str, Any] | None:
         """Parse Harbor-style rewards from test output.
@@ -273,14 +297,20 @@ class TerminalBenchBenchmark(BenchmarkService):
             # Copy test files from dataset into sandbox and get test command
             test_script = await self._copy_test_files(sandbox, task_id)
 
+            # Get verifier timeout from task definition
+            verifier_timeout = self._get_verifier_timeout(task_id, dataset)
+
             # Start running the tests
             yield StreamMessageChunk(type="message", data=f"Running tests for {task_id}...")
 
             # Run the test, collect the test output and stream the logs to the client
             try:
-                async for line in stream_command(sandbox, test_script, "/app", ignore_error=True):
+                async for line in self._stream_command_with_timeout(sandbox, test_script, "/app", verifier_timeout):
                     test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
+            except TimeoutError as e:
+                is_success = False
+                exception_info = str(e)
             except RuntimeError as e:
                 is_success = False
                 exception_info = str(e)
