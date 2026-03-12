@@ -2,22 +2,18 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install git and other dependencies
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# Install dependencies
+RUN apt-get update && apt-get install -y curl git && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy git files first for submodule setup
-COPY .git .gitmodules ./
-
-# Copy dependency files
+# Copy dependency files and application code
 COPY pyproject.toml README.md ./
 
-# Install dependencies and submodules
-RUN git submodule update --init --recursive && uv sync
+# Install dependencies
+RUN uv sync
 
-# Copy application code
 COPY . .
 
 # Expose port
