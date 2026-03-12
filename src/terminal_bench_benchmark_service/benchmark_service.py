@@ -387,17 +387,29 @@ class TerminalBenchBenchmark(BenchmarkService):
             if self._should_skip_result(result):
                 continue
 
-            resolved += 1
             verifier = result["verifier_result"]
             rewards = verifier.get("rewards")
 
-            # Parse the rewards covering multiple return formats
+            # Check if task is resolved (perfect score of 1.0)
+            is_resolved = False
+            rewards_dict = cast(dict[str, Any], rewards) if isinstance(rewards, dict) else {}
+
             if isinstance(rewards, dict):
-                for key, value in cast(dict[str, Any], rewards).items():
+                # For dict rewards, check if score is 1.0
+                score_val = rewards_dict.get("score")
+                if score_val is not None and isinstance(score_val, (int, float)) and abs(float(score_val) - 1.0) < 1e-6:
+                    is_resolved = True
+                for key, value in rewards_dict.items():
                     if isinstance(value, (int, float)):
                         reward_stats[str(key)].append(value)
             else:
+                # For single value rewards, check if it's 1.0
+                if isinstance(rewards, (int, float)) and abs(float(rewards) - 1.0) < 1e-6:
+                    is_resolved = True
                 reward_stats["reward"].append(rewards)
+
+            if is_resolved:
+                resolved += 1
 
         # Calculate aggregated metrics
         success_rate = resolved / total_count * 100
