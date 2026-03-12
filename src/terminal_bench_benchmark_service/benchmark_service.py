@@ -250,7 +250,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         return RetrieveTaskResponse(
             docker_image=formatted_docker_image,
-            problem_path="/problem.md",
+            problem_path="/tmp/problem_statement.md",
             cwd="/app",
             agent_timeout=agent_timeout,
             resources=resources,
@@ -259,11 +259,19 @@ class TerminalBenchBenchmark(BenchmarkService):
     async def setup_task(
         self, task_id: str, sandbox: AsyncSandbox, dataset: str | None = None
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Setup task in sandbox (not needed for this example)."""
-        yield StreamErrorChunk(
-            type="error",
-            data="There is no setup required for terminal bench 2, all dependencies are coupled with the docker image.",
-        )
+        """Setup task in sandbox by copying problem statement."""
+        task = self.get_dataset(dataset)[task_id]
+        problem_statement: str = task.get("problem_statement")
+
+        if problem_statement:
+            await sandbox.fs.upload_files(
+                [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
+            )
+            yield StreamMessageChunk(
+                type="message", data=f"Problem statement uploaded to /tmp/problem_statement.md\n{problem_statement}"
+            )
+        else:
+            yield StreamErrorChunk(type="error", data=f"Missing problem statement for task {task_id}")
 
     async def evaluate_response(self, request: EvaluateResponseRequest, dataset: str | None = None) -> Any:
         """Evaluate a text response."""
