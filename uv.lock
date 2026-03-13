@@ -277,7 +277,7 @@ wheels = [
 [[package]]
 name = "create-benchmark-service"
 version = "0.1.0"
-source = { git = "https://github.com/vals-ai/create-benchmark-service.git?rev=jf%2Fadd-timeout#af4cad551f58f99c5be7f209165b95307ddf33a0" }
+source = { git = "https://github.com/vals-ai/create-benchmark-service.git?rev=main#810d88db81fb2226225b34d8f39475af85dfd1f6" }
 dependencies = [
     { name = "click" },
     { name = "daytona" },
@@ -1681,7 +1681,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?rev=jf%2Fadd-timeout" }]
+requires-dist = [{ name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?rev=main" }]
 
 [package.metadata.requires-dev]
 dev = [
