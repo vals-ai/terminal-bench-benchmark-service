@@ -167,7 +167,8 @@ class TerminalBenchBenchmark(BenchmarkService):
             if line and not line.startswith("["):
                 try:
                     value: float = float(line)
-                    return {"score": value}
+                    if 0.0 <= value <= 1.0:
+                        return {"score": value}
                 except (ValueError, TypeError):
                     continue
 
