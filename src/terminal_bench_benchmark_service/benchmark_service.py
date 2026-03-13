@@ -113,7 +113,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             result: ExecuteResponse = await sandbox.process.exec("cat /logs/verifier/reward.txt")
             if result.exit_code == 0:
                 return {"score": float(result.result.strip())}
-        except (ValueError, TypeError, Exception):
+        except Exception:
             pass
         return None
 
@@ -346,9 +346,8 @@ class TerminalBenchBenchmark(BenchmarkService):
 
                 # Format final result
                 verifier_result = {
-                    "rewards": rewards if rewards else {"score": 1.0},
-                    "test_output": test_output,
-                    "passed": True,
+                    "rewards": rewards,
+                    "output": test_output,
                 }
 
             else:
@@ -361,19 +360,11 @@ class TerminalBenchBenchmark(BenchmarkService):
             exception_info = str(e)
             yield StreamErrorChunk(type="error", data=f"Evaluation error for {task_id}: {exception_info}")
 
-        # Create verified result if successful
-        harbor_verifier_result: dict[str, Any] | None = None
-        if is_success and verifier_result:
-            harbor_verifier_result = {
-                "rewards": verifier_result.get("rewards", 1.0),
-                "output": test_output,
-            }
-
         # Create trial result
         trial_result: dict[str, Any] = {
             "task_name": task_id,
             "trial_name": f"{task_id}-evaluation",
-            "verifier_result": harbor_verifier_result,
+            "verifier_result": verifier_result if is_success else None,
             "exception_info": exception_info,
         }
 
@@ -392,16 +383,13 @@ class TerminalBenchBenchmark(BenchmarkService):
         }
 
         total_count = len(task_scores)
-        resolved = sum(1 for s in task_scores.values() if abs(s - 1.0) < 1e-6)
+        resolved = sum(1 for s in task_scores.values() if s == 1.0)
         mean_score = sum(task_scores.values()) / total_count
-        success_rate = resolved / total_count * 100
 
         metadata = {
             "total_tasks": total_count,
             "resolved_tasks": resolved,
             "unresolved_tasks": total_count - resolved,
-            "reward_stats": {"score": mean_score},
-            "success_rate": success_rate,
         }
 
         return FinalScoreResult(score=mean_score * 100, metadata=metadata)
