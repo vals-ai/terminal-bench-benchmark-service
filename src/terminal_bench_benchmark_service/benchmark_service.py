@@ -259,7 +259,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         return RetrieveTaskResponse(
             docker_image=formatted_docker_image,
             problem_path="/tmp/problem_statement.md",
-            cwd="/app",
+            cwd="/workspace" if task_id == "prove-plus-comm" else "/app",
             agent_timeout=agent_timeout,
             resources=resources,
         )
@@ -323,7 +323,9 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Run the test, collect the test output and stream the logs to the client
             try:
-                async for line in self._stream_command_with_timeout(sandbox, test_script, "/app", verifier_timeout):
+                async for line in self._stream_command_with_timeout(
+                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout
+                ):
                     test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
             except TimeoutError as e:
