@@ -271,6 +271,9 @@ class TerminalBenchBenchmark(BenchmarkService):
         task = self.get_dataset(dataset)[task_id]
         problem_statement: str = task.get("problem_statement")
 
+        # Prevent interactive prompts
+        await sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+
         if problem_statement:
             await sandbox.fs.upload_files(
                 [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
