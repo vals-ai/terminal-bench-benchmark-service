@@ -133,12 +133,12 @@ class TerminalBenchBenchmark(BenchmarkService):
         self, sandbox: AsyncSandbox, command: str, cwd: str, timeout: float
     ) -> AsyncGenerator[str, None]:
         """Stream command output with timeout."""
-        start_time = asyncio.get_event_loop().time()
-        async for line in stream_command(sandbox, command, cwd, ignore_error=True):
-            elapsed = asyncio.get_event_loop().time() - start_time
-            if elapsed > timeout:
-                raise TimeoutError(f"Command execution exceeded timeout of {timeout}s")
-            yield line
+        try:
+            async with asyncio.timeout(timeout):
+                async for line in stream_command(sandbox, command, cwd, ignore_error=True):
+                    yield line
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"Command execution exceeded timeout of {timeout}s")
 
     def _parse_rewards_from_output(self, output: str) -> dict[str, Any] | None:
         """Parse Harbor-style rewards from test output.
@@ -317,6 +317,10 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Copy test files from dataset into sandbox and get test command
             test_script = await self._copy_test_files(sandbox, task_id)
+
+            # Caffe processes linger when agent gets OOM killed
+            if task_id == "caffe-cifar-10":
+                await sandbox.process.exec("pkill -9 caffe || true")
 
             # Get verifier timeout from task definition
             verifier_timeout = self._get_verifier_timeout(task_id, dataset)
