@@ -98,8 +98,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         task_path = self._DATASET_LOCATION / task_id
         tests_path = task_path / "tests"
 
-        # Create /tests directory
-        await with_retry(sandbox, lambda: sandbox.fs.create_folder("/tests", "755"))
+        await with_retry(sandbox, lambda: sandbox.process.exec("rm -rf /tests && mkdir -p /tests && chmod 755 /tests"))
 
         # Upload test files
         await self._upload_test_files(sandbox, tests_path)
