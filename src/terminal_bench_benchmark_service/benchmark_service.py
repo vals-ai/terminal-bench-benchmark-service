@@ -19,7 +19,7 @@ from benchmark_service.schemas import (
     StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
-from daytona import AsyncSandbox, FileUpload
+from daytona import AsyncSandbox, DaytonaError, FileUpload
 from daytona.common.process import ExecuteResponse
 from pydantic import model_validator
 
@@ -142,6 +142,23 @@ class TerminalBenchBenchmark(BenchmarkService):
                     yield line
         except asyncio.TimeoutError:
             raise TimeoutError(f"Command execution exceeded timeout of {timeout}s")
+
+    async def _stream_command_with_retry(
+        self, sandbox: AsyncSandbox, command: str, cwd: str, timeout: float, retries: int = 3
+    ) -> AsyncGenerator[str, None]:
+        """Stream command output with retry on transient Daytona errors. Timeout is never retried."""
+        for attempt in range(retries):
+            try:
+                async for line in self._stream_command_with_timeout(sandbox, command, cwd, timeout):
+                    yield line
+                return
+            except TimeoutError:
+                raise
+            except (DaytonaError, RuntimeError):
+                if attempt == retries - 1:
+                    raise
+                await asyncio.sleep(2**attempt)
+                yield f"Stream interrupted, retrying (attempt {attempt + 2}/{retries})..."
 
     def _parse_rewards_from_output(self, output: str) -> dict[str, Any] | None:
         """Parse Harbor-style rewards from test output.
@@ -338,7 +355,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Run the test, collect the test output and stream the logs to the client
             try:
-                async for line in self._stream_command_with_timeout(
+                async for line in self._stream_command_with_retry(
                     sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout
                 ):
                     test_output += line + "\n"
