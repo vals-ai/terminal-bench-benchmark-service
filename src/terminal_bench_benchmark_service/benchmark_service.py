@@ -23,6 +23,8 @@ from daytona import AsyncSandbox, FileUpload
 from daytona.common.process import ExecuteResponse
 from pydantic import model_validator
 
+from terminal_bench_benchmark_service.utils import with_retry
+
 
 class OverrideResources(Resources):
     @staticmethod
@@ -86,7 +88,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                     )
 
         if files_to_upload:
-            await sandbox.fs.upload_files(files_to_upload)
+            await with_retry(sandbox, lambda: sandbox.fs.upload_files(files_to_upload))
 
     async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str) -> str:
         """Copy test files from local dataset into sandbox /tests directory.
@@ -97,20 +99,22 @@ class TerminalBenchBenchmark(BenchmarkService):
         tests_path = task_path / "tests"
 
         # Create /tests directory
-        await sandbox.fs.create_folder("/tests", "755")
+        await with_retry(sandbox, lambda: sandbox.fs.create_folder("/tests", "755"))
 
         # Upload test files
         await self._upload_test_files(sandbox, tests_path)
 
         # Use test.sh if it exists, otherwise default to pytest
 
-        await sandbox.process.exec("chmod +x /tests/test.sh")
+        await with_retry(sandbox, lambda: sandbox.process.exec("chmod +x /tests/test.sh"))
 
         return "bash /tests/test.sh"
 
     async def _retrieve_reward(self, sandbox: AsyncSandbox) -> dict[str, Any] | None:
         try:
-            result: ExecuteResponse = await sandbox.process.exec("cat /logs/verifier/reward.txt")
+            result: ExecuteResponse = await with_retry(
+                sandbox, lambda: sandbox.process.exec("cat /logs/verifier/reward.txt")
+            )
             if result.exit_code == 0:
                 return {"score": float(result.result.strip())}
         except Exception:
@@ -272,11 +276,16 @@ class TerminalBenchBenchmark(BenchmarkService):
         problem_statement: str = task.get("problem_statement")
 
         # Prevent interactive prompts
-        await sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+        await with_retry(
+            sandbox, lambda: sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+        )
 
         if problem_statement:
-            await sandbox.fs.upload_files(
-                [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
+            await with_retry(
+                sandbox,
+                lambda: sandbox.fs.upload_files(
+                    [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
+                ),
             )
             yield StreamMessageChunk(
                 type="message", data=f"Problem statement uploaded to /tmp/problem_statement.md\n{problem_statement}"
@@ -320,7 +329,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Caffe processes linger when agent gets OOM killed
             if task_id == "caffe-cifar-10":
-                await sandbox.process.exec("pkill -9 caffe || true")
+                await with_retry(sandbox, lambda: sandbox.process.exec("pkill -9 caffe || true"))
 
             # Get verifier timeout from task definition
             verifier_timeout = self._get_verifier_timeout(task_id, dataset)
