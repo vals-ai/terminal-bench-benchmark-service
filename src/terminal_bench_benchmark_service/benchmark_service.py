@@ -19,9 +19,11 @@ from benchmark_service.schemas import (
     StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
-from daytona import AsyncSandbox, FileUpload
+from daytona import AsyncSandbox, DaytonaError, FileUpload
 from daytona.common.process import ExecuteResponse
 from pydantic import model_validator
+
+from terminal_bench_benchmark_service.utils import with_retry
 
 
 class OverrideResources(Resources):
@@ -86,7 +88,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                     )
 
         if files_to_upload:
-            await sandbox.fs.upload_files(files_to_upload)
+            await with_retry(sandbox, lambda: sandbox.fs.upload_files(files_to_upload))
 
     async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str) -> str:
         """Copy test files from local dataset into sandbox /tests directory.
@@ -96,21 +98,20 @@ class TerminalBenchBenchmark(BenchmarkService):
         task_path = self._DATASET_LOCATION / task_id
         tests_path = task_path / "tests"
 
-        # Create /tests directory
-        await sandbox.fs.create_folder("/tests", "755")
+        await with_retry(sandbox, lambda: sandbox.process.exec("rm -rf /tests && mkdir -p /tests && chmod 755 /tests"))
 
         # Upload test files
         await self._upload_test_files(sandbox, tests_path)
 
-        # Use test.sh if it exists, otherwise default to pytest
-
-        await sandbox.process.exec("chmod +x /tests/test.sh")
+        await with_retry(sandbox, lambda: sandbox.process.exec("chmod +x /tests/test.sh"))
 
         return "bash /tests/test.sh"
 
     async def _retrieve_reward(self, sandbox: AsyncSandbox) -> dict[str, Any] | None:
         try:
-            result: ExecuteResponse = await sandbox.process.exec("cat /logs/verifier/reward.txt")
+            result: ExecuteResponse = await with_retry(
+                sandbox, lambda: sandbox.process.exec("cat /logs/verifier/reward.txt")
+            )
             if result.exit_code == 0:
                 return {"score": float(result.result.strip())}
         except Exception:
@@ -139,6 +140,23 @@ class TerminalBenchBenchmark(BenchmarkService):
                     yield line
         except asyncio.TimeoutError:
             raise TimeoutError(f"Command execution exceeded timeout of {timeout}s")
+
+    async def _stream_command_with_retry(
+        self, sandbox: AsyncSandbox, command: str, cwd: str, timeout: float, retries: int = 3
+    ) -> AsyncGenerator[str, None]:
+        """Stream command output with retry on transient Daytona errors. Timeout is never retried."""
+        for attempt in range(retries):
+            try:
+                async for line in self._stream_command_with_timeout(sandbox, command, cwd, timeout):
+                    yield line
+                return
+            except TimeoutError:
+                raise
+            except (DaytonaError, RuntimeError):
+                if attempt == retries - 1:
+                    raise
+                await asyncio.sleep(2**attempt)
+                yield f"Stream interrupted, retrying (attempt {attempt + 2}/{retries})..."
 
     def _parse_rewards_from_output(self, output: str) -> dict[str, Any] | None:
         """Parse Harbor-style rewards from test output.
@@ -272,11 +290,16 @@ class TerminalBenchBenchmark(BenchmarkService):
         problem_statement: str = task.get("problem_statement")
 
         # Prevent interactive prompts
-        await sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+        await with_retry(
+            sandbox, lambda: sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+        )
 
         if problem_statement:
-            await sandbox.fs.upload_files(
-                [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
+            await with_retry(
+                sandbox,
+                lambda: sandbox.fs.upload_files(
+                    [FileUpload(source=problem_statement.encode(), destination="/tmp/problem_statement.md")]
+                ),
             )
             yield StreamMessageChunk(
                 type="message", data=f"Problem statement uploaded to /tmp/problem_statement.md\n{problem_statement}"
@@ -320,7 +343,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Caffe processes linger when agent gets OOM killed
             if task_id == "caffe-cifar-10":
-                await sandbox.process.exec("pkill -9 caffe || true")
+                await with_retry(sandbox, lambda: sandbox.process.exec("pkill -9 caffe || true"))
 
             # Get verifier timeout from task definition
             verifier_timeout = self._get_verifier_timeout(task_id, dataset)
@@ -330,15 +353,12 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Run the test, collect the test output and stream the logs to the client
             try:
-                async for line in self._stream_command_with_timeout(
+                async for line in self._stream_command_with_retry(
                     sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout
                 ):
                     test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
-            except TimeoutError as e:
-                is_success = False
-                exception_info = str(e)
-            except RuntimeError as e:
+            except (TimeoutError, DaytonaError, RuntimeError) as e:
                 is_success = False
                 exception_info = str(e)
 
@@ -367,6 +387,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                 )
 
         except Exception as e:
+            is_success = False
             exception_info = str(e)
             yield StreamErrorChunk(type="error", data=f"Evaluation error for {task_id}: {exception_info}")
 
