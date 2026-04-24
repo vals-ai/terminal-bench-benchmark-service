@@ -103,8 +103,6 @@ class TerminalBenchBenchmark(BenchmarkService):
         # Upload test files
         await self._upload_test_files(sandbox, tests_path)
 
-        # Use test.sh if it exists, otherwise default to pytest
-
         await with_retry(sandbox, lambda: sandbox.process.exec("chmod +x /tests/test.sh"))
 
         return "bash /tests/test.sh"
@@ -360,10 +358,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                 ):
                     test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
-            except TimeoutError as e:
-                is_success = False
-                exception_info = str(e)
-            except RuntimeError as e:
+            except (TimeoutError, DaytonaError, RuntimeError) as e:
                 is_success = False
                 exception_info = str(e)
 
@@ -392,6 +387,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                 )
 
         except Exception as e:
+            is_success = False
             exception_info = str(e)
             yield StreamErrorChunk(type="error", data=f"Evaluation error for {task_id}: {exception_info}")
 
