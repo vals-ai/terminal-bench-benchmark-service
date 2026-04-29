@@ -77,17 +77,26 @@ class TerminalBenchBenchmark(BenchmarkService):
     async def _upload_test_files(self, sandbox: AsyncSandbox, tests_path: Path) -> None:
         """Upload test files from local dataset to sandbox /tests directory."""
         files_to_upload: list[FileUpload] = []
-        for test_file in tests_path.iterdir():
+        for test_file in tests_path.rglob("*"):
             if test_file.is_file():
+                relative = test_file.relative_to(tests_path)
                 with open(test_file, "rb") as f:
                     files_to_upload.append(
                         FileUpload(
                             source=f.read(),
-                            destination=f"/tests/{test_file.name}",
+                            destination=f"/tests/{relative}",
                         )
                     )
 
         if files_to_upload:
+            # Ensure all subdirectories exist before uploading
+            subdirs = {
+                str(Path(f.destination).parent)
+                for f in files_to_upload
+                if Path(f.destination).parent != Path("/tests")
+            }
+            for subdir in sorted(subdirs):
+                await with_retry(sandbox, lambda s=subdir: sandbox.process.exec(f"mkdir -p {s}"))
             await with_retry(sandbox, lambda: sandbox.fs.upload_files(files_to_upload))
 
     async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str) -> str:
@@ -194,12 +203,21 @@ class TerminalBenchBenchmark(BenchmarkService):
 
     def _extract_score(self, result: dict[str, Any] | None) -> float:
         """Extract the score from a single evaluation result. Returns 0.0 for errored/missing tasks."""
-        if not result or result.get("exception_info"):
+        if not result:
             return 0.0
 
+        # Prefer verifier_result (the authoritative score) over exception_info.
+        # A task may have exception_info set (e.g. a transient streaming error) but still
+        # have a valid verifier_result if the test completed and wrote reward.txt.
         verifier: dict[str, Any] = result.get("verifier_result") or {}
         rewards: dict[str, Any] = verifier.get("rewards") or {}
-        return float(rewards.get("score", 0.0))
+        score = float(rewards.get("score", 0.0))
+
+        # Only fall back to 0.0 via exception_info when there is no verifier_result at all.
+        if not verifier and result.get("exception_info"):
+            return 0.0
+
+        return score
 
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
@@ -289,9 +307,15 @@ class TerminalBenchBenchmark(BenchmarkService):
         task = self.get_dataset(dataset)[task_id]
         problem_statement: str = task.get("problem_statement")
 
-        # Prevent interactive prompts
+        # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
+        # Write to both /etc/environment (read by PAM login sessions) and /etc/bash.bashrc
+        # (read by non-login interactive shells, which is what the PTY agent uses).
         await with_retry(
-            sandbox, lambda: sandbox.process.exec('echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment')
+            sandbox,
+            lambda: sandbox.process.exec(
+                'grep -q "DEBIAN_FRONTEND" /etc/environment || echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment;'
+                ' grep -q "DEBIAN_FRONTEND" /etc/bash.bashrc || echo "export DEBIAN_FRONTEND=noninteractive" >> /etc/bash.bashrc'
+            ),
         )
 
         if problem_statement:
@@ -333,10 +357,17 @@ class TerminalBenchBenchmark(BenchmarkService):
         verifier_result: dict[str, Any] | None = None
         test_output: str = ""
         is_success = True
+        streaming_timed_out = False
 
         try:
             # Notification that we are starting evaluation
             yield StreamMessageChunk(type="message", data=f"Starting evaluation for task: {task_id}")
+
+            # Ensure log directories exist before running tests
+            await with_retry(
+                sandbox,
+                lambda: sandbox.process.exec("mkdir -p /logs/agent /logs/verifier && chmod -R 755 /logs"),
+            )
 
             # Copy test files from dataset into sandbox and get test command
             test_script = await self._copy_test_files(sandbox, task_id)
@@ -351,28 +382,47 @@ class TerminalBenchBenchmark(BenchmarkService):
             # Start running the tests
             yield StreamMessageChunk(type="message", data=f"Running tests for {task_id}...")
 
-            # Run the test, collect the test output and stream the logs to the client
+            # Run the test, collect the test output and stream the logs to the client.
+            # Use retries=1 (no retry) to avoid re-running test.sh on streaming errors —
+            # if the connection drops after the test completes, a retry would re-run the
+            # test and could overwrite a passing reward.txt with a failing result.
             try:
                 async for line in self._stream_command_with_retry(
-                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout
+                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout,
+                    retries=1,
                 ):
                     test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
-            except (TimeoutError, DaytonaError, RuntimeError) as e:
+            except TimeoutError as e:
+                is_success = False
+                streaming_timed_out = True
+                exception_info = str(e)
+            except (DaytonaError, RuntimeError) as e:
+                # Streaming failed but the test may have already completed and written reward.txt.
+                # Mark as failed tentatively; we will try to recover via _retrieve_reward below.
                 is_success = False
                 exception_info = str(e)
 
-            # Create Harbor TrialResult format
-            if is_success:
-                # Read rewards from file written by test script
+            # Always try to read the reward file unless the test definitively timed out.
+            # This recovers scores when streaming drops after test.sh has already written
+            # the reward — without this, a transient Daytona network error causes a false
+            # negative even when the agent solved the task correctly.
+            if not streaming_timed_out:
                 rewards = await self._retrieve_reward(sandbox)
 
-                # Parse from the test output if not found
-                if not rewards:
+                if rewards:
+                    # Test completed and wrote a valid reward — streaming error is irrelevant.
+                    is_success = True
+                    exception_info = None
+                elif is_success:
+                    # Streaming succeeded but no reward file — fall back to output parsing.
                     rewards = self._parse_rewards_from_output(test_output)
+                else:
+                    rewards = None
 
                 reward_msg = f"with rewards: {rewards}" if rewards else "(no rewards found)"
-                yield StreamMessageChunk(type="message", data=f"✓ Tests finished {reward_msg}")
+                status_prefix = "✓" if is_success else "✗ (streaming error)"
+                yield StreamMessageChunk(type="message", data=f"{status_prefix} Tests finished {reward_msg}")
 
                 # Format final result
                 verifier_result = {
@@ -383,7 +433,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             else:
                 yield StreamMessageChunk(
                     type="message",
-                    data=f"✗ Tests failed: {exception_info}",
+                    data=f"✗ Tests timed out: {exception_info}",
                 )
 
         except Exception as e:
