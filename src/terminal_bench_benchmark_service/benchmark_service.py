@@ -72,7 +72,22 @@ class TerminalBenchBenchmark(BenchmarkService):
     Modify it to load your own dataset and implement your evaluation logic.
     """
 
-    _DATASET_LOCATION: Path = Path("datasets/terminal-bench-2")
+    # Map dataset name -> directory containing per-task subdirectories.
+    # `default` is kept as an alias for terminal-bench-2.0 for backward compatibility.
+    _DATASET_LOCATIONS: dict[str, Path] = {
+        "default": Path("datasets/terminal-bench-2"),
+        "terminal-bench-2.0": Path("datasets/terminal-bench-2"),
+        "terminal-bench-2.1": Path("datasets/terminal-bench-2.1/tasks"),
+    }
+
+    def _get_dataset_location(self, dataset: str | None) -> Path:
+        """Return the on-disk path containing per-task directories for the given dataset."""
+        key = dataset or "default"
+        if key not in self._DATASET_LOCATIONS:
+            raise ValueError(
+                f"Unknown dataset '{key}'. Available datasets: {', '.join(self._DATASET_LOCATIONS.keys())}"
+            )
+        return self._DATASET_LOCATIONS[key]
 
     async def _upload_test_files(self, sandbox: AsyncSandbox, tests_path: Path) -> None:
         """Upload test files from local dataset to sandbox /tests directory."""
@@ -90,21 +105,21 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         if files_to_upload:
             # Ensure all subdirectories exist before uploading
-            subdirs = {
+            subdirs: set[str] = {
                 str(Path(f.destination).parent)
                 for f in files_to_upload
                 if Path(f.destination).parent != Path("/tests")
             }
             for subdir in sorted(subdirs):
-                await with_retry(sandbox, lambda s=subdir: sandbox.process.exec(f"mkdir -p {s}"))
+                await with_retry(sandbox, lambda: sandbox.process.exec(f"mkdir -p {subdir}"))
             await with_retry(sandbox, lambda: sandbox.fs.upload_files(files_to_upload))
 
-    async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str) -> str:
+    async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str, dataset: str | None = None) -> str:
         """Copy test files from local dataset into sandbox /tests directory.
 
         Returns the test command to run (test.sh path or default).
         """
-        task_path = self._DATASET_LOCATION / task_id
+        task_path = self._get_dataset_location(dataset) / task_id
         tests_path = task_path / "tests"
 
         await with_retry(sandbox, lambda: sandbox.process.exec("rm -rf /tests && mkdir -p /tests && chmod 755 /tests"))
@@ -221,12 +236,29 @@ class TerminalBenchBenchmark(BenchmarkService):
 
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
-        if not self._DATASET_LOCATION.exists():
-            raise FileNotFoundError("Please run `make install-submodules` to install the dataset.")
+        # Datasets that share an on-disk path are loaded once and shared by reference
+        # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-2.0`).
+        loaded_by_path: dict[Path, dict[str, Any]] = {}
+        datasets: dict[str, dict[str, Any]] = {}
 
+        for name, location in self._DATASET_LOCATIONS.items():
+            if not location.exists():
+                raise FileNotFoundError(
+                    f"Dataset `{name}` not found at `{location}`. Run `make install-submodules` to install datasets."
+                )
+
+            if location not in loaded_by_path:
+                loaded_by_path[location] = self._load_tasks_from_directory(location)
+
+            datasets[name] = loaded_by_path[location]
+
+        return datasets
+
+    def _load_tasks_from_directory(self, location: Path) -> dict[str, Any]:
+        """Load all tasks from a single dataset directory."""
         dataset: dict[str, Any] = {}
-        for task_path in self._DATASET_LOCATION.iterdir():
-            # Skip hidden directories and non-directories
+        for task_path in location.iterdir():
+            # Skip hidden directories and non-directories (e.g. dataset.toml manifests)
             if task_path.name.startswith(".") or not task_path.is_dir():
                 continue
 
@@ -252,7 +284,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             dataset[task_path.name] = task
 
-        return {"default": dataset}
+        return dataset
 
     async def retrieve_task(
         self, task_id: str, skip_validation: bool = False, dataset: str | None = None
@@ -370,7 +402,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             )
 
             # Copy test files from dataset into sandbox and get test command
-            test_script = await self._copy_test_files(sandbox, task_id)
+            test_script = await self._copy_test_files(sandbox, task_id, dataset)
 
             # Caffe processes linger when agent gets OOM killed
             if task_id == "caffe-cifar-10":

@@ -30,6 +30,7 @@ allow-direct-references = true
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+extend-exclude = ["datasets"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -43,4 +44,7 @@ reportExplicitAny = false
 reportAny = false
 reportMissingTypeStubs = false
 enableTypeIgnoreComments = true
-exclude = [".*"]
+exclude = [".*", "datasets", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
