@@ -105,13 +105,13 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         if files_to_upload:
             # Ensure all subdirectories exist before uploading
-            subdirs = {
+            subdirs: set[str] = {
                 str(Path(f.destination).parent)
                 for f in files_to_upload
                 if Path(f.destination).parent != Path("/tests")
             }
             for subdir in sorted(subdirs):
-                await with_retry(sandbox, lambda s=subdir: sandbox.process.exec(f"mkdir -p {s}"))
+                await with_retry(sandbox, lambda: sandbox.process.exec(f"mkdir -p {subdir}"))
             await with_retry(sandbox, lambda: sandbox.fs.upload_files(files_to_upload))
 
     async def _copy_test_files(self, sandbox: AsyncSandbox, task_id: str, dataset: str | None = None) -> str:

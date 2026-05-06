@@ -44,4 +44,7 @@ reportExplicitAny = false
 reportAny = false
 reportMissingTypeStubs = false
 enableTypeIgnoreComments = true
-exclude = [".*", "datasets"]
+exclude = [".*", "datasets", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
