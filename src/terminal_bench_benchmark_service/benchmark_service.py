@@ -367,18 +367,20 @@ class TerminalBenchBenchmark(BenchmarkService):
 
     async def evaluate_response(self, request: EvaluateResponseRequest, dataset: str | None = None) -> Any:
         """Evaluate a text response."""
+        if request.response is None:
+            raise ValueError("response is required for terminal-bench evaluate_response")
+
         task = self.get_dataset(dataset)[request.task_id]
 
-        # Simple string comparison
-        is_correct = request.response.strip() == task["answer"]
+        response = request.response.strip()
+        is_correct = response == task["answer"]
 
-        # Return evaluation result as a dict (you can use any structure)
         return {
             "task_id": request.task_id,
             "resolved": is_correct,
             "score": 1.0 if is_correct else 0.0,
             "expected": task["answer"],
-            "received": request.response.strip(),
+            "received": response,
         }
 
     async def evaluate_instance(
