@@ -25,6 +25,39 @@ from pydantic import model_validator
 
 from terminal_bench_benchmark_service.utils import with_retry
 
+SCORE_TYPES: dict[str, dict[str, str]] = {
+    "score": {
+        "unit": "percent",
+        "description": "Mean Terminal-Bench verifier reward across requested tasks.",
+    }
+}
+
+
+def _vals_format_results(*, score: float, resolved: int, unresolved: int, mean_reward: float) -> dict[str, Any]:
+    by_status: dict[str, int] = {}
+    if resolved:
+        by_status["resolved"] = resolved
+    if unresolved:
+        by_status["unresolved"] = unresolved
+    return {
+        "full": {
+            "scores": {"score": {"value": score, "stderr": None}},
+            "counts": {"total": resolved + unresolved, "by_status": by_status, "extra": {}},
+            "aggregated_metrics": {"total": {"extra": {"mean_reward": mean_reward}}, "average_per_task": {}},
+            "extra": {},
+        }
+    }
+
+
+def _vals_format_task(*, task_id: str, reward: float) -> dict[str, Any]:
+    return {
+        "task_id": task_id,
+        "status": "resolved" if reward == 1.0 else "unresolved",
+        "scores": {"score": {"value": reward * 100, "stderr": None}},
+        "aggregated_metrics": {"metadata": {"mean_reward": reward}, "tool_usage": {}, "extra": {}},
+        "extra": {},
+    }
+
 
 class OverrideResources(Resources):
     @staticmethod
@@ -106,9 +139,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         if files_to_upload:
             # Ensure all subdirectories exist before uploading
             subdirs: set[str] = {
-                str(Path(f.destination).parent)
-                for f in files_to_upload
-                if Path(f.destination).parent != Path("/tests")
+                str(Path(f.destination).parent) for f in files_to_upload if Path(f.destination).parent != Path("/tests")
             }
             for subdir in sorted(subdirs):
                 await with_retry(sandbox, lambda: sandbox.process.exec(f"mkdir -p {subdir}"))
@@ -422,7 +453,10 @@ class TerminalBenchBenchmark(BenchmarkService):
             # test and could overwrite a passing reward.txt with a failing result.
             try:
                 async for line in self._stream_command_with_retry(
-                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout,
+                    sandbox,
+                    test_script,
+                    "/workspace" if task_id == "prove-plus-comm" else "/app",
+                    verifier_timeout,
                     retries=1,
                 ):
                     test_output += line + "\n"
@@ -496,15 +530,29 @@ class TerminalBenchBenchmark(BenchmarkService):
         task_scores: dict[str, float] = {
             task_id: self._extract_score(result) for task_id, result in evaluation_results.items()
         }
+        vals_format_tasks = [
+            _vals_format_task(task_id=task_id, reward=reward) for task_id, reward in task_scores.items()
+        ]
 
         total_count = len(task_scores)
         resolved = sum(1 for s in task_scores.values() if s == 1.0)
         mean_score = sum(task_scores.values()) / total_count
 
+        final_score = mean_score * 100
+        unresolved = total_count - resolved
         metadata = {
             "total_tasks": total_count,
             "resolved_tasks": resolved,
-            "unresolved_tasks": total_count - resolved,
+            "unresolved_tasks": unresolved,
+            "score_types": SCORE_TYPES,
+            "results": _vals_format_results(
+                score=final_score,
+                resolved=resolved,
+                unresolved=unresolved,
+                mean_reward=mean_score,
+            ),
+            "primary_population": "full",
+            "tasks": vals_format_tasks,
         }
 
-        return FinalScoreResult(score=mean_score * 100, metadata=metadata)
+        return FinalScoreResult(score=final_score, metadata=metadata)
