@@ -12,7 +12,7 @@ def test_load_terminal_bench_2_0_and_2_1() -> None:
     datasets = asyncio.run(TerminalBenchBenchmark().load_datasets())
 
     assert set(datasets.keys()) == {"default", "terminal-bench-2.0", "terminal-bench-2.1"}
-    assert datasets["default"] is datasets["terminal-bench-2.0"], "`default` must alias terminal-bench-2.0"
+    assert datasets["default"] is datasets["terminal-bench-2.1"], "`default` must alias terminal-bench-2.1"
 
     for name in ("terminal-bench-2.0", "terminal-bench-2.1"):
         tasks = datasets[name]
