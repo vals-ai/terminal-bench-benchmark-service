@@ -73,9 +73,9 @@ class TerminalBenchBenchmark(BenchmarkService):
     """
 
     # Map dataset name -> directory containing per-task subdirectories.
-    # `default` is kept as an alias for terminal-bench-2.0 for backward compatibility.
+    # `default` aliases the latest Terminal-Bench dataset.
     _DATASET_LOCATIONS: dict[str, Path] = {
-        "default": Path("datasets/terminal-bench-2"),
+        "default": Path("datasets/terminal-bench-2.1/tasks"),
         "terminal-bench-2.0": Path("datasets/terminal-bench-2"),
         "terminal-bench-2.1": Path("datasets/terminal-bench-2.1/tasks"),
     }
@@ -237,7 +237,7 @@ class TerminalBenchBenchmark(BenchmarkService):
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
         # Datasets that share an on-disk path are loaded once and shared by reference
-        # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-2.0`).
+        # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-2.1`).
         loaded_by_path: dict[Path, dict[str, Any]] = {}
         datasets: dict[str, dict[str, Any]] = {}
 
