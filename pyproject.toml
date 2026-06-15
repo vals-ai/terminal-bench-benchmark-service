@@ -5,9 +5,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 dependencies = [
-    "create-benchmark-service @ git+https://github.com/vals-ai/create-benchmark-service.git@v0.5.0",
+    "create-benchmark-service",
     "tenacity>=9.1.4",
 ]
+
+[tool.uv.sources]
+create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", tag = "v0.8.0" }
 
 [dependency-groups]
 dev = [
