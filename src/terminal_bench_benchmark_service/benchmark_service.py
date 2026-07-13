@@ -2,13 +2,22 @@
 
 import asyncio
 import json
+import logging
 import tomllib
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
 from benchmark_service import BenchmarkService
-from benchmark_service.sandbox import ExecResult, ImageSource, Sandbox, SandboxError
+from benchmark_service.sandbox import (
+    DaytonaProviderConfig,
+    ExecResult,
+    ImageSource,
+    Sandbox,
+    SandboxCreateRequest,
+    SandboxError,
+    SnapshotSource,
+)
 from benchmark_service.schemas import (
     EvaluateResponseRequest,
     FinalScoreResult,
@@ -16,13 +25,24 @@ from benchmark_service.schemas import (
     RetrieveTaskResponse,
     StreamChunk,
     StreamErrorChunk,
+    StreamEvalResumeStateChunk,
     StreamMessageChunk,
     StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
 from pydantic import model_validator
 
+from terminal_bench_benchmark_service.eval_resume import (
+    EvalResumeState,
+    create_daytona_snapshot,
+    resume_sandbox_name,
+)
 from terminal_bench_benchmark_service.utils import with_retry
+
+logger = logging.getLogger(__name__)
+
+EVAL_SANDBOX_CREATE_TIMEOUT_SECONDS = 600
+EVAL_SANDBOX_AUTO_STOP_MINUTES = 15
 
 
 class OverrideResources(Resources):
@@ -376,10 +396,71 @@ class TerminalBenchBenchmark(BenchmarkService):
             "received": response,
         }
 
+    async def stream_evaluate_response(
+        self, request: EvaluateResponseRequest, dataset: str | None = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Resume verification from a durable post-agent Daytona snapshot."""
+        if request.eval_resume_state is None:
+            yield StreamResultChunk(type="result", data=await self.evaluate_response(request, dataset))
+            return
+
+        state = EvalResumeState.model_validate(request.eval_resume_state)
+        requested_dataset = dataset or request.dataset or "default"
+        if request.dataset is not None and request.dataset != requested_dataset:
+            raise ValueError(f"request dataset mismatch: {request.dataset} != {requested_dataset}")
+        if state.task_id != request.task_id:
+            raise ValueError(f"eval_resume_state task_id mismatch: {state.task_id} != {request.task_id}")
+        if state.dataset != requested_dataset:
+            raise ValueError(f"eval_resume_state dataset mismatch: {state.dataset} != {requested_dataset}")
+        if not isinstance(request.sandbox_provider, DaytonaProviderConfig):
+            raise ValueError("Terminal-Bench eval resume requires a Daytona sandbox_provider")
+
+        await self.validate_task_ids([request.task_id], dataset=requested_dataset)
+        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
+
+        task = await self.retrieve_task(request.task_id, skip_validation=True, dataset=requested_dataset)
+        async with request.sandbox_provider.create_provider() as provider:
+            sandbox = await provider.create_sandbox(
+                SandboxCreateRequest(
+                    source=SnapshotSource(snapshot=state.snapshot_name),
+                    resources=task.resources,
+                    name=resume_sandbox_name(state),
+                    labels={
+                        "Benchmark": "terminal-bench",
+                        "Task": state.task_id,
+                        "Dataset": state.dataset,
+                        "EvalResume": "true",
+                    },
+                    env_vars={},
+                    auto_stop_interval=EVAL_SANDBOX_AUTO_STOP_MINUTES,
+                    create_timeout=EVAL_SANDBOX_CREATE_TIMEOUT_SECONDS,
+                )
+            )
+            try:
+                async for chunk in self._evaluate_snapshot(request.task_id, sandbox, dataset=requested_dataset):
+                    yield chunk
+            finally:
+                try:
+                    await provider.delete_sandbox(sandbox.id)
+                except Exception:
+                    logger.exception("Failed to delete Terminal-Bench eval-resume sandbox %s", sandbox.id)
+
     async def evaluate_instance(
         self, task_id: str, sandbox: Sandbox, dataset: str | None = None
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Pure evaluation - run test suite in sandbox and return Harbor TrialResult format."""
+        """Checkpoint the post-agent filesystem, then evaluate it."""
+        await self.validate_task_ids([task_id], dataset=dataset)
+        state = EvalResumeState.create(task_id, dataset or "default")
+        await create_daytona_snapshot(sandbox, state.snapshot_name)
+        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
+
+        async for chunk in self._evaluate_snapshot(task_id, sandbox, dataset=dataset):
+            yield chunk
+
+    async def _evaluate_snapshot(
+        self, task_id: str, sandbox: Sandbox, dataset: str | None = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Run the unchanged verifier path against a captured filesystem state."""
         exception_info: str | None = None
         verifier_result: dict[str, Any] | None = None
         test_output: str = ""
