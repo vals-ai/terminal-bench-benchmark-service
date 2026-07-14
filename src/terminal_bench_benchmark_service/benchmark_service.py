@@ -148,9 +148,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
     async def _retrieve_reward(self, sandbox: Sandbox) -> dict[str, Any] | None:
         try:
-            result: ExecResult = await with_retry(
-                sandbox, lambda: sandbox.exec("cat /logs/verifier/reward.txt")
-            )
+            result: ExecResult = await with_retry(sandbox, lambda: sandbox.exec("cat /logs/verifier/reward.txt"))
             if result.exit_code == 0:
                 return {"score": float(result.output.strip())}
         except Exception:
@@ -496,7 +494,10 @@ class TerminalBenchBenchmark(BenchmarkService):
             # test and could overwrite a passing reward.txt with a failing result.
             try:
                 async for line in self._stream_command_with_retry(
-                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout,
+                    sandbox,
+                    test_script,
+                    "/workspace" if task_id == "prove-plus-comm" else "/app",
+                    verifier_timeout,
                     retries=1,
                 ):
                     test_output += line + "\n"
