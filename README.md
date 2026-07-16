@@ -15,6 +15,18 @@ Edit `src/terminal_bench_benchmark_service/benchmark_service.py` and implement t
 
 `setup_task` and `evaluate_instance` are async generators — yield `StreamMessageChunk`, `StreamErrorChunk`, and finally `StreamResultChunk`.
 
+## Datasets
+
+The service loads Terminal-Bench datasets from git submodules under `datasets/`.
+
+| Dataset name | Source path |
+|--------------|-------------|
+| `default` | `datasets/terminal-bench-2.1/tasks` |
+| `terminal-bench-2.1` | `datasets/terminal-bench-2.1/tasks` |
+| `terminal-bench-2.0` | `datasets/terminal-bench-2` |
+
+Requests that omit `dataset` use `default`, which currently aliases `terminal-bench-2.1`.
+
 ## Development
 
 ```bash
