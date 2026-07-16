@@ -25,6 +25,11 @@ from pydantic import model_validator
 from terminal_bench_benchmark_service.utils import with_retry
 
 
+def with_pinned_image_tools(command: str) -> str:
+    """Prefer verifier tools pinned by the task image over agent-installed tools."""
+    return f"PATH=/bin:$PATH {command}"
+
+
 class OverrideResources(Resources):
     @staticmethod
     def _normalize_resource(value: Any, fallback_key: str | None, data: dict[str, Any]) -> int | None:
@@ -408,6 +413,11 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             # Start running the tests
             yield StreamMessageChunk(type="message", data=f"Running tests for {task_id}...")
+
+            # Task images install their pinned verifier tools in /bin, but an agent may
+            # create an older user-local executable with the same name. Keep the image's
+            # controlled toolchain ahead of user-local paths during evaluation.
+            test_script = with_pinned_image_tools(test_script)
 
             # Run the test, collect the test output and stream the logs to the client.
             # Use retries=1 (no retry) to avoid re-running test.sh on streaming errors —
