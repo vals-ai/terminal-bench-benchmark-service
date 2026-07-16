@@ -45,13 +45,35 @@ def prepare_test_file(task_id: str, relative_path: Path, content: bytes) -> byte
         return content
 
     source = content.decode("utf-8")
-    shard_reference = '"en/c4-train.00009-of-01024.json.gz"'
+    dataset_import = "from datasets import load_dataset"
+    dataset_loader = '''dataset = load_dataset(
+        "allenai/c4",
+        data_files={"train": ["en/c4-train.00009-of-01024.json.gz"]},
+        split="train",
+    )'''
     mutation_point = 'del item["timestamp"]\n                    f.write(json.dumps(item) + "\\n")'
 
-    if source.count(shard_reference) != 1 or source.count(mutation_point) != 1:
+    if (
+        source.count(dataset_import) != 1
+        or source.count(dataset_loader) != 1
+        or source.count(mutation_point) != 1
+    ):
         raise ValueError("reshard-c4-data verifier source no longer matches the hermetic fixture patch")
 
-    source = source.replace(shard_reference, '"en/c4-train.00000-of-01024.json.gz"')
+    source = source.replace("import hashlib", "import glob\nimport hashlib")
+    source = source.replace(dataset_import, "from datasets import Dataset, concatenate_datasets")
+    source = source.replace(
+        dataset_loader,
+        '''cache_files = sorted(
+        glob.glob(
+            "/root/.cache/huggingface/datasets/allenai___c4/"
+            "default-b04fc8a0b8562884/*/*/c4-train-*.arrow"
+        )
+    )
+    if len(cache_files) != 2:
+        raise RuntimeError(f"expected 2 baked C4 Arrow files, found {len(cache_files)}")
+    dataset = concatenate_datasets([Dataset.from_file(path) for path in cache_files])''',
+    )
     source = source.replace(
         mutation_point,
         'del item["timestamp"]\n'
