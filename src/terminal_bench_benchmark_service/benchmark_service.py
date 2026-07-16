@@ -25,9 +25,44 @@ from pydantic import model_validator
 from terminal_bench_benchmark_service.utils import with_retry
 
 
+_RESHARD_C4_TASK_ID = "reshard-c4-data"
+
+
 def with_pinned_image_tools(command: str) -> str:
     """Prefer verifier tools pinned by the task image over agent-installed tools."""
     return f"PATH=/bin:$PATH {command}"
+
+
+def prepare_test_file(task_id: str, relative_path: Path, content: bytes) -> bytes:
+    """Make the C4 verifier hermetic while preserving an unseen round-trip fixture.
+
+    The task image already contains the complete shard-00000 dataset cache used to
+    build ``/app/c4_sample``. Reusing that cache avoids a live Hugging Face
+    dependency. A per-evaluation nonce is added to every record so the verifier's
+    contents are not identical to the agent-visible sample.
+    """
+    if task_id != _RESHARD_C4_TASK_ID or relative_path != Path("test_outputs.py"):
+        return content
+
+    source = content.decode("utf-8")
+    shard_reference = '"en/c4-train.00009-of-01024.json.gz"'
+    mutation_point = 'del item["timestamp"]\n                    f.write(json.dumps(item) + "\\n")'
+
+    if source.count(shard_reference) != 1 or source.count(mutation_point) != 1:
+        raise ValueError("reshard-c4-data verifier source no longer matches the hermetic fixture patch")
+
+    source = source.replace(shard_reference, '"en/c4-train.00000-of-01024.json.gz"')
+    source = source.replace(
+        mutation_point,
+        'del item["timestamp"]\n'
+        '                    item["_vals_eval_nonce"] = EVAL_NONCE\n'
+        '                    f.write(json.dumps(item) + "\\n")',
+    )
+    source = source.replace(
+        'DECOMPRESS_SCRIPT = "/app/decompress.py"',
+        'DECOMPRESS_SCRIPT = "/app/decompress.py"\nEVAL_NONCE = uuid.uuid4().hex',
+    )
+    return source.encode("utf-8")
 
 
 class OverrideResources(Resources):
@@ -93,14 +128,14 @@ class TerminalBenchBenchmark(BenchmarkService):
             )
         return self._DATASET_LOCATIONS[key]
 
-    async def _upload_test_files(self, sandbox: Sandbox, tests_path: Path) -> None:
+    async def _upload_test_files(self, sandbox: Sandbox, tests_path: Path, task_id: str) -> None:
         """Upload test files from local dataset to sandbox /tests directory."""
         files_to_upload: list[tuple[str, bytes]] = []
         for test_file in tests_path.rglob("*"):
             if test_file.is_file():
                 relative = test_file.relative_to(tests_path)
                 with open(test_file, "rb") as f:
-                    files_to_upload.append((f"/tests/{relative}", f.read()))
+                    files_to_upload.append((f"/tests/{relative}", prepare_test_file(task_id, relative, f.read())))
 
         if files_to_upload:
             # Ensure all subdirectories exist before uploading
@@ -125,7 +160,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         await with_retry(sandbox, lambda: sandbox.exec("rm -rf /tests && mkdir -p /tests && chmod 755 /tests"))
 
         # Upload test files
-        await self._upload_test_files(sandbox, tests_path)
+        await self._upload_test_files(sandbox, tests_path, task_id)
 
         await with_retry(sandbox, lambda: sandbox.exec("chmod +x /tests/test.sh"))
 
@@ -133,9 +168,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
     async def _retrieve_reward(self, sandbox: Sandbox) -> dict[str, Any] | None:
         try:
-            result: ExecResult = await with_retry(
-                sandbox, lambda: sandbox.exec("cat /logs/verifier/reward.txt")
-            )
+            result: ExecResult = await with_retry(sandbox, lambda: sandbox.exec("cat /logs/verifier/reward.txt"))
             if result.exit_code == 0:
                 return {"score": float(result.output.strip())}
         except Exception:
@@ -418,6 +451,8 @@ class TerminalBenchBenchmark(BenchmarkService):
             # create an older user-local executable with the same name. Keep the image's
             # controlled toolchain ahead of user-local paths during evaluation.
             test_script = with_pinned_image_tools(test_script)
+            if task_id == _RESHARD_C4_TASK_ID:
+                test_script = f"HF_HUB_OFFLINE=1 {test_script}"
 
             # Run the test, collect the test output and stream the logs to the client.
             # Use retries=1 (no retry) to avoid re-running test.sh on streaming errors —
@@ -425,7 +460,10 @@ class TerminalBenchBenchmark(BenchmarkService):
             # test and could overwrite a passing reward.txt with a failing result.
             try:
                 async for line in self._stream_command_with_retry(
-                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout,
+                    sandbox,
+                    test_script,
+                    "/workspace" if task_id == "prove-plus-comm" else "/app",
+                    verifier_timeout,
                     retries=1,
                 ):
                     test_output += line + "\n"
