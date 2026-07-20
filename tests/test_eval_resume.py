@@ -242,6 +242,35 @@ def test_resume_rejects_malformed_or_noncanonical_snapshot_pointer(snapshot_name
         asyncio.run(collect(benchmark.stream_evaluate_response(request)))
 
 
+@pytest.mark.parametrize("version", [True, 1.0])
+def test_resume_rejects_non_exact_integer_version_before_checkpoint_or_provider(
+    version: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    benchmark = service()
+    state = EvalResumeState.create("task-1", "default").model_dump(mode="json")
+    state["version"] = version
+    request = EvaluateResponseRequest(
+        task_id="task-1",
+        eval_resume_state=state,
+        sandbox_provider=daytona_config(),
+    )
+    chunks: list[StreamChunk] = []
+
+    def forbidden_provider(_config: DaytonaProviderConfig) -> SandboxProvider:
+        raise AssertionError("invalid resume state must not create a provider")
+
+    monkeypatch.setattr(DaytonaProviderConfig, "create_provider", forbidden_provider)
+
+    async def consume() -> None:
+        async for chunk in benchmark.stream_evaluate_response(request):
+            chunks.append(chunk)
+
+    with pytest.raises(ValidationError):
+        asyncio.run(consume())
+
+    assert chunks == []
+
+
 def test_snapshot_pointers_are_unique() -> None:
     assert (
         EvalResumeState.create("task-1", "default").snapshot_name
