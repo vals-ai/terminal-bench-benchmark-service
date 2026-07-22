@@ -1,12 +1,14 @@
 """Example benchmark service implementation."""
 
 import asyncio
+import hashlib
 import json
 import logging
+import shlex
 import tomllib
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from benchmark_service import BenchmarkService
 from benchmark_service.sandbox import (
@@ -16,6 +18,7 @@ from benchmark_service.sandbox import (
     Sandbox,
     SandboxCreateRequest,
     SandboxError,
+    SandboxProvider,
     SnapshotSource,
 )
 from benchmark_service.schemas import (
@@ -34,6 +37,7 @@ from pydantic import model_validator
 
 from terminal_bench_benchmark_service.eval_resume import (
     EvalResumeState,
+    cleanup_expired_daytona_snapshots,
     create_daytona_snapshot,
     resume_sandbox_name,
 )
@@ -43,6 +47,67 @@ logger = logging.getLogger(__name__)
 
 EVAL_SANDBOX_CREATE_TIMEOUT_SECONDS = 600
 EVAL_SANDBOX_AUTO_STOP_MINUTES = 15
+
+_PROCESS_REHYDRATION_COMMANDS = {
+    "nginx-request-logging": """
+if command -v nginx >/dev/null && nginx -t; then
+  pkill nginx >/dev/null 2>&1 || true
+  nginx
+  bash -c '</dev/tcp/127.0.0.1/8080'
+fi
+""",
+    "pypi-server": """
+if test -x /opt/pypiserver/venv/bin/pypi-server && test -f /opt/pypiserver/.htpasswd; then
+  pkill -f '[p]ypi-server' >/dev/null 2>&1 || true
+  nohup /opt/pypiserver/venv/bin/pypi-server -p 8080 \
+    --passwords /opt/pypiserver/.htpasswd /srv/pypi-packages \
+    >/var/log/pypiserver.log 2>&1 &
+  ready=0
+  for _ in $(seq 1 30); do
+    if bash -c '</dev/tcp/127.0.0.1/8080' >/dev/null 2>&1; then ready=1; break; fi
+    sleep 1
+  done
+  test "$ready" = 1
+fi
+""",
+    "qemu-alpine-ssh": """
+if command -v qemu-system-x86_64 >/dev/null && test -f /app/alpine-disk.qcow2; then
+  pkill -f '[q]emu-system-x86_64.*alpine-disk.qcow2' >/dev/null 2>&1 || true
+  qemu-system-x86_64 -m 1024 -drive file=/app/alpine-disk.qcow2,format=qcow2 \
+    -boot c -nic user,hostfwd=tcp::2222-:22 -daemonize -display none -vga none
+  ready=0
+  for _ in $(seq 1 60); do
+    if bash -c '</dev/tcp/127.0.0.1/2222' >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+  done
+  test "$ready" = 1
+fi
+""",
+}
+
+
+async def _delete_owned_sandbox(provider: SandboxProvider, sandbox_id: str) -> None:
+    cleanup = asyncio.create_task(provider.delete_sandbox(sandbox_id))
+    try:
+        await asyncio.shield(cleanup)
+    except asyncio.CancelledError:
+        await asyncio.shield(cleanup)
+        raise
+    except Exception:
+        logger.exception("Failed to delete Terminal-Bench eval-resume sandbox %s", sandbox_id)
+
+
+async def _create_owned_sandbox(
+    provider: SandboxProvider,
+    request: SandboxCreateRequest,
+) -> Sandbox:
+    creation = asyncio.create_task(provider.create_sandbox(request))
+    try:
+        return await asyncio.shield(creation)
+    except asyncio.CancelledError:
+        sandbox = await asyncio.shield(creation)
+        await _delete_owned_sandbox(provider, sandbox.id)
+        raise
 
 
 class OverrideResources(Resources):
@@ -107,6 +172,28 @@ class TerminalBenchBenchmark(BenchmarkService):
                 f"Unknown dataset '{key}'. Available datasets: {', '.join(self._DATASET_LOCATIONS.keys())}"
             )
         return self._DATASET_LOCATIONS[key]
+
+    def _task_contract_sha256(self, task_id: str, dataset: str) -> str:
+        task = self.get_dataset(dataset)[task_id]
+        digest = hashlib.sha256()
+        digest.update(json.dumps([dataset, task], sort_keys=True, separators=(",", ":")).encode())
+        task_dir = self._get_dataset_location(dataset) / task_id
+        if task_dir.is_dir():
+            for path in sorted(task_dir.rglob("*")):
+                if path.is_file() and (path.name == "task.toml" or "tests" in path.parts):
+                    digest.update(str(path.relative_to(task_dir)).encode())
+                    digest.update(path.read_bytes())
+        digest.update(Path(__file__).read_bytes())
+        return digest.hexdigest()
+
+    @staticmethod
+    def _run_id(sandbox: Sandbox) -> str:
+        raw_labels = getattr(getattr(sandbox, "_sandbox", None), "labels", None)
+        labels = cast(dict[str, str], raw_labels) if isinstance(raw_labels, dict) else {}
+        run_id = labels.get("Id")
+        if not isinstance(run_id, str) or not run_id:
+            raise ValueError("Terminal-Bench eval resume requires the original sandbox Id label")
+        return run_id
 
     async def _upload_test_files(self, sandbox: Sandbox, tests_path: Path) -> None:
         """Upload test files from local dataset to sandbox /tests directory."""
@@ -394,6 +481,17 @@ class TerminalBenchBenchmark(BenchmarkService):
             "received": response,
         }
 
+    async def _rehydrate_snapshot(self, task_id: str, sandbox: Sandbox) -> None:
+        command = _PROCESS_REHYDRATION_COMMANDS.get(task_id)
+        if command is None:
+            return
+        result = await with_retry(
+            sandbox,
+            lambda: sandbox.exec(f"bash -lc {shlex.quote(command)}", timeout=180),
+        )
+        if result.exit_code != 0:
+            raise RuntimeError(f"Failed to rehydrate Terminal-Bench task {task_id}: {result.output.strip()}")
+
     async def stream_evaluate_response(
         self, request: EvaluateResponseRequest, dataset: str | None = None
     ) -> AsyncGenerator[StreamChunk, None]:
@@ -414,11 +512,19 @@ class TerminalBenchBenchmark(BenchmarkService):
             raise ValueError("Terminal-Bench eval resume requires a Daytona sandbox_provider")
 
         await self.validate_task_ids([request.task_id], dataset=requested_dataset)
+        contract = self._task_contract_sha256(request.task_id, requested_dataset)
+        if state.task_contract_sha256 != contract:
+            raise ValueError("eval_resume_state task contract does not match the deployed verifier")
         yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
 
         task = await self.retrieve_task(request.task_id, skip_validation=True, dataset=requested_dataset)
         async with request.sandbox_provider.create_provider() as provider:
-            sandbox = await provider.create_sandbox(
+            try:
+                await cleanup_expired_daytona_snapshots(provider)
+            except Exception:
+                logger.exception("Failed to clean expired Terminal-Bench eval-resume snapshots")
+            sandbox = await _create_owned_sandbox(
+                provider,
                 SandboxCreateRequest(
                     source=SnapshotSource(snapshot=state.snapshot_name),
                     resources=task.resources,
@@ -428,27 +534,32 @@ class TerminalBenchBenchmark(BenchmarkService):
                         "Task": state.task_id,
                         "Dataset": state.dataset,
                         "EvalResume": "true",
+                        "Id": state.run_id,
                     },
                     env_vars={},
                     auto_stop_interval=EVAL_SANDBOX_AUTO_STOP_MINUTES,
                     create_timeout=EVAL_SANDBOX_CREATE_TIMEOUT_SECONDS,
-                )
+                ),
             )
             try:
+                await self._rehydrate_snapshot(request.task_id, sandbox)
                 async for chunk in self._evaluate_snapshot(request.task_id, sandbox, dataset=requested_dataset):
                     yield chunk
             finally:
-                try:
-                    await provider.delete_sandbox(sandbox.id)
-                except Exception:
-                    logger.exception("Failed to delete Terminal-Bench eval-resume sandbox %s", sandbox.id)
+                await _delete_owned_sandbox(provider, sandbox.id)
 
     async def evaluate_instance(
         self, task_id: str, sandbox: Sandbox, dataset: str | None = None
     ) -> AsyncGenerator[StreamChunk, None]:
         """Checkpoint the post-agent filesystem, then evaluate it."""
         await self.validate_task_ids([task_id], dataset=dataset)
-        state = EvalResumeState.create(task_id, dataset or "default")
+        requested_dataset = dataset or "default"
+        state = EvalResumeState.create(
+            task_id,
+            requested_dataset,
+            self._run_id(sandbox),
+            self._task_contract_sha256(task_id, requested_dataset),
+        )
         await create_daytona_snapshot(sandbox, state.snapshot_name)
         yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
 

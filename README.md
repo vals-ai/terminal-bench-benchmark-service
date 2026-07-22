@@ -27,6 +27,15 @@ The service loads Terminal-Bench datasets from git submodules under `datasets/`.
 
 Requests that omit `dataset` use `default`, which currently aliases `terminal-bench-2.1`.
 
+## Evaluation retry
+
+Terminal-Bench checkpoints the post-agent Daytona filesystem before verification.
+Retries restore that snapshot without rerunning the agent. The service restarts the
+runtime state required by `nginx-request-logging`, `pypi-server`, and
+`qemu-alpine-ssh`; checkpoints are bound to the task image, tests, verifier code,
+dataset, and original run ID. Owned snapshots expire after 30 days through the
+best-effort Daytona janitor that runs on retry.
+
 ## Development
 
 ```bash
