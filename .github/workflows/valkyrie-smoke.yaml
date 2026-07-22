@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   smoke:
-    uses: vals-ai/.github/.github/workflows/benchmark-service-smoke.yaml@jf/benchmark-smoke-harvey-support
+    uses: vals-ai/.github/.github/workflows/benchmark-service-smoke.yaml@main
     with:
       checkout_submodules: true
     secrets:
