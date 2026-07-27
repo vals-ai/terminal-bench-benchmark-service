@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 SNAPSHOT_PREFIX = "tb-eval-resume-v1"
 SNAPSHOT_TIMEOUT_SECONDS = 600
+SNAPSHOT_JANITOR_TIMEOUT_SECONDS = 60
 SNAPSHOT_RETENTION_SECONDS = 30 * 24 * 60 * 60
 
 
@@ -95,12 +96,39 @@ async def cleanup_expired_daytona_snapshots(provider: object, now_seconds: int |
     daytona = cast(Any, getattr(provider, "_daytona", None))
     snapshot_service = getattr(daytona, "snapshot", None)
     if snapshot_service is None:
-        return
+        inner = getattr(provider, "_sandbox", None)
+        sandbox_api = getattr(inner, "_sandbox_api", None)
+        api_client = getattr(sandbox_api, "api_client", None)
+        if api_client is None:
+            return
+
+        from daytona_api_client_async import SnapshotsApi
+
+        snapshot_service = SnapshotsApi(api_client)
+
+        async def list_snapshots(page: int) -> Any:
+            return await snapshot_service.get_all_snapshots(
+                page=page,
+                limit=100,
+                name=f"{SNAPSHOT_PREFIX}-",
+            )
+
+        async def delete_snapshot(snapshot: Any) -> None:
+            await snapshot_service.remove_snapshot(snapshot.id)
+
+    else:
+
+        async def list_snapshots(page: int) -> Any:
+            return await snapshot_service.list(page=page, limit=100)
+
+        async def delete_snapshot(snapshot: Any) -> None:
+            await snapshot_service.delete(snapshot)
+
     cutoff = (now_seconds or int(time.time())) - SNAPSHOT_RETENTION_SECONDS
     page = 1
     expired: list[Any] = []
     while True:
-        result = await snapshot_service.list(page=page, limit=100)
+        result = await list_snapshots(page)
         expired.extend(
             snapshot
             for snapshot in result.items
@@ -110,7 +138,7 @@ async def cleanup_expired_daytona_snapshots(provider: object, now_seconds: int |
             break
         page += 1
     for snapshot in expired:
-        await snapshot_service.delete(snapshot)
+        await delete_snapshot(snapshot)
 
 
 async def create_daytona_snapshot(sandbox: Sandbox, snapshot_name: str) -> None:

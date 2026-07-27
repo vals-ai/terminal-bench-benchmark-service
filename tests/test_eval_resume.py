@@ -138,41 +138,87 @@ def test_stream_evaluate_response_preserves_text_evaluation() -> None:
     assert chunks[-1].data["score"] == 1.0
 
 
-def test_initial_response_collects_expired_snapshots_without_eval_retry(
+def test_initial_evaluation_collects_expired_snapshots(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     benchmark = service()
-    benchmark.datasets["default"]["task-1"]["answer"] = "done"
     expired_name = f"{resume_module.SNAPSHOT_PREFIX}-{'a' * 12}-6553f100{'1' * 24}"
+    removed: list[str] = []
 
-    class SnapshotService:
-        def __init__(self) -> None:
-            self.deleted: list[str] = []
+    class SnapshotsApi:
+        def __init__(self, _client: object) -> None:
+            pass
 
-        async def list(self, page: int, limit: int) -> SimpleNamespace:
-            assert (page, limit) == (1, 100)
+        async def get_all_snapshots(self, *, page: int, limit: int, name: str) -> SimpleNamespace:
+            assert (page, limit, name) == (1, 100, f"{resume_module.SNAPSHOT_PREFIX}-")
             return SimpleNamespace(
-                items=[SimpleNamespace(name=expired_name)],
+                items=[SimpleNamespace(id=expired_name, name=expired_name)],
                 total_pages=1,
             )
 
-        async def delete(self, snapshot: SimpleNamespace) -> None:
-            self.deleted.append(snapshot.name)
+        async def remove_snapshot(self, snapshot_id: str) -> None:
+            removed.append(snapshot_id)
 
-    snapshots = SnapshotService()
-    provider = FakeProvider()
-    provider._daytona = SimpleNamespace(snapshot=snapshots)  # type: ignore[attr-defined]
-    use_provider(monkeypatch, provider)
-    request = EvaluateResponseRequest(
-        task_id="task-1",
-        response="done",
-        sandbox_provider=daytona_config(),
+    async def snapshot(_sandbox: Sandbox, _name: str) -> None:
+        pass
+
+    async def evaluator(
+        _task_id: str, _sandbox: Sandbox, dataset: str | None = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        yield StreamResultChunk(type="result", data={"score": 1.0})
+
+    import daytona_api_client_async
+
+    monkeypatch.setattr(daytona_api_client_async, "SnapshotsApi", SnapshotsApi)
+    monkeypatch.setattr(service_module, "create_daytona_snapshot", snapshot)
+    monkeypatch.setattr(benchmark, "_evaluate_snapshot", evaluator)
+    sandbox = DaytonaSandbox(
+        SimpleNamespace(
+            id="sandbox",
+            name="sandbox",
+            state="started",
+            labels={"Id": "run-123"},
+            _sandbox_api=SimpleNamespace(api_client=object()),
+        )
     )
 
-    chunks = asyncio.run(collect(benchmark.stream_evaluate_response(request)))
+    chunks = asyncio.run(collect(benchmark.evaluate_instance("task-1", sandbox)))
 
     assert chunks[-1].data["score"] == 1.0
-    assert snapshots.deleted == [expired_name]
+    assert removed == [expired_name]
+
+
+def test_initial_evaluation_does_not_wait_forever_for_snapshot_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    benchmark = service()
+    cleanup_started = False
+    snapshot_created = False
+
+    async def cleanup(_sandbox: object) -> None:
+        nonlocal cleanup_started
+        cleanup_started = True
+        await asyncio.Event().wait()
+
+    async def snapshot(_sandbox: Sandbox, _name: str) -> None:
+        nonlocal snapshot_created
+        snapshot_created = True
+
+    async def evaluator(
+        _task_id: str, _sandbox: Sandbox, dataset: str | None = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        yield StreamResultChunk(type="result", data={"score": 1.0})
+
+    monkeypatch.setattr(service_module, "cleanup_expired_daytona_snapshots", cleanup)
+    monkeypatch.setattr(service_module, "SNAPSHOT_JANITOR_TIMEOUT_SECONDS", 0.01, raising=False)
+    monkeypatch.setattr(service_module, "create_daytona_snapshot", snapshot)
+    monkeypatch.setattr(benchmark, "_evaluate_snapshot", evaluator)
+
+    chunks = asyncio.run(collect(benchmark.evaluate_instance("task-1", FakeSandbox())))
+
+    assert cleanup_started
+    assert snapshot_created
+    assert chunks[-1].data["score"] == 1.0
 
 
 def test_checkpoint_is_emitted_before_verifier_setup_failure(monkeypatch: pytest.MonkeyPatch) -> None:

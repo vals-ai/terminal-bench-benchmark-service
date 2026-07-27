@@ -36,6 +36,7 @@ from benchmark_service.utils import stream_command
 from pydantic import model_validator
 
 from terminal_bench_benchmark_service.eval_resume import (
+    SNAPSHOT_JANITOR_TIMEOUT_SECONDS,
     EvalResumeState,
     cleanup_expired_daytona_snapshots,
     create_daytona_snapshot,
@@ -497,12 +498,6 @@ class TerminalBenchBenchmark(BenchmarkService):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Resume verification from a durable post-agent Daytona snapshot."""
         if request.eval_resume_state is None:
-            if isinstance(request.sandbox_provider, DaytonaProviderConfig):
-                async with request.sandbox_provider.create_provider() as provider:
-                    try:
-                        await cleanup_expired_daytona_snapshots(provider)
-                    except Exception:
-                        logger.exception("Failed to clean expired Terminal-Bench eval-resume snapshots")
             yield StreamResultChunk(type="result", data=await self.evaluate_response(request, dataset))
             return
 
@@ -526,7 +521,10 @@ class TerminalBenchBenchmark(BenchmarkService):
         task = await self.retrieve_task(request.task_id, skip_validation=True, dataset=requested_dataset)
         async with request.sandbox_provider.create_provider() as provider:
             try:
-                await cleanup_expired_daytona_snapshots(provider)
+                await asyncio.wait_for(
+                    cleanup_expired_daytona_snapshots(provider),
+                    timeout=SNAPSHOT_JANITOR_TIMEOUT_SECONDS,
+                )
             except Exception:
                 logger.exception("Failed to clean expired Terminal-Bench eval-resume snapshots")
             sandbox = await _create_owned_sandbox(
@@ -559,6 +557,13 @@ class TerminalBenchBenchmark(BenchmarkService):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Checkpoint the post-agent filesystem, then evaluate it."""
         await self.validate_task_ids([task_id], dataset=dataset)
+        try:
+            await asyncio.wait_for(
+                cleanup_expired_daytona_snapshots(sandbox),
+                timeout=SNAPSHOT_JANITOR_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            logger.exception("Failed to clean expired Terminal-Bench eval-resume snapshots")
         requested_dataset = dataset or "default"
         state = EvalResumeState.create(
             task_id,

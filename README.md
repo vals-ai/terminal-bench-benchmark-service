@@ -34,7 +34,7 @@ Retries restore that snapshot without rerunning the agent. The service restarts 
 runtime state required by `nginx-request-logging`, `pypi-server`, and
 `qemu-alpine-ssh`; checkpoints are bound to the task image, tests, verifier code,
 dataset, and original run ID. Owned snapshots expire after 30 days through the
-best-effort Daytona janitor that also runs on provider-backed response traffic.
+best-effort Daytona janitor that runs before initial and resumed evaluation.
 
 ## Development
 
