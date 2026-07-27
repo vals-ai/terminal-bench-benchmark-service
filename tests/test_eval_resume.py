@@ -138,6 +138,43 @@ def test_stream_evaluate_response_preserves_text_evaluation() -> None:
     assert chunks[-1].data["score"] == 1.0
 
 
+def test_initial_response_collects_expired_snapshots_without_eval_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    benchmark = service()
+    benchmark.datasets["default"]["task-1"]["answer"] = "done"
+    expired_name = f"{resume_module.SNAPSHOT_PREFIX}-{'a' * 12}-6553f100{'1' * 24}"
+
+    class SnapshotService:
+        def __init__(self) -> None:
+            self.deleted: list[str] = []
+
+        async def list(self, page: int, limit: int) -> SimpleNamespace:
+            assert (page, limit) == (1, 100)
+            return SimpleNamespace(
+                items=[SimpleNamespace(name=expired_name)],
+                total_pages=1,
+            )
+
+        async def delete(self, snapshot: SimpleNamespace) -> None:
+            self.deleted.append(snapshot.name)
+
+    snapshots = SnapshotService()
+    provider = FakeProvider()
+    provider._daytona = SimpleNamespace(snapshot=snapshots)  # type: ignore[attr-defined]
+    use_provider(monkeypatch, provider)
+    request = EvaluateResponseRequest(
+        task_id="task-1",
+        response="done",
+        sandbox_provider=daytona_config(),
+    )
+
+    chunks = asyncio.run(collect(benchmark.stream_evaluate_response(request)))
+
+    assert chunks[-1].data["score"] == 1.0
+    assert snapshots.deleted == [expired_name]
+
+
 def test_checkpoint_is_emitted_before_verifier_setup_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     benchmark = service()
     events: list[str] = []

@@ -497,6 +497,12 @@ class TerminalBenchBenchmark(BenchmarkService):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Resume verification from a durable post-agent Daytona snapshot."""
         if request.eval_resume_state is None:
+            if isinstance(request.sandbox_provider, DaytonaProviderConfig):
+                async with request.sandbox_provider.create_provider() as provider:
+                    try:
+                        await cleanup_expired_daytona_snapshots(provider)
+                    except Exception:
+                        logger.exception("Failed to clean expired Terminal-Bench eval-resume snapshots")
             yield StreamResultChunk(type="result", data=await self.evaluate_response(request, dataset))
             return
 
