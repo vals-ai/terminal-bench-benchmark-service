@@ -564,6 +564,25 @@ def test_snapshot_janitor_deletes_only_expired_owned_snapshots(monkeypatch: pyte
     assert snapshots.deleted == [old.snapshot_name]
 
 
+def test_snapshot_janitor_respects_epoch_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SnapshotService:
+        async def list(self, page: int, limit: int) -> SimpleNamespace:
+            assert (page, limit) == (1, 100)
+            return SimpleNamespace(items=[], total_pages=1)
+
+        async def delete(self, _snapshot: SimpleNamespace) -> None:
+            raise AssertionError("empty snapshot list must not delete")
+
+    monkeypatch.setattr(
+        resume_module.time,
+        "time",
+        lambda: (_ for _ in ()).throw(AssertionError("explicit epoch must not read wall clock")),
+    )
+    provider = SimpleNamespace(_daytona=SimpleNamespace(snapshot=SnapshotService()))
+
+    asyncio.run(resume_module.cleanup_expired_daytona_snapshots(provider, now_seconds=0))
+
+
 def test_failed_snapshot_creation_attempts_to_delete_partial_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

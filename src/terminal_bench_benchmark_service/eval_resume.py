@@ -124,7 +124,7 @@ async def cleanup_expired_daytona_snapshots(provider: object, now_seconds: int |
         async def delete_snapshot(snapshot: Any) -> None:
             await snapshot_service.delete(snapshot)
 
-    cutoff = (now_seconds or int(time.time())) - SNAPSHOT_RETENTION_SECONDS
+    cutoff = (int(time.time()) if now_seconds is None else now_seconds) - SNAPSHOT_RETENTION_SECONDS
     page = 1
     expired: list[Any] = []
     while True:
