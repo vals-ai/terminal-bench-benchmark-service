@@ -95,13 +95,13 @@ async def cleanup_expired_daytona_snapshots(provider: object, now_seconds: int |
     """Best-effort age-based cleanup for snapshots owned by this feature."""
     daytona = cast(Any, getattr(provider, "_daytona", None))
     snapshot_service = getattr(daytona, "snapshot", None)
-    if snapshot_service is None:
+    api_client = getattr(daytona, "_api_client", None)
+    if snapshot_service is None and api_client is None:
         inner = getattr(provider, "_sandbox", None)
         sandbox_api = getattr(inner, "_sandbox_api", None)
         api_client = getattr(sandbox_api, "api_client", None)
-        if api_client is None:
-            return
 
+    if api_client is not None:
         from daytona_api_client_async import SnapshotsApi
 
         snapshot_service = SnapshotsApi(api_client)
@@ -116,13 +116,16 @@ async def cleanup_expired_daytona_snapshots(provider: object, now_seconds: int |
         async def delete_snapshot(snapshot: Any) -> None:
             await snapshot_service.remove_snapshot(snapshot.id)
 
-    else:
+    elif snapshot_service is not None:
 
         async def list_snapshots(page: int) -> Any:
             return await snapshot_service.list(page=page, limit=100)
 
         async def delete_snapshot(snapshot: Any) -> None:
             await snapshot_service.delete(snapshot)
+
+    else:
+        return
 
     cutoff = (int(time.time()) if now_seconds is None else now_seconds) - SNAPSHOT_RETENTION_SECONDS
     page = 1

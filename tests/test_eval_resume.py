@@ -529,6 +529,51 @@ def test_resume_rejects_changed_task_contract_before_provider(
         asyncio.run(collect(benchmark.stream_evaluate_response(request)))
 
 
+def test_snapshot_janitor_filters_provider_list_via_low_level_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    expired_name = f"{resume_module.SNAPSHOT_PREFIX}-{'a' * 12}-6553f100{'1' * 24}"
+    requested_names: list[str] = []
+    removed: list[str] = []
+
+    class UnexpectedHighLevelSnapshotService:
+        async def list(self, page: int, limit: int) -> SimpleNamespace:
+            raise AssertionError(f"unfiltered high-level list called with {(page, limit)}")
+
+    class SnapshotsApi:
+        def __init__(self, api_client: object) -> None:
+            assert api_client is low_level_client
+
+        async def get_all_snapshots(self, *, page: int, limit: int, name: str) -> SimpleNamespace:
+            requested_names.append(name)
+            return SimpleNamespace(
+                items=[SimpleNamespace(id="expired-id", name=expired_name)],
+                total_pages=1,
+            )
+
+        async def remove_snapshot(self, snapshot_id: str) -> None:
+            removed.append(snapshot_id)
+
+    import daytona_api_client_async
+
+    low_level_client = object()
+    monkeypatch.setattr(daytona_api_client_async, "SnapshotsApi", SnapshotsApi)
+    provider = SimpleNamespace(
+        _daytona=SimpleNamespace(
+            _api_client=low_level_client,
+            snapshot=UnexpectedHighLevelSnapshotService(),
+        )
+    )
+
+    asyncio.run(
+        resume_module.cleanup_expired_daytona_snapshots(
+            provider,
+            now_seconds=1_700_000_001 + resume_module.SNAPSHOT_RETENTION_SECONDS,
+        )
+    )
+
+    assert requested_names == [f"{resume_module.SNAPSHOT_PREFIX}-"]
+    assert removed == ["expired-id"]
+
+
 def test_snapshot_janitor_deletes_only_expired_owned_snapshots(monkeypatch: pytest.MonkeyPatch) -> None:
     old_time = 1_700_000_000
     new_time = old_time + resume_module.SNAPSHOT_RETENTION_SECONDS
