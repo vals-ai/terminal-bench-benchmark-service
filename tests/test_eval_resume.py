@@ -178,6 +178,7 @@ def test_initial_evaluation_collects_expired_snapshots(
             name="sandbox",
             state="started",
             labels={"Id": "run-123"},
+            created_at=None,
             _sandbox_api=SimpleNamespace(api_client=object()),
         )
     )
@@ -396,7 +397,13 @@ def test_snapshot_adapter_is_guarded_and_calls_daytona_filesystem_hook() -> None
     async def create_snapshot(name: str, timeout: int) -> None:
         calls.append((name, timeout))
 
-    sandbox = DaytonaSandbox(SimpleNamespace(_experimental_create_snapshot=create_snapshot))
+    sandbox = DaytonaSandbox(
+        SimpleNamespace(
+            labels={},
+            created_at=None,
+            _experimental_create_snapshot=create_snapshot,
+        )
+    )
     asyncio.run(create_daytona_snapshot(sandbox, "snapshot"))
 
     assert calls == [("snapshot", SNAPSHOT_TIMEOUT_SECONDS)]
@@ -653,6 +660,8 @@ def test_failed_snapshot_creation_attempts_to_delete_partial_snapshot(
 
     monkeypatch.setattr(daytona_api_client_async, "SnapshotsApi", SnapshotsApi)
     inner = SimpleNamespace(
+        labels={},
+        created_at=None,
         _experimental_create_snapshot=create_snapshot,
         _sandbox_api=SimpleNamespace(api_client=object()),
     )
