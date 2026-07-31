@@ -12,6 +12,11 @@ on:
         description: "Completed Valkyrie run ID to retry evaluation for."
         required: true
         type: string
+      benchmark_url:
+        description: "Replacement Terminal-Bench service URL."
+        required: false
+        default: "https://terminal-bench.benchmarks.vals.ai:443"
+        type: string
 
 permissions:
   contents: read
@@ -19,8 +24,12 @@ permissions:
 
 jobs:
   retry-eval:
-    uses: vals-ai/.github/.github/workflows/retry-eval.yaml@main
+    uses: vals-ai/.github/.github/workflows/retry-eval.yaml@jf/retry-eval-passed-task
     with:
       run_id: ${{ inputs.run_id || 'aa0bbe06-2238-4079-8025-e81917fa0eb2' }}
+      benchmark_name: terminal-bench
+      benchmark_url: ${{ inputs.benchmark_url || 'https://terminal-bench.benchmarks.vals.ai:443' }}
+      passing_task_only: true
+      valkyrie_ref: dev
     secrets:
       VALKYRIE_AWS_ROLE_ARN: ${{ secrets.VALKYRIE_AWS_ROLE_ARN }}
