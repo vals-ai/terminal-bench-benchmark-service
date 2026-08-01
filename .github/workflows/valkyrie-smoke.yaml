@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   smoke:
-    uses: vals-ai/.github/.github/workflows/benchmark-service-smoke.yaml@main
+    uses: vals-ai/.github/.github/workflows/benchmark-service-smoke.yaml@jf/retry-eval-passed-task
     with:
       checkout_submodules: true
     secrets:
