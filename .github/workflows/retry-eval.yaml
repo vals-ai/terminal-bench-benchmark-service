@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   retry-eval:
-    uses: vals-ai/.github/.github/workflows/retry-eval.yaml@jf/retry-eval-passed-task
+    uses: vals-ai/.github/.github/workflows/retry-eval.yaml@main
     with:
       run_id: ${{ inputs.run_id || 'aa0bbe06-2238-4079-8025-e81917fa0eb2' }}
       benchmark_name: terminal-bench
