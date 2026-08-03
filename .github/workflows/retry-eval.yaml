@@ -6,7 +6,7 @@ on:
       task_id:
         description: "Task ID for the source smoke run."
         required: true
-        default: "pytorch-model-cli"
+        default: "fix-git"
         type: string
       dataset:
         description: "Dataset for the source smoke run."
