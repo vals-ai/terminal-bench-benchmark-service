@@ -6,7 +6,7 @@ on:
       task_id:
         description: "Task ID for the source smoke run."
         required: true
-        default: "fix-git"
+        default: "financial-document-processor"
         type: string
       dataset:
         description: "Dataset for the source smoke run."
@@ -31,8 +31,8 @@ jobs:
       NGROK_PUBLIC_URL: ${{ secrets.NGROK_PUBLIC_URL }}
       SMOKE_DATASET: ${{ inputs.dataset }}
       SMOKE_TASK_ID: ${{ inputs.task_id }}
-      SMOKE_AGENT: terminus2
-      SMOKE_MODEL: google/gemini-3.6-flash
+      SMOKE_AGENT: grok_build
+      SMOKE_MODEL: grok/grok-4.5
       BENCHMARK_SERVICE_ENV: ${{ secrets.BENCHMARK_SERVICE_ENV }}
 
   retry-eval:
