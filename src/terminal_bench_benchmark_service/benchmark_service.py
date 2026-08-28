@@ -2,10 +2,12 @@
 
 import asyncio
 import json
+import logging
 import tomllib
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar, cast
 
 from benchmark_service import BenchmarkService
 from benchmark_service.sandbox import ExecResult, ImageSource, Sandbox, SandboxError
@@ -23,6 +25,8 @@ from benchmark_service.utils import stream_command
 from pydantic import model_validator
 
 from terminal_bench_benchmark_service.utils import with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def with_pinned_image_tools(command: str) -> str:
@@ -69,6 +73,21 @@ class OverrideResources(Resources):
         return {"vcpu": vcpu, "memory": memory, "disk": storage}
 
 
+@dataclass(frozen=True)
+class DatasetSpec:
+    """Where a dataset's tasks live and how this service has to run them."""
+
+    tasks_root: Path
+    # Terminal-Bench 2.x keeps every task directly under tasks_root. Newer
+    # datasets group them, e.g. tasks/<domain>/<field>/<slug>.
+    nested: bool = False
+    # Tasks that ship no environment.docker_image resolve their image here.
+    image_manifest: Path | None = None
+    # Grade in a separate, network-blocked sandbox rather than the agent's own,
+    # for datasets whose tasks declare verifier.environment_mode = "separate".
+    grades_in_separate_sandbox: bool = False
+
+
 class TerminalBenchBenchmark(BenchmarkService):
     """TODO: Replace this example with your benchmark implementation.
 
@@ -76,22 +95,43 @@ class TerminalBenchBenchmark(BenchmarkService):
     Modify it to load your own dataset and implement your evaluation logic.
     """
 
-    # Map dataset name -> directory containing per-task subdirectories.
+    # Map dataset name -> how to load and run it.
     # `default` aliases the latest Terminal-Bench dataset.
-    _DATASET_LOCATIONS: dict[str, Path] = {
-        "default": Path("datasets/terminal-bench-2.1/tasks"),
-        "terminal-bench-2.0": Path("datasets/terminal-bench-2"),
-        "terminal-bench-2.1": Path("datasets/terminal-bench-2.1/tasks"),
+    _DATASETS: ClassVar[dict[str, DatasetSpec]] = {
+        "default": DatasetSpec(Path("datasets/terminal-bench-2.1/tasks")),
+        "terminal-bench-2.0": DatasetSpec(Path("datasets/terminal-bench-2")),
+        "terminal-bench-2.1": DatasetSpec(Path("datasets/terminal-bench-2.1/tasks")),
+        "terminal-bench-science": DatasetSpec(
+            Path("datasets/terminal-bench-science/tasks"),
+            nested=True,
+            image_manifest=Path("datasets/images/terminal-bench-science.json"),
+            grades_in_separate_sandbox=True,
+        ),
     }
 
-    def _get_dataset_location(self, dataset: str | None) -> Path:
-        """Return the on-disk path containing per-task directories for the given dataset."""
+    def __init__(self) -> None:
+        super().__init__()
+        # dataset name -> task id -> task directory, filled by load_datasets.
+        # Task directories are held explicitly because a nested dataset's id no
+        # longer reconstructs its path.
+        self._task_paths: dict[str, dict[str, Path]] = {}
+        # dataset name -> parsed image manifest, read lazily on first use.
+        self._image_manifests: dict[str, dict[str, Any]] = {}
+
+    def _dataset_spec(self, dataset: str | None) -> DatasetSpec:
+        """Return how to load and run the given dataset."""
         key = dataset or "default"
-        if key not in self._DATASET_LOCATIONS:
-            raise ValueError(
-                f"Unknown dataset '{key}'. Available datasets: {', '.join(self._DATASET_LOCATIONS.keys())}"
-            )
-        return self._DATASET_LOCATIONS[key]
+        if key not in self._DATASETS:
+            raise ValueError(f"Unknown dataset '{key}'. Available datasets: {', '.join(self._DATASETS.keys())}")
+        return self._DATASETS[key]
+
+    def _task_dir(self, task_id: str, dataset: str | None = None) -> Path:
+        """Return the on-disk directory for one task."""
+        key = dataset or "default"
+        try:
+            return self._task_paths[key][task_id]
+        except KeyError as error:
+            raise ValueError(f"Unknown task '{task_id}' in dataset '{key}'") from error
 
     async def _upload_test_files(self, sandbox: Sandbox, tests_path: Path) -> None:
         """Upload test files from local dataset to sandbox /tests directory."""
@@ -119,7 +159,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         Returns the test command to run (test.sh path or default).
         """
-        task_path = self._get_dataset_location(dataset) / task_id
+        task_path = self._task_dir(task_id, dataset)
         tests_path = task_path / "tests"
 
         await with_retry(sandbox, lambda: sandbox.exec("rm -rf /tests && mkdir -p /tests && chmod 755 /tests"))
@@ -238,30 +278,60 @@ class TerminalBenchBenchmark(BenchmarkService):
         """Load the benchmark datasets."""
         # Datasets that share an on-disk path are loaded once and shared by reference
         # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-2.1`).
-        loaded_by_path: dict[Path, dict[str, Any]] = {}
+        loaded_by_path: dict[Path, tuple[dict[str, Any], dict[str, Path]]] = {}
         datasets: dict[str, dict[str, Any]] = {}
+        self._task_paths = {}
 
-        for name, location in self._DATASET_LOCATIONS.items():
+        for name, spec in self._DATASETS.items():
+            location = spec.tasks_root
             if not location.exists():
                 raise FileNotFoundError(
                     f"Dataset `{name}` not found at `{location}`. Run `make install-submodules` to install datasets."
                 )
 
             if location not in loaded_by_path:
-                loaded_by_path[location] = self._load_tasks_from_directory(location)
+                loaded_by_path[location] = self._load_tasks_from_directory(location, nested=spec.nested)
 
-            datasets[name] = loaded_by_path[location]
+            tasks, task_paths = loaded_by_path[location]
+            datasets[name] = tasks
+            self._task_paths[name] = task_paths
 
         return datasets
 
-    def _load_tasks_from_directory(self, location: Path) -> dict[str, Any]:
+    def _task_directories(self, location: Path, *, nested: bool) -> dict[str, Path]:
+        """Return task id -> directory for one dataset root.
+
+        A flat dataset takes every immediate subdirectory. A nested one takes
+        every directory holding a `task.toml` at any depth, keyed by its own
+        name so ids stay the bare task slugs the upstream registry publishes.
+        """
+        if not nested:
+            return {
+                path.name: path
+                for path in sorted(location.iterdir())
+                if path.is_dir() and not path.name.startswith(".")
+            }
+
+        directories: dict[str, Path] = {}
+        for task_toml in sorted(location.rglob("task.toml")):
+            path = task_toml.parent
+            if any(part.startswith(".") for part in path.relative_to(location).parts):
+                continue
+            if path.name in directories:
+                raise ValueError(
+                    f"Duplicate task id `{path.name}` in `{location}`: "
+                    f"{directories[path.name]} and {path}"
+                )
+            directories[path.name] = path
+        return directories
+
+    def _load_tasks_from_directory(
+        self, location: Path, *, nested: bool = False
+    ) -> tuple[dict[str, Any], dict[str, Path]]:
         """Load all tasks from a single dataset directory."""
         dataset: dict[str, Any] = {}
-        for task_path in location.iterdir():
-            # Skip hidden directories and non-directories (e.g. dataset.toml manifests)
-            if task_path.name.startswith(".") or not task_path.is_dir():
-                continue
-
+        task_paths = self._task_directories(location, nested=nested)
+        for task_id, task_path in task_paths.items():
             task: dict[str, Any] = {}
 
             # Read the problem statement
@@ -282,9 +352,61 @@ class TerminalBenchBenchmark(BenchmarkService):
             with open(task_toml_path, "rb") as f:
                 task["task_definition"] = tomllib.load(f)
 
-            dataset[task_path.name] = task
+            dataset[task_id] = task
 
-        return dataset
+        return dataset, task_paths
+
+    def _image_manifest(self, dataset: str | None) -> dict[str, Any]:
+        """Read the dataset's task -> image manifest, cached per dataset."""
+        spec = self._dataset_spec(dataset)
+        if spec.image_manifest is None:
+            return {}
+        key = dataset or "default"
+        cached = self._image_manifests.get(key)
+        if cached is not None:
+            return cached
+        if not spec.image_manifest.exists():
+            raise FileNotFoundError(
+                f"Dataset `{key}` needs an image manifest at `{spec.image_manifest}`, "
+                "built by scripts/build_dataset_images.py."
+            )
+        with open(spec.image_manifest, "rb") as f:
+            manifest = cast(dict[str, Any], json.loads(f.read()))
+        self._image_manifests[key] = manifest
+        return manifest
+
+    def _manifest_entry(self, task_id: str, dataset: str | None) -> dict[str, Any]:
+        manifest = self._image_manifest(dataset)
+        tasks = cast(dict[str, Any], manifest.get("tasks", {}))
+        entry = tasks.get(task_id)
+        if not isinstance(entry, dict):
+            raise ValueError(
+                f"No image published for task `{task_id}` in dataset `{dataset or 'default'}`; "
+                "rebuild the dataset image manifest."
+            )
+        return cast(dict[str, Any], entry)
+
+    def _task_image(self, task_id: str, dataset: str | None) -> str:
+        """Return the fully qualified agent image for a task."""
+        task = self.get_dataset(dataset)[task_id]
+        environment: dict[str, Any] = task.get("task_definition", {}).get("environment", {})
+        docker_image = environment.get("docker_image")
+        if docker_image:
+            # Terminal-Bench 2.x publishes unqualified Docker Hub references.
+            return f"docker.io/{docker_image}"
+
+        image = self._manifest_entry(task_id, dataset).get("image")
+        if not isinstance(image, str) or not image:
+            raise ValueError(f"Image manifest entry for `{task_id}` has no `image`")
+        return image
+
+    def _task_cwd(self, task_id: str, dataset: str | None) -> str:
+        """Working directory the agent and grader start in."""
+        # Terminal-Bench 2.x ships one task that works out of /workspace; the id is
+        # scoped to those datasets so a same-named task elsewhere cannot inherit it.
+        if task_id == "prove-plus-comm" and not self._dataset_spec(dataset).nested:
+            return "/workspace"
+        return "/app"
 
     async def retrieve_task(
         self, task_id: str, skip_validation: bool = False, dataset: str | None = None
@@ -306,14 +428,9 @@ class TerminalBenchBenchmark(BenchmarkService):
         # Validate resources are correctly set
         resources: OverrideResources = OverrideResources.model_validate(environment)
 
-        # Use docker image from registry
-        docker_image = environment.get("docker_image")
-
-        if not docker_image:
-            raise ValueError(f"Docker image is required for task `{task_id}`")
-
-        # Use the full url
-        formatted_docker_image: str = f"docker.io/{docker_image}"
+        # Terminal-Bench 2.x tasks name a published image; datasets that ship only
+        # a Dockerfile resolve their pre-built image through the dataset manifest.
+        formatted_docker_image = self._task_image(task_id, dataset)
 
         # Extract agent timeout from task definition
         agent_config: dict[str, Any] = task_def.get("agent", {})
@@ -327,7 +444,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         return RetrieveTaskResponse(
             source=ImageSource(image=formatted_docker_image),
             problem_path="/tmp/problem_statement.md",
-            cwd="/workspace" if task_id == "prove-plus-comm" else "/app",
+            cwd=self._task_cwd(task_id, dataset),
             agent_timeout=agent_timeout,
             resources=resources,
         )
@@ -405,7 +522,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             test_script = await self._copy_test_files(sandbox, task_id, dataset)
 
             # Caffe processes linger when agent gets OOM killed
-            if task_id == "caffe-cifar-10":
+            if task_id == "caffe-cifar-10" and not self._dataset_spec(dataset).nested:
                 await with_retry(sandbox, lambda: sandbox.exec("pkill -9 caffe || true"))
 
             # Get verifier timeout from task definition
@@ -425,7 +542,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             # test and could overwrite a passing reward.txt with a failing result.
             try:
                 async for line in self._stream_command_with_retry(
-                    sandbox, test_script, "/workspace" if task_id == "prove-plus-comm" else "/app", verifier_timeout,
+                    sandbox, test_script, self._task_cwd(task_id, dataset), verifier_timeout,
                     retries=1,
                 ):
                     test_output += line + "\n"
