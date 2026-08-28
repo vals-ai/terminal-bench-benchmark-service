@@ -17,7 +17,7 @@ Usage:
     python scripts/build_dataset_images.py \\
         --dataset terminal-bench-science \\
         --registry docker.io/valsai \\
-        [--tasks 3x2pt-inference,diag-chipseq] [--platform linux/amd64] [--no-push]
+        [--tasks 3x2pt-inference,diag-chipseq] [--build-timeout 7200] [--no-push]
 """
 
 from __future__ import annotations
@@ -29,9 +29,12 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PLATFORM = "linux/amd64"
+# Pushing a multi-gigabyte image is not bounded by the build's own budget.
+PUSH_TIMEOUT_SECONDS = 3600.0
 
 
 @dataclass(frozen=True)
@@ -93,7 +96,31 @@ def run(command: list[str], *, timeout: float | None) -> None:
 def build_image(context: Path, tag: str, platform: str, timeout: float | None, push: bool) -> None:
     run(["docker", "build", "--platform", platform, "-t", tag, str(context)], timeout=timeout)
     if push:
-        run(["docker", "push", tag], timeout=timeout)
+        run(["docker", "push", tag], timeout=PUSH_TIMEOUT_SECONDS)
+
+
+def image_workdir(tag: str) -> str:
+    """The directory the task image starts in.
+
+    Recorded because the agent has to start where the task's data and starter
+    files are. Most of these images declare something other than /app, and a
+    sandbox started elsewhere gets a freshly created empty directory instead --
+    which depresses scores on those tasks without failing anything.
+
+    An image that declares no WORKDIR reports an empty string, and Docker starts
+    it in `/`; that is returned rather than the empty string, so the manifest
+    always names a real directory. A failed inspect raises instead of being
+    mistaken for the same thing.
+    """
+    result = subprocess.run(
+        ["docker", "image", "inspect", "--format", "{{.Config.WorkingDir}}", tag],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"Could not inspect {tag}: {result.stderr.strip()}")
+    return result.stdout.strip() or "/"
 
 
 def main() -> int:
@@ -103,6 +130,13 @@ def main() -> int:
     parser.add_argument("--tag", default=None, help="Image tag (default: the dataset checkout's short commit)")
     parser.add_argument("--tasks", default="", help="Comma-separated task slugs (default: every task)")
     parser.add_argument("--platform", default=DEFAULT_PLATFORM)
+    parser.add_argument(
+        "--build-timeout",
+        type=float,
+        default=None,
+        help="Seconds per build, overriding the task's own budget. A task's budget is what "
+        "upstream's runner allows, not what a cold cache on other hardware needs.",
+    )
     parser.add_argument("--no-push", action="store_true", help="Build locally without pushing")
     parser.add_argument(
         "--manifest",
@@ -141,7 +175,7 @@ def main() -> int:
 
         image = f"{args.registry}/tbs-env-{task.task_id}:{tag}"
         verifier_image = f"{args.registry}/tbs-verifier-{task.task_id}:{tag}"
-        timeout = build_timeout(task)
+        timeout = args.build_timeout if args.build_timeout is not None else build_timeout(task)
         try:
             build_image(task.environment_dir, image, args.platform, timeout, not args.no_push)
             build_image(task.tests_dir, verifier_image, args.platform, timeout, not args.no_push)
@@ -150,15 +184,28 @@ def main() -> int:
             print(f"FAILED {task.task_id}: {error}", file=sys.stderr, flush=True)
             continue
 
-        entries[task.task_id] = {"image": image, "verifier_image": verifier_image}
+        entries[task.task_id] = {
+            "image": image,
+            "verifier_image": verifier_image,
+            "workdir": image_workdir(image),
+        }
+
+    # A rebuild of a subset must not drop the tasks it did not touch: the
+    # service resolves every task through this file, so a partial write would
+    # leave the rest of the dataset with no image.
+    previous: dict[str, Any] = {}
+    if manifest_path.exists():
+        previous = cast(dict[str, Any], json.loads(manifest_path.read_text()))
+    merged_tasks = {**cast(dict[str, Any], previous.get("tasks", {})), **entries}
+    merged_skipped = sorted(set(cast(list[str], previous.get("unsupported_tasks", []))) | set(skipped))
 
     manifest = {
         "dataset": args.dataset,
         "dataset_commit": version,
         "tag": tag,
         "platform": args.platform,
-        "unsupported_tasks": sorted(skipped),
-        "tasks": dict(sorted(entries.items())),
+        "unsupported_tasks": merged_skipped,
+        "tasks": dict(sorted(merged_tasks.items())),
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")

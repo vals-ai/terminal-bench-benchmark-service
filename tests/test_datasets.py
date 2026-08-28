@@ -5,11 +5,13 @@ Requires submodules to be initialized (`make install-submodules`).
 
 import asyncio
 
+import pytest
+
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 
 
 def test_load_terminal_bench_datasets() -> None:
-    datasets = asyncio.run(TerminalBenchBenchmark().load_datasets())
+    datasets = asyncio.run(TerminalBenchBenchmark.create()).datasets
 
     assert set(datasets.keys()) == {
         "default",
@@ -29,10 +31,9 @@ def test_load_terminal_bench_datasets() -> None:
 
 def test_terminal_bench_science_loads_nested_tasks_by_slug() -> None:
     """Science tasks nest as <domain>/<field>/<slug> but keep their slug as the id."""
-    benchmark = TerminalBenchBenchmark()
-    datasets = asyncio.run(benchmark.load_datasets())
+    benchmark = asyncio.run(TerminalBenchBenchmark.create())
 
-    tasks = datasets["terminal-bench-science"]
+    tasks = benchmark.datasets["terminal-bench-science"]
 
     assert len(tasks) == 70, "dataset submodule is not at the pinned v0.1.0"
     assert "3x2pt-inference" in tasks, "task ids must be bare upstream slugs"
@@ -41,3 +42,15 @@ def test_terminal_bench_science_loads_nested_tasks_by_slug() -> None:
     task_dir = benchmark._task_dir("3x2pt-inference", "terminal-bench-science")
     assert task_dir.parts[-3:] == ("physical-sciences", "astronomy", "3x2pt-inference")
     assert (task_dir / "tests" / "test.sh").exists()
+
+
+def test_science_task_retrieval_reports_the_missing_manifest() -> None:
+    """Retrieval must fail on the absent manifest, not on an uninitialised cache.
+
+    `create()` builds the service with `__new__`, so anything set up in
+    `__init__` is not there when a request arrives.
+    """
+    benchmark = asyncio.run(TerminalBenchBenchmark.create())
+
+    with pytest.raises(FileNotFoundError, match="image manifest"):
+        asyncio.run(benchmark.retrieve_task("3x2pt-inference", dataset="terminal-bench-science"))
