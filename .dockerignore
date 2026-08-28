@@ -20,3 +20,10 @@ tests/
 
 # Development
 Makefile
+
+# Dataset inputs the running service never reads. It loads instruction.md and
+# task.toml, and uploads tests/; task environments are built into images ahead
+# of a run, and solutions and authoring notes are never needed at runtime.
+datasets/**/environment/
+datasets/**/solution/
+datasets/**/authoring/
