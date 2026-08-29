@@ -203,8 +203,13 @@ def test_expanded_size_is_measured_without_extracting() -> None:
     """A packed bound does not bound what unpacking writes: ratios beat it easily."""
     command = isolated_verifier.expanded_size_command("/tmp/a.tar.gz")
 
-    assert command.startswith("tar -tzvf /tmp/a.tar.gz")
-    assert "bytes += $3" in command
-    assert "members += 1" in command
+    # Not from `tar -tv` columns: its owner and group come from the header the
+    # agent wrote, and a name holding a space shifts the size column away.
+    assert "-tzvf" not in command
+    assert "gzip -dc /tmp/a.tar.gz" in command
+    assert f"head -c {isolated_verifier.MAX_EXPANDED_ARTIFACT_BYTES + 1}" in command
+    assert "set -o pipefail" in command  # a truncated archive must not read as empty
     # Listing only: nothing is written while measuring.
     assert "-x" not in command
+
+

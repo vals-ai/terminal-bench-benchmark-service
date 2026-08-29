@@ -27,3 +27,7 @@ Makefile
 datasets/**/environment/
 datasets/**/solution/
 datasets/**/authoring/
+
+# Science tasks are graded in their own verifier image, which is built with the
+# tests already inside it, so the service never uploads these.
+datasets/terminal-bench-science/**/tests/

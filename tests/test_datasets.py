@@ -4,6 +4,9 @@ Requires submodules to be initialized (`make install-submodules`).
 """
 
 import asyncio
+from dataclasses import replace
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -44,13 +47,17 @@ def test_terminal_bench_science_loads_nested_tasks_by_slug() -> None:
     assert (task_dir / "tests" / "test.sh").exists()
 
 
-def test_science_task_retrieval_reports_the_missing_manifest() -> None:
-    """Retrieval must fail on the absent manifest, not on an uninitialised cache.
+def test_science_task_retrieval_needs_an_image_manifest(tmp_path: Path) -> None:
+    """A missing manifest must name itself rather than surface as a KeyError.
 
-    `create()` builds the service with `__new__`, so anything set up in
-    `__init__` is not there when a request arrives.
+    Pointed at a path that cannot exist so the check holds both before the
+    manifest is built and after it is committed.
     """
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
+    spec = benchmark._DATASETS["terminal-bench-science"]  # pyright: ignore[reportPrivateUsage]
+    absent = replace(spec, image_manifest=Path(str(tmp_path)) / "not-built.json")
 
-    with pytest.raises(FileNotFoundError, match="image manifest"):
-        asyncio.run(benchmark.retrieve_task("3x2pt-inference", dataset="terminal-bench-science"))
+    with patch.dict(benchmark._DATASETS, {"terminal-bench-science": absent}):  # pyright: ignore[reportPrivateUsage]
+        benchmark._image_manifests.pop("terminal-bench-science", None)  # pyright: ignore[reportPrivateUsage]
+        with pytest.raises(FileNotFoundError, match="image manifest"):
+            asyncio.run(benchmark.retrieve_task("3x2pt-inference", dataset="terminal-bench-science"))

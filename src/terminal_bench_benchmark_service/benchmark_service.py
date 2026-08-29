@@ -738,6 +738,15 @@ class TerminalBenchBenchmark(BenchmarkService):
         if present.output.strip().splitlines()[-1].strip() != isolated_verifier.PRESENT:
             return f"Artifact not produced by the agent: {artifact.source}"
 
+        followed = await with_retry(
+            agent_sandbox, lambda: agent_sandbox.exec(isolated_verifier.dir_symlink_command(source))
+        )
+        if followed.exit_code != 0:
+            raise isolated_verifier.VerifierEnvironmentError(
+                f"Artifact {artifact.source} contains a symlinked directory, whose contents "
+                "packing cannot carry: grading it would mark the model down for output it made"
+            )
+
         packed = await with_retry(
             agent_sandbox, lambda: agent_sandbox.exec(isolated_verifier.pack_command(source, archive))
         )
@@ -861,19 +870,40 @@ class TerminalBenchBenchmark(BenchmarkService):
                 verifier_timeout = self._get_verifier_timeout(task_id, dataset)
                 # Everything up to the grader has its own bound: only the grader
                 # itself is allowed to take the task's verifier timeout.
-                async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                    verifier = await self._create_verifier_sandbox(
-                        provider, task_id, sandbox, dataset, verifier_timeout, attempt
-                    )
+                try:
+                    async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
+                        verifier = await self._create_verifier_sandbox(
+                            provider, task_id, sandbox, dataset, verifier_timeout, attempt
+                        )
+                except TimeoutError as error:
+                    raise isolated_verifier.VerifierEnvironmentError(
+                        f"Verifier sandbox for `{task_id}` was not ready within "
+                        f"{isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
+                    ) from error
 
                 # Artifacts land first; the reward directory is emptied after them,
                 # so nothing an archive planted there survives to be read as a score.
+                deadline = (
+                    asyncio.get_running_loop().time() + isolated_verifier.PREPARE_BUDGET_SECONDS
+                )
                 for artifact in isolated_verifier.local_artifacts(artifacts):
+                    # Announced before each transfer so the client's idle watchdog
+                    # sees progress across a long series of them.
+                    yield StreamMessageChunk(type="message", data=f"Carrying artifact {artifact.source}")
                     # Bounded per artifact rather than around the loop: a timeout
                     # spanning a yield would keep running while nobody is driving
-                    # this generator.
-                    async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                        note = await self._carry_artifact(artifact, sandbox, verifier)
+                    # this generator. The shared deadline caps their sum.
+                    budget = min(
+                        isolated_verifier.PREPARE_TIMEOUT_SECONDS,
+                        deadline - asyncio.get_running_loop().time(),
+                    )
+                    try:
+                        async with asyncio.timeout(budget):
+                            note = await self._carry_artifact(artifact, sandbox, verifier)
+                    except TimeoutError as error:
+                        raise isolated_verifier.VerifierEnvironmentError(
+                            f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
+                        ) from error
                     if note:
                         yield StreamMessageChunk(type="message", data=note)
 

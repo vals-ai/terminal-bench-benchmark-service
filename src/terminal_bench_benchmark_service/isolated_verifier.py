@@ -32,6 +32,9 @@ MAX_ARTIFACT_MEMBERS = 200_000
 MAX_CONCURRENT_VERIFIER_CREATES = 4
 # Creating the verifier and carrying artifacts into it, before the grader runs.
 PREPARE_TIMEOUT_SECONDS = 1800.0
+# All of a task's artifacts share one budget. One task declares fourteen, and
+# per-artifact bounds alone would let preparation run for most of a day.
+PREPARE_BUDGET_SECONDS = 5400.0
 PRESENT = "PRESENT"
 # tar pads a file that shrank while being read out to its listed length, so
 # the archive holds a right-sized member with a fabricated tail.
@@ -122,8 +125,6 @@ def reject_irregular_members_command(stage: str) -> str:
 
     The archive is produced by tar running as root in the agent's sandbox, so
     the agent can replace tar itself and emit any member type or mode it likes.
-    Three things are refused:
-
     One thing is refused: anything that is not a regular file or a directory. `pack_command` selects files and
     directories explicitly, so a symlink, device or socket in the archive means
     the archive was not written by that command -- the agent is root in its own
@@ -243,13 +244,33 @@ def pack_command(source: str, archive: str) -> str:
 
 
 def expanded_size_command(archive: str) -> str:
-    """Print the archive's uncompressed byte total and its member count.
+    """Print the archive's uncompressed byte total and member count.
 
-    Listing decompresses the stream without writing anything, so an archive that
-    expands enormously is refused while it is still small.
+    Measured from the decompressed stream, not from `tar -tv` columns: the
+    owner and group fields in those come from the header the agent wrote, and a
+    name containing a space shifts the size column out of position -- a 1.5 GiB
+    member reads as zero. Reading stops one byte past the limit, so measuring a
+    bomb costs no more than measuring a legitimate submission, and the member
+    count is only worth taking once the byte total is known to be sane.
     """
     quoted = shlex.quote(archive)
-    return f"tar -tzvf {quoted} | awk '{{bytes += $3; members += 1}} END {{print bytes+0, members+0}}'"
+    return (
+        f"bytes=$(gzip -dc {quoted} 2>/dev/null | head -c {MAX_EXPANDED_ARTIFACT_BYTES + 1} | wc -c); "
+        f'if [ "$bytes" -gt {MAX_EXPANDED_ARTIFACT_BYTES} ]; then echo "$bytes 0"; exit 0; fi; '
+        "set -o pipefail; "
+        f"members=$(tar -tzf {quoted} | wc -l) && "
+        'echo "$bytes $members"'
+    )
+
+
+def dir_symlink_command(source: str) -> str:
+    """Find a symlinked directory in the artifact, which packing cannot follow.
+
+    Its subtree would be left out of the archive with no error, and the grader
+    would mark the model down for output it produced.
+    """
+    quoted = shlex.quote(source)
+    return f"found=$(find {quoted} -type l -xtype d -print -quit) && test -z \"$found\""
 
 
 def fabricated_content(pack_output: str) -> bool:
@@ -267,8 +288,8 @@ def unpack_command(source: str, archive: str) -> str:
     member aimed at the grader, its dependencies, or the reward file.
 
     The destination is removed first so nothing is written through a symlink
-    left there by an earlier member, and ``cp -a`` keeps symlinks inside the
-    submission as symlinks instead of following them.
+    left there by an earlier member, and ``cp -a`` copies modes and timestamps
+    through unchanged; the staging gate has already rejected any symlink.
     """
     quoted_source = shlex.quote(source)
     relative = shlex.quote(source.lstrip("/"))
