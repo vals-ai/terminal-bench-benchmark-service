@@ -250,15 +250,20 @@ def expanded_size_command(archive: str) -> str:
     owner and group fields in those come from the header the agent wrote, and a
     name containing a space shifts the size column out of position -- a 1.5 GiB
     member reads as zero. Reading stops one byte past the limit, so measuring a
-    bomb costs no more than measuring a legitimate submission, and the member
-    count is only worth taking once the byte total is known to be sane.
+    bomb costs no more than measuring a legitimate submission, and the members
+    are only listed once the byte total is known to be sane.
+
+    Written for POSIX sh. The verifier image is the task's, and `set -o
+    pipefail` is a bashism that aborts dash outright, so tar's own status is
+    taken directly rather than through a pipeline.
     """
     quoted = shlex.quote(archive)
+    listing = shlex.quote(f"{archive}.members")
     return (
         f"bytes=$(gzip -dc {quoted} 2>/dev/null | head -c {MAX_EXPANDED_ARTIFACT_BYTES + 1} | wc -c); "
         f'if [ "$bytes" -gt {MAX_EXPANDED_ARTIFACT_BYTES} ]; then echo "$bytes 0"; exit 0; fi; '
-        "set -o pipefail; "
-        f"members=$(tar -tzf {quoted} | wc -l) && "
+        f"tar -tzf {quoted} > {listing} || exit 1; "
+        f"members=$(wc -l < {listing}); rm -f {listing}; "
         'echo "$bytes $members"'
     )
 

@@ -208,7 +208,8 @@ def test_expanded_size_is_measured_without_extracting() -> None:
     assert "-tzvf" not in command
     assert "gzip -dc /tmp/a.tar.gz" in command
     assert f"head -c {isolated_verifier.MAX_EXPANDED_ARTIFACT_BYTES + 1}" in command
-    assert "set -o pipefail" in command  # a truncated archive must not read as empty
+    # No bashisms: the verifier image is the task's, and dash aborts on `set -o pipefail`.
+    assert "pipefail" not in command
     # Listing only: nothing is written while measuring.
     assert "-x" not in command
 

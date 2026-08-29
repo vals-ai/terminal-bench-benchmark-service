@@ -99,6 +99,19 @@ def build_image(context: Path, tag: str, platform: str, timeout: float | None, p
         run(["docker", "push", tag], timeout=PUSH_TIMEOUT_SECONDS)
 
 
+def discard_local(tag: str) -> None:
+    """Drop a pushed image from the local store.
+
+    A dataset's images do not fit on one disk together -- these range from
+    under a gigabyte to fifteen -- so the local copy is released once the
+    registry has it. Failure is only reported: the image is already pushed, and
+    a full disk is a better error than a lost build.
+    """
+    result = subprocess.run(["docker", "image", "rm", "-f", tag], capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        print(f"could not remove local {tag}: {result.stderr.strip()}", file=sys.stderr, flush=True)
+
+
 def image_workdir(tag: str) -> str:
     """The directory the task image starts in.
 
@@ -138,6 +151,11 @@ def main() -> int:
         "upstream's runner allows, not what a cold cache on other hardware needs.",
     )
     parser.add_argument("--no-push", action="store_true", help="Build locally without pushing")
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="Remove each image locally once pushed. A whole dataset does not fit on one disk.",
+    )
     parser.add_argument(
         "--manifest",
         default=None,
@@ -179,16 +197,17 @@ def main() -> int:
         try:
             build_image(task.environment_dir, image, args.platform, timeout, not args.no_push)
             build_image(task.tests_dir, verifier_image, args.platform, timeout, not args.no_push)
+            # Read before the image can be pruned: the manifest needs its workdir.
+            workdir = image_workdir(image)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
             failed.append(task.task_id)
             print(f"FAILED {task.task_id}: {error}", file=sys.stderr, flush=True)
             continue
 
-        entries[task.task_id] = {
-            "image": image,
-            "verifier_image": verifier_image,
-            "workdir": image_workdir(image),
-        }
+        entries[task.task_id] = {"image": image, "verifier_image": verifier_image, "workdir": workdir}
+        if args.prune and not args.no_push:
+            discard_local(image)
+            discard_local(verifier_image)
 
     # A rebuild of a subset must not drop the tasks it did not touch: the
     # service resolves every task through this file, so a partial write would
