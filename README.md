@@ -21,14 +21,14 @@ The service loads Terminal-Bench datasets from git submodules under `datasets/`.
 
 | Dataset name | Source path | Layout |
 |--------------|-------------|--------|
-| `default` | `datasets/terminal-bench-2.1/tasks` | flat |
+| `default` | `datasets/terminal-bench-4/tasks` | flat |
 | `terminal-bench-2.1` | `datasets/terminal-bench-2.1/tasks` | flat |
 | `terminal-bench-2.0` | `datasets/terminal-bench-2` | flat |
 | `terminal-bench-4.0` | `datasets/terminal-bench-4/tasks` | flat |
 
-Requests that omit `dataset` use `default`, which currently aliases
-`terminal-bench-2.1`. TBench4 is opt-in to preserve existing Terminal-Bench 2.x
-callers while its remaining runtime features are integrated.
+Requests that omit `dataset` use `default`, which aliases `terminal-bench-4.0`.
+The explicit `terminal-bench-2.0` and `terminal-bench-2.1` names remain available
+for callers that need the published 2.x datasets.
 
 ## Terminal-Bench 4
 

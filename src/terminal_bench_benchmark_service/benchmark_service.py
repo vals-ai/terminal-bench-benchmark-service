@@ -140,7 +140,11 @@ class TerminalBenchBenchmark(BenchmarkService):
     # Map dataset name -> how to load and run it.
     # `default` aliases the latest Terminal-Bench dataset.
     _DATASETS: ClassVar[dict[str, DatasetSpec]] = {
-        "default": DatasetSpec(Path("datasets/terminal-bench-2.1/tasks")),
+        "default": DatasetSpec(
+            Path("datasets/terminal-bench-4/tasks"),
+            image_manifest=Path("datasets/images/terminal-bench-4.json"),
+            grades_in_separate_sandbox=True,
+        ),
         "terminal-bench-2.0": DatasetSpec(Path("datasets/terminal-bench-2")),
         "terminal-bench-2.1": DatasetSpec(Path("datasets/terminal-bench-2.1/tasks")),
         "terminal-bench-4.0": DatasetSpec(
@@ -312,7 +316,7 @@ class TerminalBenchBenchmark(BenchmarkService):
     async def load_datasets(self) -> dict[str, dict[str, Any]]:
         """Load the benchmark datasets."""
         # Datasets that share an on-disk path are loaded once and shared by reference
-        # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-2.1`).
+        # to avoid duplicated parsing work (e.g. `default` and `terminal-bench-4.0`).
         loaded_by_path: dict[Path, tuple[dict[str, Any], dict[str, Path]]] = {}
         datasets: dict[str, dict[str, Any]] = {}
         self._task_paths = {}

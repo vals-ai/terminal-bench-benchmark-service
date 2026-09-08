@@ -20,7 +20,8 @@ def test_load_terminal_bench_datasets() -> None:
         "terminal-bench-2.1",
         "terminal-bench-4.0",
     }
-    assert datasets["default"] is datasets["terminal-bench-2.1"], "`default` must alias terminal-bench-2.1"
+    assert datasets["default"] is datasets["terminal-bench-4.0"], "`default` must alias terminal-bench-4.0"
+    assert len(datasets["default"]) == 66
 
     for name in ("terminal-bench-2.0", "terminal-bench-2.1", "terminal-bench-4.0"):
         tasks = datasets[name]
@@ -34,6 +35,10 @@ def test_load_terminal_bench_datasets() -> None:
 
 def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
+
+    default_task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr"))
+    assert default_task.source.image.startswith("harborframework/terminal-bench:")
+    assert default_task.cwd == "/app"
 
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
     assert task.source.image.startswith("harborframework/terminal-bench:")
