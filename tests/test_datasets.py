@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from benchmark_service import ComposeSource
+from benchmark_service.v1_schemas import V1Task
 
 from scripts.import_tbench4_release import build_manifest
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
@@ -86,6 +87,18 @@ def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features() 
         ".npm",
         ".cache",
     )
+
+
+def test_list_tasks_exposes_all_tbench4_tasks_through_the_v1_contract() -> None:
+    benchmark = asyncio.run(TerminalBenchBenchmark.create())
+
+    tasks = asyncio.run(benchmark.list_tasks(dataset="terminal-bench-4.0"))
+
+    assert len(tasks) == 66
+    assert [task.id for task in tasks] == sorted(benchmark.datasets["terminal-bench-4.0"])
+    assert all(isinstance(task, V1Task) for task in tasks)
+    assert all(task.question and task.timeout is not None for task in tasks)
+    assert all(set(task.model_dump()) == {"id", "question", "timeout"} for task in tasks)
 
 
 def test_terminal_bench_4_manifest_is_reproducible() -> None:
