@@ -32,6 +32,7 @@ from benchmark_service.schemas import (
     StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
+from benchmark_service.v1_schemas import V1Task
 from pydantic import model_validator
 
 from terminal_bench_benchmark_service import isolated_verifier
@@ -337,6 +338,22 @@ class TerminalBenchBenchmark(BenchmarkService):
             self._task_paths[name] = task_paths
 
         return datasets
+
+    async def list_tasks(self, dataset: str | None = None) -> list[V1Task]:
+        """Expose the task fields required by the lab-facing V1 API."""
+        tasks: list[V1Task] = []
+        for task_id, task in self.get_dataset(dataset).items():
+            problem_statement = task.get("problem_statement")
+            if not isinstance(problem_statement, str) or not problem_statement:
+                raise ValueError(f"Missing problem statement for `{task_id}`")
+
+            agent_config: dict[str, Any] = task.get("task_definition", {}).get("agent", {})
+            timeout_value = agent_config.get("timeout_sec")
+            if timeout_value is None:
+                raise ValueError(f"Agent timeout_sec not found in task definition for `{task_id}`")
+
+            tasks.append(V1Task(id=task_id, question=problem_statement, timeout=float(timeout_value)))
+        return tasks
 
     def _task_directories(self, location: Path, *, nested: bool) -> dict[str, Path]:
         """Return task id -> directory for one dataset root.
