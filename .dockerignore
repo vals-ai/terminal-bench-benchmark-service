@@ -20,3 +20,14 @@ tests/
 
 # Development
 Makefile
+
+# Dataset inputs the running service never reads. Task environments are built
+# into images ahead of a run, and solutions and authoring notes are not needed
+# at runtime.
+datasets/**/environment/
+datasets/**/solution/
+datasets/**/authoring/
+
+# TBench4 tasks are graded in their separate verifier image, which is built
+# with the tests already inside it.
+datasets/terminal-bench-4/**/tests/
