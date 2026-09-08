@@ -1,5 +1,9 @@
 """Contract for grading in a separate, network-blocked sandbox."""
 
+import subprocess
+import tarfile
+from pathlib import Path
+
 import pytest
 
 from terminal_bench_benchmark_service import isolated_verifier
@@ -39,7 +43,8 @@ def test_pack_carries_resolving_symlinks_but_not_dangling_ones() -> None:
     """A submission that links to its own output must still carry it."""
     command = isolated_verifier.pack_command("/app/out", "/tmp/a.tar.gz")
 
-    assert "-type f -o -type d -o -xtype f" in command
+    assert "-type f -o -type d" in command
+    assert "-type l -exec test -f" in command
     assert "-czhf" in command, "a listed symlink is stored as its target's content"
 
 
@@ -73,9 +78,55 @@ def test_pack_does_not_take_its_status_from_the_last_pipeline_stage() -> None:
 
 
 def test_unsupported_artifact_keys_are_refused() -> None:
-    """`destination` and `exclude` change what the verifier should see."""
-    with pytest.raises(isolated_verifier.UnsupportedArtifactError, match="destination"):
-        isolated_verifier.parse_artifacts([{"source": "/logs/artifacts", "destination": "elsewhere"}])
+    """Unknown artifact fields are still rejected rather than silently ignored."""
+    with pytest.raises(isolated_verifier.UnsupportedArtifactError, match="unknown"):
+        isolated_verifier.parse_artifacts([{"source": "/logs/artifacts", "unknown": "elsewhere"}])
+
+
+def test_exclude_patterns_are_preserved() -> None:
+    artifacts = isolated_verifier.parse_artifacts(
+        [{"source": "/workspace/generated_app", "exclude": ["node_modules", "*.pyc"]}]
+    )
+
+    assert artifacts[0].exclude == ("node_modules", "*.pyc")
+    assert "--exclude" in isolated_verifier.pack_command(artifacts[0].source, "/tmp/a.tar.gz", artifacts[0].exclude)
+
+
+def test_exclude_patterns_are_applied_by_tar(tmp_path: Path) -> None:
+    source = tmp_path / "generated_app"
+    (source / "src").mkdir(parents=True)
+    (source / "node_modules" / "package").mkdir(parents=True)
+    (source / "src" / "keep.txt").write_text("keep")
+    (source / "node_modules" / "package" / "drop.txt").write_text("drop")
+    archive = tmp_path / "artifact.tar.gz"
+
+    subprocess.run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{tmp_path}:/work",
+            "debian:bookworm-slim",
+            "sh",
+            "-c",
+            isolated_verifier.pack_command("/work/generated_app", "/work/artifact.tar.gz", ("node_modules",)),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    with tarfile.open(archive, "r:gz") as tar:
+        names = tar.getnames()
+    assert any(name.endswith("src/keep.txt") for name in names)
+    assert not any("node_modules" in name for name in names)
+
+
+def test_destination_is_metadata_for_verifier_transfer() -> None:
+    artifacts = isolated_verifier.parse_artifacts([{"source": "/app/result", "destination": "/artifacts/result"}])
+
+    assert artifacts[0].destination == "/artifacts/result"
 
 
 def test_parse_artifacts_splits_local_from_sidecar() -> None:
@@ -98,14 +149,21 @@ def test_parse_artifacts_rejects_an_entry_with_no_source() -> None:
         isolated_verifier.parse_artifacts([{"service": "sim"}])
 
 
-def test_a_task_with_sidecar_artifacts_is_refused_rather_than_mis_graded() -> None:
-    """A compose task's output lives where this runtime cannot reach it."""
+def test_a_task_with_sidecar_artifacts_is_kept_for_compose_collection() -> None:
+    """A compose task's output is carried from its declared service."""
     artifacts = isolated_verifier.parse_artifacts([{"source": "/app/out.json", "service": "sim"}])
 
-    # Nothing is gradeable from the agent container alone, so the caller raises
-    # rather than grading an empty submission as a zero.
     assert isolated_verifier.local_artifacts(artifacts) == []
     assert isolated_verifier.sidecar_artifacts(artifacts) == artifacts
+
+
+def test_collect_hooks_default_to_main_and_preserve_timeouts() -> None:
+    hooks = isolated_verifier.parse_collect_hooks([{"command": "git diff", "timeout_sec": 12}, {"command": "true"}])
+
+    assert [(hook.command, hook.service, hook.timeout_sec) for hook in hooks] == [
+        ("git diff", "main", 12.0),
+        ("true", "main", 60.0),
+    ]
 
 
 def test_unpack_never_extracts_at_the_filesystem_root() -> None:

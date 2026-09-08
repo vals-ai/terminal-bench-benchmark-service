@@ -14,7 +14,7 @@ import shlex
 from collections.abc import Sequence
 from posixpath import dirname
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 REWARD_PATH = "/logs/verifier/reward.txt"
 GRADE_COMMAND = "bash /tests/test.sh"
@@ -66,6 +66,8 @@ class ArtifactSpec:
     # runtime serves single-container tasks, so a service-scoped artifact means
     # the task needs the compose runtime, not that the file is missing.
     service: str | None = None
+    destination: str | None = None
+    exclude: tuple[str, ...] = ()
 
     @classmethod
     def parse(cls, entry: str | dict[str, Any]) -> ArtifactSpec:
@@ -74,19 +76,64 @@ class ArtifactSpec:
         source = entry.get("source")
         if not isinstance(source, str) or not source:
             raise ValueError(f"Artifact entry has no usable source: {entry!r}")
-        # `destination` and `exclude` change what the verifier is supposed to
-        # see. Carrying such an entry as if it were a plain source would grade
-        # the opposite of what the task asked for, so refuse it instead.
-        unsupported = sorted(set(entry) - {"source", "service"})
+        unsupported = sorted(set(entry) - {"source", "destination", "service", "exclude"})
         if unsupported:
             raise UnsupportedArtifactError(f"Artifact {source} uses unsupported keys ({', '.join(unsupported)})")
         service = entry.get("service")
-        return cls(source=source, service=service if isinstance(service, str) else None)
+        destination = entry.get("destination")
+        if destination is not None and not isinstance(destination, str):
+            raise ValueError(f"Artifact {source} has an invalid destination")
+        exclude_value = entry.get("exclude", [])
+        if not isinstance(exclude_value, list):
+            raise ValueError(f"Artifact {source} has an invalid exclude list")
+        exclude_values = cast(list[object], exclude_value)
+        if not all(isinstance(pattern, str) for pattern in exclude_values):
+            raise ValueError(f"Artifact {source} has an invalid exclude list")
+        exclude_patterns = tuple(cast(str, pattern) for pattern in exclude_values)
+        return cls(
+            source=source,
+            service=service if isinstance(service, str) else None,
+            destination=destination,
+            exclude=exclude_patterns,
+        )
+
+
+@dataclass(frozen=True)
+class CollectSpec:
+    """One verifier collect hook executed in the completed agent runtime."""
+
+    command: str
+    service: str = "main"
+    timeout_sec: float = 60.0
+    user: str | None = None
 
 
 def parse_artifacts(entries: Sequence[str | dict[str, Any]] | None) -> list[ArtifactSpec]:
     """Parse a task definition's ``artifacts`` list."""
     return [ArtifactSpec.parse(entry) for entry in entries or []]
+
+
+def parse_collect_hooks(entries: Sequence[dict[str, Any]] | None) -> list[CollectSpec]:
+    """Parse Harbor verifier collect hooks without changing their commands."""
+    hooks: list[CollectSpec] = []
+    for entry in entries or []:
+        unsupported = sorted(set(entry) - {"command", "service", "timeout_sec", "user"})
+        if unsupported:
+            raise ValueError(f"Collect hook uses unsupported keys ({', '.join(unsupported)})")
+        command = entry.get("command")
+        if not isinstance(command, str) or not command:
+            raise ValueError(f"Collect hook has no usable command: {entry!r}")
+        service = entry.get("service", "main")
+        if not isinstance(service, str) or not service:
+            raise ValueError(f"Collect hook has an invalid service: {entry!r}")
+        timeout = entry.get("timeout_sec", 60.0)
+        if not isinstance(timeout, (int, float)) or timeout <= 0:
+            raise ValueError(f"Collect hook has an invalid timeout_sec: {entry!r}")
+        user = entry.get("user")
+        if user is not None and (not isinstance(user, str) or not user):
+            raise ValueError(f"Collect hook has an invalid user: {entry!r}")
+        hooks.append(CollectSpec(command=command, service=service, timeout_sec=float(timeout), user=user))
+    return hooks
 
 
 def local_artifacts(artifacts: Sequence[ArtifactSpec]) -> list[ArtifactSpec]:
@@ -95,7 +142,7 @@ def local_artifacts(artifacts: Sequence[ArtifactSpec]) -> list[ArtifactSpec]:
 
 
 def sidecar_artifacts(artifacts: Sequence[ArtifactSpec]) -> list[ArtifactSpec]:
-    """Artifacts owned by a compose sidecar, which this runtime cannot collect."""
+    """Artifacts owned by a compose sidecar."""
     return [artifact for artifact in artifacts if artifact.service is not None]
 
 
@@ -210,7 +257,7 @@ def exists_command(source: str) -> str:
     return f"if [ -e {quoted} ]; then echo PRESENT; else echo ABSENT; fi"
 
 
-def pack_command(source: str, archive: str) -> str:
+def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
     """Archive one artifact in the agent's sandbox and print its packed size.
 
     Regular files, directories, and symlinks that resolve to a regular file --
@@ -226,15 +273,27 @@ def pack_command(source: str, archive: str) -> str:
     the same exit 1 as growth. Diagnostics are folded into stdout so that check
     sees them.
 
+    ``exclude`` patterns are passed to tar, matching Harbor's artifact
+    collection semantics. Patterns beginning with ``./`` are also passed
+    without that prefix because the archive member names retain the declared
+    absolute path after tar strips its leading slash.
+
     No size is reported here: the agent owns this sandbox's tooling, so the
     bounds are enforced on bytes the service holds and on the verifier's own tar.
     """
     quoted_source = shlex.quote(source)
     quoted_archive = shlex.quote(archive)
     members = shlex.quote(f"{archive}.members")
+    exclude_args = " ".join(
+        f"--exclude={shlex.quote(pattern)}"
+        for pattern in dict.fromkeys(pattern for value in exclude for pattern in (value, value.removeprefix("./")))
+    )
+    if exclude_args:
+        exclude_args = f" {exclude_args}"
     return (
-        f"set -e; find {quoted_source} \\( -type f -o -type d -o -xtype f \\) -print0 > {members}; "
-        f"set +e; tar -czhf {quoted_archive} --null --no-recursion --ignore-failed-read "
+        f"set -e; find {quoted_source} \\( -type f -o -type d \\) -print0 > {members}; "
+        f"find {quoted_source} -type l -exec test -f {{}} \\; -print0 >> {members}; "
+        f"set +e; tar -czhf {quoted_archive}{exclude_args} --null --no-recursion --ignore-failed-read "
         f"-T {members} 2>&1; status=$?; "
         f"rm -f {members}; "
         f'[ "$status" -le 1 ] || exit "$status"'

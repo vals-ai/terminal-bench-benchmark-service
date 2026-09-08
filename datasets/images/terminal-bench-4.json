@@ -49,16 +49,10 @@
       "image": "harborframework/terminal-bench:ctr-optimization-environment-f22bf10e7c9a34e7@sha256:718822ca93c5d49694d69a094a84a68a8b6e3f09415ff23fb2baf01c209bd3c2",
       "sidecars": [
         {
-          "role": "sidecar-api",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "api"
-            }
-          ]
+          "image": "harborframework/terminal-bench:ctr-optimization-sidecar-api-35cd5fe7841b4933@sha256:4dee63e20e07c00cdab5b1ba977b1f848a074f967bd8f97c9cda9027725e17d5",
+          "service": "api"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet; uses verifier.collect hooks, which this service does not execute yet",
       "verifier_image": "harborframework/terminal-bench:ctr-optimization-verifier-95230a1e10470b64@sha256:5b1c5955a918a75c15795660644a1c1e5525d99eca650fe9ddaea8c994b27693",
       "workdir": "/app"
     },
@@ -66,16 +60,10 @@
       "image": "harborframework/terminal-bench:cumulative-layout-shift-environment-7c5f839ce1345e4b@sha256:d840b99ee43fffbd7a76eab8e28d996063de8571725d2f4dbb5869d5d018baa1",
       "sidecars": [
         {
-          "role": "sidecar-barber-shop-data-backend",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "barber-shop-data-backend"
-            }
-          ]
+          "image": "harborframework/terminal-bench:cumulative-layout-shift-sidecar-barber-shop-data-backend-57bd45dbb96a662e@sha256:1f40268536b534165e32aa58b910eaa422a863c39cc6de005a09e3536efd9dda",
+          "service": "barber-shop-data-backend"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet; uses verifier.collect hooks, which this service does not execute yet",
       "verifier_image": "harborframework/terminal-bench:cumulative-layout-shift-verifier-11f8afe9c3e2df5f@sha256:1f720bbb344fadc91460eb6e3e8d6c577521246807288e6369bf9ca48a86cd14",
       "workdir": "/app"
     },
@@ -133,16 +121,10 @@
       "image": "harborframework/terminal-bench:freight-dispatch-shift-environment-b8a25b24cf23c8d7@sha256:f9ffe49f11bcc6e77e33fd1bacd0a60027547526d716575c71e52517ac96daf8",
       "sidecars": [
         {
-          "role": "sidecar-event-feed",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "event-feed"
-            }
-          ]
+          "image": "harborframework/terminal-bench:freight-dispatch-shift-sidecar-event-feed-42859b8ef057c829@sha256:f5975c403f3d3edc43e926ac49a63ea8561f9731ea63366180424380ad952782",
+          "service": "event-feed"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:freight-dispatch-shift-verifier-3a05c31659f4dcad@sha256:5f8a8a3d18fbe18836dbd9c292bdb1182277c701e980c4d734aca848e0a4f0ba",
       "workdir": "/workspace"
     },
@@ -160,61 +142,30 @@
       "image": "harborframework/terminal-bench:heat-pump-warranty-environment-760b960d24b30b4c@sha256:8245f02d4346749433b53cf2d2ea281e624c2410aa697394a8d70a32ae2c1a99",
       "sidecars": [
         {
-          "role": "sidecar-warranty-portal",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "warranty-portal"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-asset-ledger-61c5ee7eb0a19cd7@sha256:4906b2be733507125a12559fcb7a1162f483f397dd835bd66d94f463f2ef0da8",
+          "service": "asset-ledger"
         },
         {
-          "role": "sidecar-asset-ledger",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "asset-ledger"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-compliance-ledger-55a4e36df409fe04@sha256:e7191e63c1f7609f9b1fd5c2bcc83511537f2b107df325acbbf7201d0d1c138f",
+          "service": "compliance-ledger"
         },
         {
-          "role": "sidecar-document-vault",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "document-vault"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-document-vault-61247c2a9becac9d@sha256:2f309687721bdd0e55dd08193832051ebf064f6b84053f3ae6f6a79365687e34",
+          "service": "document-vault"
         },
         {
-          "role": "sidecar-returns-ledger",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "returns-ledger"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-returns-ledger-0a15c968bfd78180@sha256:94a3e3f4423ddde7d84405c463d1738d1a680d63846ef5f7aca3d3dac88c1888",
+          "service": "returns-ledger"
         },
         {
-          "role": "sidecar-compliance-ledger",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "compliance-ledger"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-inbox-1b35b5032cd7e558@sha256:2e5e263df61ecd255c04952270ef3f3bb3c0bd2a819b210836661bdf5cfc3d61",
+          "service": "warranty-inbox"
         },
         {
-          "role": "sidecar-warranty-inbox",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "warranty-inbox"
-            }
-          ]
+          "image": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-portal-9b1856ffd65950a9@sha256:c754da3670b3455e05c7a6f52608a0906e9b102cad2957b6a84e853461079a08",
+          "service": "warranty-portal"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:heat-pump-warranty-verifier-f396506fe36af39b@sha256:4d3730e4fac2dc4fce918f86888cd209af7c630686ff6c97eafde1aac49c0365",
       "workdir": "/workspace"
     },
@@ -237,52 +188,26 @@
       "image": "harborframework/terminal-bench:intrastat-meldung-environment-8ee45061a2f8d64c@sha256:6357248f210a333fb08d0fc28f23020b909364ef1a67db132418e651e71bb788",
       "sidecars": [
         {
-          "role": "sidecar-odoo",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "odoo"
-            }
-          ]
+          "image": "harborframework/terminal-bench:intrastat-meldung-sidecar-compliance-hub-5ac013ecb7a2351d@sha256:c019cea99f27450679b0390571e6d68640dff055534b0f5c5e798fa30661138e",
+          "service": "compliance-hub"
         },
         {
-          "role": "sidecar-compliance-hub",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "compliance-hub"
-            }
-          ]
+          "image": "harborframework/terminal-bench:intrastat-meldung-sidecar-dms-5ac013ecb7a2351d@sha256:5722eaf160ff537576d713a09e4c3ebd9b200d6b5054e02ab607e434a7dfd082",
+          "service": "dms"
         },
         {
-          "role": "sidecar-idev",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "idev"
-            }
-          ]
+          "image": "harborframework/terminal-bench:intrastat-meldung-sidecar-idev-5ac013ecb7a2351d@sha256:b1ec3caa5ca80a7b2a00ec28ec54a51dbc7680ea297578a5bf27ab4ae79949e1",
+          "service": "idev"
         },
         {
-          "role": "sidecar-services",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "services"
-            }
-          ]
+          "image": "harborframework/terminal-bench:intrastat-meldung-sidecar-odoo-5ac013ecb7a2351d@sha256:5b35fea6469419b2f2fafd9a562cbe9bab0d38decfdcdf27a3c8f8fc4acf9778",
+          "service": "odoo"
         },
         {
-          "role": "sidecar-dms",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "dms"
-            }
-          ]
+          "image": "harborframework/terminal-bench:intrastat-meldung-sidecar-services-5ac013ecb7a2351d@sha256:e7af68dd2519d09eefc6e68d714e4115ef35f67ca8b674507bd3f93ac0d3f9c0",
+          "service": "services"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:intrastat-meldung-verifier-50a738477a28b2e6@sha256:c9ede6308df3ae229a469071b58c6deb2a23ceb87abe44b2cd66ebea31b8c1a9",
       "workdir": "/workspace"
     },
@@ -300,16 +225,10 @@
       "image": "harborframework/terminal-bench:kv-live-surgery-environment-6e8d8c54429dfc9f@sha256:dd272ea1f98a6529bfee74e4a52330a44e414017a0cad756add94e23cac1473a",
       "sidecars": [
         {
-          "role": "sidecar-loadgen",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "loadgen"
-            }
-          ]
+          "image": "harborframework/terminal-bench:kv-live-surgery-sidecar-loadgen-e42e01bb667f9fd9@sha256:ecb13e07d75c8d041ab0f6357d2d84cc6112fc1ce1a182a7de71f2ab420f3fd5",
+          "service": "loadgen"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:kv-live-surgery-verifier-8b631950635ab7d6@sha256:f235830f84d6b5a87921603d6f7ce9a238f5a0de4b84ca003db0318f274b9cc6",
       "workdir": "/app"
     },
@@ -332,25 +251,14 @@
       "image": "harborframework/terminal-bench:legacy-utility-triage-environment-5cc1128c429e8d05@sha256:f599a42278c8fd1b0185933752c29c33d4dfa5850cbabd7e712e70654d96a643",
       "sidecars": [
         {
-          "role": "sidecar-legacy-workstation",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "legacy-workstation"
-            }
-          ]
+          "image": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-app-44fa7b126bb99cb6@sha256:f381021e014f4f36f619068edf0f3a2ed54b05cfa84245301afbedc2d9dd3042",
+          "service": "legacy-app"
         },
         {
-          "role": "sidecar-legacy-app",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "legacy-app"
-            }
-          ]
+          "image": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-workstation-e8775dad9c6bd514@sha256:706a7124caa138c3e8fc116af4413a637087869cd1dd7bf7e86c2069afa682a4",
+          "service": "legacy-workstation"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:legacy-utility-triage-verifier-5b9caa2f94d1848e@sha256:df47bb8f0b6cf490d380c294e38769cc755b4fbf3720ff23b960647d86bae403",
       "workdir": "/workspace"
     },
@@ -358,34 +266,22 @@
       "image": "harborframework/terminal-bench:live-database-cutover-environment-5997c5b486ffe2b0@sha256:dbd2997e95d6bdde237f94cefb8cdc45ef5c7bbd44ecde02052a6dffcde14054",
       "sidecars": [
         {
-          "role": "sidecar-mysql-db",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "mysql-db"
-            }
-          ]
+          "image": "harborframework/terminal-bench:live-database-cutover-sidecar-customer-53744832a5bce5e9@sha256:aa5a2a5c2b9c1e334125f0e5953e1b082ac61fdb4c2b1291c9171045b5af3dcf",
+          "service": "customer"
         },
         {
-          "role": "sidecar-postgres-db",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "postgres-db"
-            }
-          ]
+          "image": "harborframework/terminal-bench:live-database-cutover-sidecar-mysql-db-15531a3d85d91c9d@sha256:79bf81670ba7d98dfb04552ccad598331c5729b92b8311dfb1b5edcd84d6c55b",
+          "service": "mysql-db"
         },
         {
-          "role": "sidecar-customer",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "customer"
-            }
-          ]
+          "image": "harborframework/terminal-bench:live-database-cutover-sidecar-postgres-db-42772d973839630b@sha256:20d349253b3b0ead577aaf2208de0d7648692e3064e0efe88e5125e0b63be8c9",
+          "service": "postgres-db"
+        },
+        {
+          "image": "redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+          "service": "redis"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet; uses verifier.collect hooks, which this service does not execute yet",
       "verifier_image": "harborframework/terminal-bench:live-database-cutover-verifier-414377563ab8198b@sha256:ef8c2eb446624c3e8a37f8487771b5b6dbe853e4b42cac856ef1f518b3a214ac",
       "workdir": "/app"
     },
@@ -398,25 +294,14 @@
       "image": "harborframework/terminal-bench:medical-claims-processing-environment-98fb909bc55e54a7@sha256:dc51c3e3da8c9b5758b095543f94f4c5082ff401a8d63414a2898708e787d541",
       "sidecars": [
         {
-          "role": "sidecar-playwright-mcp",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "playwright-mcp"
-            }
-          ]
+          "image": "harborframework/terminal-bench:medical-claims-processing-sidecar-playwright-mcp-8867302f7b779be5@sha256:9a5080ae6a8d839875f4a5536145a279a9321721dcfd0ac15286de8caffb3aff",
+          "service": "playwright-mcp"
         },
         {
-          "role": "sidecar-workspace",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "workspace"
-            }
-          ]
+          "image": "harborframework/terminal-bench:medical-claims-processing-sidecar-workspace-37f3799ffc402618@sha256:d18cb02cc2d98bb1a9d92ed5804792bf52347cee129dbfe1a5bc3c853afe268e",
+          "service": "workspace"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:medical-claims-processing-verifier-10f6ae885fcf9fe6@sha256:452fabedbea53b205cecbf28a97c2ccec6d51f746a2eba87531db61e5fd8c17d",
       "workdir": "/app"
     },
@@ -439,16 +324,10 @@
       "image": "harborframework/terminal-bench:nextjs-performance-environment-6069ddb935a93aee@sha256:c2b1ae7f93b579cc3378d13b4e613ac7e8c0a5f06e4a295142dc2a07459399f0",
       "sidecars": [
         {
-          "role": "sidecar-warehouse-api",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "warehouse-api"
-            }
-          ]
+          "image": "harborframework/terminal-bench:nextjs-performance-sidecar-warehouse-api-ad5ec787ca3cb3eb@sha256:1b3bc750097ca5004dc7c5315835702616926e8901c03b2fe8b3017c48cabbf9",
+          "service": "warehouse-api"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet",
       "verifier_image": "harborframework/terminal-bench:nextjs-performance-verifier-2db77624d85783b8@sha256:9779ef143cc897dcaf255f82167d0e070c2d2fa3671a57517fc8ef779d88610a",
       "workdir": "/app"
     },
@@ -461,25 +340,18 @@
       "image": "harborframework/terminal-bench:payments-pipeline-fix-environment-18a0d069e5ba5a20@sha256:be62f14692d1aafaaffe40c46a01b034baa53a6e333931f9705c343054398f7e",
       "sidecars": [
         {
-          "role": "sidecar-seeder",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "seeder"
-            }
-          ]
+          "image": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-customer-7526dda72acc4b73@sha256:29995da6ac028ab31f407430596a9fa5328e74ba20ee018f998af9e354b5c7ad",
+          "service": "customer"
         },
         {
-          "role": "sidecar-customer",
-          "services": [
-            {
-              "path": "environment/docker-compose.yaml",
-              "service": "customer"
-            }
-          ]
+          "image": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+          "service": "kafka"
+        },
+        {
+          "image": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-seeder-dfa2b554b10ec940@sha256:d74e2040609ab0c266aa8d36f7927f6966d393e5b28b0a594428b4b48e589259",
+          "service": "seeder"
         }
       ],
-      "unsupported_reason": "TBench4 task requires sidecar services, which this service does not provision yet; uses verifier.collect hooks, which this service does not execute yet",
       "verifier_image": "harborframework/terminal-bench:payments-pipeline-fix-verifier-c570b6cbbabf3203@sha256:0f9eccbfc074584d8c5dfa24d6254626bf76c59609e3ba043a10a344d50e1a3c",
       "workdir": "/app"
     },
@@ -545,7 +417,6 @@
     },
     "shadow-relay": {
       "image": "harborframework/terminal-bench:shadow-relay-environment-af3a553c2d31f40a@sha256:85ed6579499c6c890ce0f8ceb77af4a22af21122ca6c639f80cbedf6b92faf09",
-      "unsupported_reason": "TBench4 task uses verifier.collect hooks, which this service does not execute yet",
       "verifier_image": "harborframework/terminal-bench:shadow-relay-verifier-6b5fcf69fa09a003@sha256:144df5448fa71d5b3c9e857d300ab25d30bb74bf99badb352b4b13ed1ffdf63d",
       "workdir": "/app"
     },
@@ -571,7 +442,6 @@
     },
     "vba-userform-port": {
       "image": "harborframework/terminal-bench:vba-userform-port-environment-6440e5b47411548a@sha256:c69155e05f747c75cf3b8320989979df8ceab622a8729f3ac813baca71d78b64",
-      "unsupported_reason": "TBench4 task declares artifacts with unsupported keys (exclude)",
       "verifier_image": "harborframework/terminal-bench:vba-userform-port-verifier-e1bd4ac3ebb909cc@sha256:f71902eab191f92cde999097091628cd8f236715b08bd8338ecf45b88fa15424",
       "workdir": "/workspace"
     },
@@ -587,7 +457,6 @@
     },
     "vpp-loss-divergence": {
       "image": "harborframework/terminal-bench:vpp-loss-divergence-environment-50b7c56494675e27@sha256:cf91023f3f7bf5f27e9213d1b0764ff41fa7375814df5278813ef5d784fc42f8",
-      "unsupported_reason": "TBench4 task declares artifacts with unsupported keys (exclude)",
       "verifier_image": "harborframework/terminal-bench:vpp-loss-divergence-verifier-d007cef259b500ae@sha256:2a7bd7c59d18c5bd9acc158d832345fe1506d83e4d9f0f121e3ea8c8767c8761",
       "workdir": "/app"
     },
@@ -602,20 +471,5 @@
       "workdir": "/app"
     }
   },
-  "unsupported_tasks": [
-    "ctr-optimization",
-    "cumulative-layout-shift",
-    "freight-dispatch-shift",
-    "heat-pump-warranty",
-    "intrastat-meldung",
-    "kv-live-surgery",
-    "legacy-utility-triage",
-    "live-database-cutover",
-    "medical-claims-processing",
-    "nextjs-performance",
-    "payments-pipeline-fix",
-    "shadow-relay",
-    "vba-userform-port",
-    "vpp-loss-divergence"
-  ]
+  "unsupported_tasks": []
 }
