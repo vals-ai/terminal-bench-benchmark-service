@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, cast
 
-from benchmark_service import BenchmarkService
+from benchmark_service import BenchmarkService, ComposeSandbox, ComposeSource
 from benchmark_service.context import current_sandbox_provider
 from benchmark_service.sandbox import (
     ExecResult,
@@ -35,6 +35,13 @@ from benchmark_service.utils import stream_command
 from pydantic import model_validator
 
 from terminal_bench_benchmark_service import isolated_verifier
+from terminal_bench_benchmark_service.compose_runtime import (
+    compose_runtime_source,
+    compose_service_sandbox,
+    start_compose_runtime,
+    stop_compose_main,
+    stop_compose_runtime,
+)
 from terminal_bench_benchmark_service.utils import with_retry
 
 logger = logging.getLogger(__name__)
@@ -444,6 +451,35 @@ class TerminalBenchBenchmark(BenchmarkService):
             raise ValueError(f"Image manifest entry for `{task_id}` has no `verifier_image`")
         return image
 
+    def _compose_sidecar_images(self, task_id: str, dataset: str | None) -> dict[str, str]:
+        """Return service names and pinned images for a TBench4 compose task."""
+        sidecars_value = self._supported_manifest_entry(task_id, dataset).get("sidecars", [])
+        if not isinstance(sidecars_value, list):
+            raise ValueError(f"Image manifest entry for `{task_id}` has an invalid sidecar list")
+        sidecars = cast(list[object], sidecars_value)
+
+        images: dict[str, str] = {}
+        for sidecar_value in sidecars:
+            if not isinstance(sidecar_value, dict):
+                raise ValueError(f"Image manifest entry for `{task_id}` has an invalid sidecar entry")
+            sidecar = cast(dict[str, Any], sidecar_value)
+            service = sidecar.get("service")
+            image = sidecar.get("image")
+            if not isinstance(service, str) or not service or not isinstance(image, str) or not image:
+                raise ValueError(f"Image manifest entry for `{task_id}` has an invalid sidecar image")
+            if service in images and images[service] != image:
+                raise ValueError(f"Image manifest entry for `{task_id}` assigns multiple images to {service!r}")
+            images[service] = image
+        return images
+
+    def _compose_source(self, task_id: str, dataset: str | None) -> ComposeSource | None:
+        if self._dataset_spec(dataset).image_manifest is None:
+            return None
+        sidecars = self._compose_sidecar_images(task_id, dataset)
+        if not sidecars:
+            return None
+        return compose_runtime_source(task_id, self._task_image(task_id, dataset), sidecars)
+
     def _task_cwd(self, task_id: str, dataset: str | None) -> str:
         """Working directory the agent starts in.
 
@@ -486,14 +522,9 @@ class TerminalBenchBenchmark(BenchmarkService):
         resources: OverrideResources = OverrideResources.model_validate(environment)
 
         # Terminal-Bench 2.x tasks name a published image; datasets that ship only
-        # a Dockerfile resolve their pre-built image through the dataset manifest.
+        # a Dockerfile resolve their pinned image through the dataset manifest.
         formatted_docker_image = self._task_image(task_id, dataset)
-
-        # Extract agent timeout from task definition
-        if self._dataset_spec(dataset).grades_in_separate_sandbox:
-            # Refused here rather than after the agent phase: this is a property
-            # of the task, and the agent phase is measured in hours.
-            self._gradeable_artifacts(task_id, dataset)
+        runtime_source = self._compose_source(task_id, dataset)
 
         agent_config: dict[str, Any] = task_def.get("agent", {})
         agent_timeout_value = agent_config.get("timeout_sec")
@@ -504,7 +535,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         agent_timeout: float = agent_timeout_value
 
         return RetrieveTaskResponse(
-            source=ImageSource(image=formatted_docker_image),
+            source=runtime_source or ImageSource(image=formatted_docker_image),
             problem_path="/tmp/problem_statement.md",
             cwd=self._task_cwd(task_id, dataset),
             agent_timeout=agent_timeout,
@@ -517,30 +548,64 @@ class TerminalBenchBenchmark(BenchmarkService):
         """Setup task in sandbox by copying problem statement."""
         task = self.get_dataset(dataset)[task_id]
         problem_statement: str = task.get("problem_statement")
+        outer_sandbox = sandbox
+        compose_started = False
+        setup_succeeded = False
 
-        # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
-        # Write to both /etc/environment (read by PAM login sessions) and /etc/bash.bashrc
-        # (read by non-login interactive shells, which is what the PTY agent uses).
-        await with_retry(
-            sandbox,
-            lambda: sandbox.exec(
-                'grep -q "DEBIAN_FRONTEND" /etc/environment || echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment;'
-                ' grep -q "DEBIAN_FRONTEND" /etc/bash.bashrc || echo "export DEBIAN_FRONTEND=noninteractive" >> /etc/bash.bashrc'
-            ),
-        )
+        try:
+            # Valkyrie creates the outer DinD sandbox before calling setup_task.
+            # Start the compose services here, then use the main-service wrapper for
+            # the same setup operations the agent will receive later.
+            runtime_source = self._compose_source(task_id, dataset)
+            if runtime_source is not None:
+                # Mark this before startup: a partial `pull`/`up` still needs a
+                # best-effort `down` if startup or the client stream fails.
+                compose_started = True
+                environment = task.get("task_definition", {}).get("environment", {})
+                await start_compose_runtime(
+                    self._task_dir(task_id, dataset),
+                    task_id,
+                    self._task_image(task_id, dataset),
+                    self._compose_sidecar_images(task_id, dataset),
+                    environment,
+                    sandbox,
+                )
+                sandbox = ComposeSandbox(sandbox, runtime_source)
 
-        if problem_statement:
+            # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
+            # Write to both /etc/environment (read by PAM login sessions) and /etc/bash.bashrc
+            # (read by non-login interactive shells, which is what the PTY agent uses).
             await with_retry(
                 sandbox,
-                lambda: sandbox.upload_file("/tmp/problem_statement.md", problem_statement.encode()),
+                lambda: sandbox.exec(
+                    'grep -q "DEBIAN_FRONTEND" /etc/environment || echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment;'
+                    ' grep -q "DEBIAN_FRONTEND" /etc/bash.bashrc || echo "export DEBIAN_FRONTEND=noninteractive" >> /etc/bash.bashrc'
+                ),
             )
-            yield StreamMessageChunk(
-                type="message", data=f"Problem statement uploaded to /tmp/problem_statement.md\n{problem_statement}"
-            )
-        else:
-            yield StreamErrorChunk(type="error", data=f"Missing problem statement for task {task_id}")
 
-        yield StreamResultChunk(type="result", data={"status": "ok"})
+            if problem_statement:
+                await with_retry(
+                    sandbox,
+                    lambda: sandbox.upload_file("/tmp/problem_statement.md", problem_statement.encode()),
+                )
+                yield StreamMessageChunk(
+                    type="message", data=f"Problem statement uploaded to /tmp/problem_statement.md\n{problem_statement}"
+                )
+            else:
+                yield StreamErrorChunk(type="error", data=f"Missing problem statement for task {task_id}")
+
+            # Set this before yielding the terminal setup chunk so a consumer
+            # that stops after receiving it does not tear down a healthy runtime.
+            setup_succeeded = True
+            yield StreamResultChunk(type="result", data={"status": "ok"})
+        finally:
+            if compose_started and not setup_succeeded:
+                try:
+                    await stop_compose_runtime(task_id, outer_sandbox)
+                except Exception:
+                    logger.warning(
+                        "Could not clean up compose runtime after setup failure for %s", task_id, exc_info=True
+                    )
 
     async def evaluate_response(self, request: EvaluateResponseRequest, dataset: str | None = None) -> Any:
         """Evaluate a text response."""
@@ -565,8 +630,24 @@ class TerminalBenchBenchmark(BenchmarkService):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Pure evaluation - run test suite in sandbox and return Harbor TrialResult format."""
         if self._dataset_spec(dataset).grades_in_separate_sandbox:
-            async for chunk in self._evaluate_in_isolated_verifier(task_id, sandbox, dataset):
-                yield chunk
+            runtime_source = self._compose_source(task_id, dataset)
+            outer_sandbox = sandbox if runtime_source is not None else None
+            runtime_sandbox = ComposeSandbox(sandbox, runtime_source) if runtime_source is not None else sandbox
+            try:
+                async for chunk in self._evaluate_in_isolated_verifier(
+                    task_id,
+                    runtime_sandbox,
+                    dataset,
+                    outer_sandbox=outer_sandbox,
+                    runtime_source=runtime_source,
+                ):
+                    yield chunk
+            finally:
+                if runtime_source is not None and outer_sandbox is not None:
+                    try:
+                        await stop_compose_runtime(task_id, outer_sandbox)
+                    except Exception:
+                        logger.warning("Could not clean up compose runtime for %s", task_id, exc_info=True)
             return
 
         exception_info: str | None = None
@@ -719,7 +800,13 @@ class TerminalBenchBenchmark(BenchmarkService):
             ) from error
 
     async def _carry_artifact(
-        self, artifact: isolated_verifier.ArtifactSpec, agent_sandbox: Sandbox, verifier: Sandbox
+        self,
+        artifact: isolated_verifier.ArtifactSpec,
+        agent_sandbox: Sandbox,
+        verifier: Sandbox,
+        *,
+        outer_sandbox: Sandbox | None = None,
+        runtime_source: ComposeSource | None = None,
     ) -> str | None:
         """Re-materialize one declared artifact in the verifier at its original path.
 
@@ -732,10 +819,21 @@ class TerminalBenchBenchmark(BenchmarkService):
         still runs and decides what a missing submission is worth. Anything else
         raises, because it says nothing about the model.
         """
+        source_sandbox = agent_sandbox
+        if artifact.service is not None:
+            if outer_sandbox is None or runtime_source is None:
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Artifact {artifact.source} names compose service {artifact.service!r}, "
+                    "but no compose runtime is active"
+                )
+            source_sandbox = compose_service_sandbox(outer_sandbox, runtime_source, artifact.service)
+
         source = artifact.source.rstrip("/") or "/"
         archive = f"/tmp/{isolated_verifier.artifact_archive_name(source)}"
 
-        present = await with_retry(agent_sandbox, lambda: agent_sandbox.exec(isolated_verifier.exists_command(source)))
+        present = await with_retry(
+            source_sandbox, lambda: source_sandbox.exec(isolated_verifier.exists_command(source))
+        )
         if present.exit_code != 0:
             raise isolated_verifier.VerifierEnvironmentError(
                 f"Could not look for artifact {artifact.source}: {present.output.strip()[-500:]}"
@@ -744,7 +842,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             return f"Artifact not produced by the agent: {artifact.source}"
 
         followed = await with_retry(
-            agent_sandbox, lambda: agent_sandbox.exec(isolated_verifier.dir_symlink_command(source))
+            source_sandbox, lambda: source_sandbox.exec(isolated_verifier.dir_symlink_command(source))
         )
         if followed.exit_code != 0:
             raise isolated_verifier.VerifierEnvironmentError(
@@ -753,7 +851,8 @@ class TerminalBenchBenchmark(BenchmarkService):
             )
 
         packed = await with_retry(
-            agent_sandbox, lambda: agent_sandbox.exec(isolated_verifier.pack_command(source, archive))
+            source_sandbox,
+            lambda: source_sandbox.exec(isolated_verifier.pack_command(source, archive, artifact.exclude)),
         )
         if packed.exit_code != 0:
             raise isolated_verifier.VerifierEnvironmentError(
@@ -768,9 +867,9 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         async with _ARTIFACT_TRANSFERS:
             try:
-                content = await self._download_bounded(agent_sandbox, archive, artifact.source)
+                content = await self._download_bounded(source_sandbox, archive, artifact.source)
             finally:
-                await agent_sandbox.exec(f"rm -f {shlex.quote(archive)}")
+                await source_sandbox.exec(f"rm -f {shlex.quote(archive)}")
             await with_retry(verifier, lambda: verifier.upload_file(archive, content))
 
         await self._check_expansion(verifier, archive, artifact.source)
@@ -819,23 +918,63 @@ class TerminalBenchBenchmark(BenchmarkService):
             )
 
     def _gradeable_artifacts(self, task_id: str, dataset: str | None) -> list[isolated_verifier.ArtifactSpec]:
-        """The task's declared artifacts, or a clear refusal if we cannot honour them."""
+        """Parse the task's declared artifacts for the isolated verifier."""
         task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
         try:
-            artifacts = isolated_verifier.parse_artifacts(task_def.get("artifacts"))
+            return isolated_verifier.parse_artifacts(task_def.get("artifacts"))
         except isolated_verifier.UnsupportedArtifactError as error:
             raise ValueError(f"Task `{task_id}` declares an artifact this runtime cannot honour: {error}") from error
-        sidecar = isolated_verifier.sidecar_artifacts(artifacts)
-        if sidecar:
-            names = ", ".join(f"{artifact.service}:{artifact.source}" for artifact in sidecar)
-            raise ValueError(
-                f"Task `{task_id}` exports artifacts from compose services ({names}), "
-                "which this single-container runtime cannot collect."
+
+    async def _run_collect_hooks(
+        self,
+        task_id: str,
+        dataset: str | None,
+        agent_sandbox: Sandbox,
+        *,
+        outer_sandbox: Sandbox | None,
+        runtime_source: ComposeSource | None,
+        services: set[str] | None = None,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Run Harbor verifier collect hooks before carrying artifacts."""
+        task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
+        verifier_def = task_def.get("verifier", {})
+        hooks = isolated_verifier.parse_collect_hooks(verifier_def.get("collect"))
+        for hook in hooks:
+            if services is not None and hook.service not in services:
+                continue
+            target = agent_sandbox
+            if hook.service != "main":
+                if outer_sandbox is None or runtime_source is None:
+                    raise isolated_verifier.VerifierEnvironmentError(
+                        f"Collect hook for {task_id} targets compose service {hook.service!r}, "
+                        "but no compose runtime is active"
+                    )
+                target = compose_service_sandbox(outer_sandbox, runtime_source, hook.service)
+
+            yield StreamMessageChunk(
+                type="message",
+                data=f"Running collect hook for {task_id} on {hook.service}: {hook.command}",
             )
-        return artifacts
+            command = hook.command
+            if hook.user is not None:
+                command = f"su -s /bin/sh {shlex.quote(hook.user)} -c {shlex.quote(command)}"
+            result = await with_retry(target, lambda: target.exec(command, timeout=hook.timeout_sec))
+            if result.exit_code != 0:
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Collect hook for {task_id} on {hook.service} failed with exit code "
+                    f"{result.exit_code}: {result.output.strip()[-1000:]}"
+                )
+            if result.output.strip():
+                yield StreamMessageChunk(type="message", data=result.output.strip())
 
     async def _evaluate_in_isolated_verifier(
-        self, task_id: str, sandbox: Sandbox, dataset: str | None = None
+        self,
+        task_id: str,
+        sandbox: Sandbox,
+        dataset: str | None = None,
+        *,
+        outer_sandbox: Sandbox | None = None,
+        runtime_source: ComposeSource | None = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Grade in a second sandbox the agent never had access to.
 
@@ -872,6 +1011,16 @@ class TerminalBenchBenchmark(BenchmarkService):
                 except ValueError as error:
                     raise isolated_verifier.VerifierEnvironmentError(str(error)) from error
 
+                async for chunk in self._run_collect_hooks(
+                    task_id,
+                    dataset,
+                    sandbox,
+                    outer_sandbox=outer_sandbox,
+                    runtime_source=runtime_source,
+                    services={"main"},
+                ):
+                    yield chunk
+
                 verifier_timeout = self._get_verifier_timeout(task_id, dataset)
                 # Everything up to the grader has its own bound: only the grader
                 # itself is allowed to take the task's verifier timeout.
@@ -889,7 +1038,13 @@ class TerminalBenchBenchmark(BenchmarkService):
                 # Artifacts land first; the reward directory is emptied after them,
                 # so nothing an archive planted there survives to be read as a score.
                 deadline = asyncio.get_running_loop().time() + isolated_verifier.PREPARE_BUDGET_SECONDS
-                for artifact in isolated_verifier.local_artifacts(artifacts):
+                main_artifacts = [artifact for artifact in artifacts if artifact.service in (None, "main")]
+                sidecar_artifacts = [artifact for artifact in artifacts if artifact.service not in (None, "main")]
+                task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
+                verifier_def = task_def.get("verifier", {})
+                collect_hooks = isolated_verifier.parse_collect_hooks(verifier_def.get("collect"))
+                sidecar_hooks = [hook for hook in collect_hooks if hook.service != "main"]
+                for artifact in main_artifacts:
                     # Announced before each transfer so the client's idle watchdog
                     # sees progress across a long series of them.
                     yield StreamMessageChunk(type="message", data=f"Carrying artifact {artifact.source}")
@@ -902,13 +1057,66 @@ class TerminalBenchBenchmark(BenchmarkService):
                     )
                     try:
                         async with asyncio.timeout(budget):
-                            note = await self._carry_artifact(artifact, sandbox, verifier)
+                            note = await self._carry_artifact(
+                                artifact,
+                                sandbox,
+                                verifier,
+                                outer_sandbox=outer_sandbox,
+                                runtime_source=runtime_source,
+                            )
                     except TimeoutError as error:
                         raise isolated_verifier.VerifierEnvironmentError(
                             f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
                         ) from error
                     if note:
                         yield StreamMessageChunk(type="message", data=note)
+
+                if sidecar_artifacts or sidecar_hooks:
+                    if outer_sandbox is None or runtime_source is None:
+                        raise isolated_verifier.VerifierEnvironmentError(
+                            f"Task {task_id} declares sidecar artifacts but no compose runtime is active"
+                        )
+                    try:
+                        await stop_compose_main(task_id, outer_sandbox)
+                    except Exception as error:
+                        raise isolated_verifier.VerifierEnvironmentError(
+                            f"Could not stop main before collecting sidecar state for {task_id}: {error}"
+                        ) from error
+
+                    async for chunk in self._run_collect_hooks(
+                        task_id,
+                        dataset,
+                        sandbox,
+                        outer_sandbox=outer_sandbox,
+                        runtime_source=runtime_source,
+                        services={
+                            *[artifact.service for artifact in sidecar_artifacts if artifact.service is not None],
+                            *[hook.service for hook in sidecar_hooks],
+                        },
+                    ):
+                        yield chunk
+
+                    for artifact in sidecar_artifacts:
+                        yield StreamMessageChunk(type="message", data=f"Carrying artifact {artifact.source}")
+                        budget = min(
+                            isolated_verifier.PREPARE_TIMEOUT_SECONDS,
+                            deadline - asyncio.get_running_loop().time(),
+                        )
+                        try:
+                            async with asyncio.timeout(budget):
+                                note = await self._carry_artifact(
+                                    artifact,
+                                    sandbox,
+                                    verifier,
+                                    outer_sandbox=outer_sandbox,
+                                    runtime_source=runtime_source,
+                                )
+                        except TimeoutError as error:
+                            raise isolated_verifier.VerifierEnvironmentError(
+                                f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
+                            ) from error
+                        if note:
+                            yield StreamMessageChunk(type="message", data=note)
 
                 # /tests is the image's: uploading ours over it would delete data
                 # generated at build time and undo its permission hardening.

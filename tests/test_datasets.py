@@ -4,7 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 
-import pytest
+from benchmark_service import ComposeSource
 
 from scripts.import_tbench4_release import build_manifest
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
@@ -48,22 +48,39 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     manifest = benchmark._image_manifest("terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
     assert manifest["release_tag"] == "v4.0.0"
     assert len(manifest["tasks"]) == 66
-    assert len(manifest["unsupported_tasks"]) == 14
+    assert manifest["unsupported_tasks"] == []
     assert all("@sha256:" in entry["image"] for entry in manifest["tasks"].values())
     assert all("@sha256:" in entry["verifier_image"] for entry in manifest["tasks"].values())
+    assert all(
+        "@sha256:" in sidecar["image"] for entry in manifest["tasks"].values() for sidecar in entry.get("sidecars", [])
+    )
 
 
-def test_terminal_bench_4_refuses_unsupported_tasks_before_provisioning() -> None:
+def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features() -> None:
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
 
-    with pytest.raises(ValueError, match="sidecar services"):
-        asyncio.run(benchmark.retrieve_task("ctr-optimization", dataset="terminal-bench-4.0"))
+    task_ids = sorted(benchmark.datasets["terminal-bench-4.0"])
+    responses = [asyncio.run(benchmark.retrieve_task(task_id, dataset="terminal-bench-4.0")) for task_id in task_ids]
+    assert len(responses) == 66
+    assert all(response.source is not None for response in responses)
 
-    with pytest.raises(ValueError, match="verifier.collect"):
-        asyncio.run(benchmark.retrieve_task("shadow-relay", dataset="terminal-bench-4.0"))
+    compose_response = asyncio.run(benchmark.retrieve_task("ctr-optimization", dataset="terminal-bench-4.0"))
+    assert isinstance(compose_response.source, ComposeSource)
+    assert "runtime.json" in compose_response.source.compose_command
 
-    with pytest.raises(ValueError, match=r"unsupported keys \(exclude\)"):
-        asyncio.run(benchmark.retrieve_task("vba-userform-port", dataset="terminal-bench-4.0"))
+    assert benchmark._gradeable_artifacts("shadow-relay", "terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
+    artifacts = benchmark._gradeable_artifacts("vba-userform-port", "terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
+    assert artifacts[0].exclude == (
+        "node_modules",
+        ".venv",
+        ".vite",
+        ".git",
+        "__pycache__",
+        "*.pyc",
+        ".pytest_cache",
+        ".npm",
+        ".cache",
+    )
 
 
 def test_terminal_bench_4_manifest_is_reproducible() -> None:

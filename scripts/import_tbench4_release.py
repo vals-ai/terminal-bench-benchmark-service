@@ -3,10 +3,9 @@
 
 The upstream release asset describes each task as a list of environment,
 verifier, and (where applicable) sidecar images. The benchmark service needs a
-smaller task -> image mapping and the image working directory, which is not
-included in that asset. This script derives the latter from the pinned source
-Dockerfiles and records sidecar tasks as unsupported until the service can run
-the compose runtime.
+smaller task -> image mapping, the image working directory, and a service ->
+sidecar image mapping for compose tasks. This script derives the latter from
+the pinned source Dockerfiles and release references.
 """
 
 from __future__ import annotations
@@ -15,9 +14,20 @@ import argparse
 import hashlib
 import json
 import re
-import tomllib
 from pathlib import Path
 from typing import Any, cast
+
+_PINNED_COMPOSE_IMAGES: dict[str, dict[str, str]] = {
+    # These services use upstream images rather than Harbor-built release
+    # sidecars. Keep their exact task-provided versions, but pin the resolved
+    # multi-platform image so Compose cannot silently move them between runs.
+    "live-database-cutover": {
+        "redis": "redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+    },
+    "payments-pipeline-fix": {
+        "kafka": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+    },
+}
 
 _DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
 _WORKDIR_RE = re.compile(r"^WORKDIR\s+(\S+)\s*$", re.IGNORECASE)
@@ -55,7 +65,6 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
     raw_tasks = cast(list[object], raw_tasks_value)
 
     tasks: dict[str, dict[str, Any]] = {}
-    unsupported_tasks: list[str] = []
     source_sha = "unknown"
     for raw_task_value in raw_tasks:
         if not isinstance(raw_task_value, dict):
@@ -80,43 +89,31 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
         environment = _image(images, "environment", task_id)
         verifier = _image(images, "verifier", task_id)
         sidecars = [image for image in images if image.get("kind") == "sidecar"]
-        task_definition = tomllib.loads((tasks_root / task_id / "task.toml").read_text())
-        verifier_definition: Any = task_definition.get("verifier", {})
-        has_collect_hooks = False
-        if isinstance(verifier_definition, dict):
-            verifier_table = cast(dict[str, Any], verifier_definition)
-            has_collect_hooks = bool(verifier_table.get("collect"))
-        unsupported_artifact_keys: set[str] = set()
-        artifacts: Any = task_definition.get("artifacts")
-        if isinstance(artifacts, list):
-            for artifact_value in cast(list[object], artifacts):
-                if isinstance(artifact_value, dict):
-                    artifact = cast(dict[str, Any], artifact_value)
-                    unsupported_artifact_keys.update(str(key) for key in artifact if key not in {"source", "service"})
-
         entry: dict[str, Any] = {
             "image": environment["pinned_ref"],
             "verifier_image": verifier["pinned_ref"],
             "workdir": _workdir(tasks_root / task_id),
         }
-        unsupported_reasons: list[str] = []
+        sidecar_entries: list[dict[str, str]] = []
         if sidecars:
-            unsupported_reasons.append("requires sidecar services, which this service does not provision yet")
-            entry["sidecars"] = [
-                {
-                    "role": image.get("role"),
-                    "services": image.get("compose_services", []),
-                }
-                for image in sidecars
-            ]
-        if has_collect_hooks:
-            unsupported_reasons.append("uses verifier.collect hooks, which this service does not execute yet")
-        if unsupported_artifact_keys:
-            keys = ", ".join(sorted(unsupported_artifact_keys))
-            unsupported_reasons.append(f"declares artifacts with unsupported keys ({keys})")
-        if unsupported_reasons:
-            entry["unsupported_reason"] = f"TBench4 task {'; '.join(unsupported_reasons)}"
-            unsupported_tasks.append(task_id)
+            for image in sidecars:
+                pinned_ref = image.get("pinned_ref")
+                compose_services_value = image.get("compose_services", [])
+                if not isinstance(pinned_ref, str) or not isinstance(compose_services_value, list):
+                    raise ValueError(f"{task_id} has an invalid sidecar image")
+                compose_services = cast(list[object], compose_services_value)
+                for service_value in compose_services:
+                    if not isinstance(service_value, dict):
+                        raise ValueError(f"{task_id} has an invalid sidecar service")
+                    service_entry = cast(dict[str, Any], service_value)
+                    if not isinstance(service_entry.get("service"), str):
+                        raise ValueError(f"{task_id} has an invalid sidecar service")
+                    sidecar_entries.append({"service": cast(str, service_entry["service"]), "image": pinned_ref})
+        sidecar_entries.extend(
+            {"service": service, "image": image} for service, image in _PINNED_COMPOSE_IMAGES.get(task_id, {}).items()
+        )
+        if sidecar_entries:
+            entry["sidecars"] = sorted(sidecar_entries, key=lambda value: value["service"])
         tasks[task_id] = entry
 
     return {
@@ -130,7 +127,7 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
         "image_repository": source_manifest.get("image_repository"),
         "task_count": len(tasks),
         "image_count": source_manifest.get("image_count"),
-        "unsupported_tasks": sorted(unsupported_tasks),
+        "unsupported_tasks": [],
         "tasks": dict(sorted(tasks.items())),
     }
 

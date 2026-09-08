@@ -43,13 +43,13 @@ python scripts/import_tbench4_release.py \
   --output datasets/images/terminal-bench-4.json
 ```
 
-The service supports v4 CPU/GPU tasks that use one environment image and a
-separate verifier image. Both image references are digest-pinned, and the task
-Dockerfile's working directory is preserved. The current v4 release has 66
-tasks; 52 are supported by this runtime. Fourteen are explicitly refused at
-retrieval time because they require sidecar services, `verifier.collect` hooks,
-or artifact fields this service does not execute yet. They remain in the
-manifest so support can be added without silently changing the imported set.
+The service supports all 66 v4 CPU/GPU tasks. Plain tasks use their digest-pinned
+environment and verifier images. Compose tasks use the digest-pinned
+`docker:28.3.3-dind` outer sandbox and digest-pinned service images from the
+release manifest. `verifier.collect` hooks run at their declared service and
+phase, and artifact `exclude` patterns are applied while packaging the original
+source path for the isolated verifier. The task Dockerfile's working directory
+is preserved.
 
 ## Development
 
