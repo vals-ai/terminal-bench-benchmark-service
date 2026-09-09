@@ -4,11 +4,17 @@ import asyncio
 import json
 from pathlib import Path
 
+import pytest
 from benchmark_service import ComposeSource
 from benchmark_service.v1_schemas import V1Task
 
 from scripts.import_tbench4_release import build_manifest
-from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
+import terminal_bench_benchmark_service.benchmark_service as service_module
+from terminal_bench_benchmark_service.benchmark_service import (
+    MAX_DAYTONA_DISK_GB,
+    MAX_DAYTONA_VCPU,
+    TerminalBenchBenchmark,
+)
 
 
 def test_load_terminal_bench_datasets() -> None:
@@ -38,18 +44,30 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
 
     default_task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr"))
-    assert default_task.source.image.startswith("harborframework/terminal-bench:")
+    assert isinstance(default_task.source, ComposeSource)
+    assert benchmark._task_image("atrx-vep-crispr", "terminal-bench-4.0").startswith(  # type: ignore[reportPrivateUsage]
+        "harborframework/terminal-bench:"
+    )
     assert default_task.cwd == "/app"
 
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
-    assert task.source.image.startswith("harborframework/terminal-bench:")
-    assert "@sha256:" in task.source.image
+    assert isinstance(task.source, ComposeSource)
+    task_image = benchmark._task_image("atrx-vep-crispr", "terminal-bench-4.0")  # type: ignore[reportPrivateUsage]
+    assert task_image.startswith("harborframework/terminal-bench:")
+    assert "@sha256:" in task_image
     assert task.cwd == "/app"
     assert task.resources.gpu == 0
 
     gpu_task = asyncio.run(benchmark.retrieve_task("fp8-rmsnorm-gemm", dataset="terminal-bench-4.0"))
     assert gpu_task.resources.gpu == 1
     assert gpu_task.resources.gpu_type == "H100"
+
+    jax_task = asyncio.run(benchmark.retrieve_task("jax-speedrun-gpu", dataset="terminal-bench-4.0"))
+    assert jax_task.resources.disk == MAX_DAYTONA_DISK_GB
+
+    database_task = asyncio.run(benchmark.retrieve_task("live-database-cutover", dataset="terminal-bench-4.0"))
+    assert database_task.resources.vcpu == MAX_DAYTONA_VCPU
+    assert benchmark._verifier_resources("live-database-cutover", "terminal-bench-4.0").vcpu == MAX_DAYTONA_VCPU  # pyright: ignore[reportPrivateUsage]
 
     manifest = benchmark._image_manifest("terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
     assert manifest["release_tag"] == "v4.0.0"
@@ -60,6 +78,20 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     assert all(
         "@sha256:" in sidecar["image"] for entry in manifest["tasks"].values() for sidecar in entry.get("sidecars", [])
     )
+
+
+def test_tbench4_does_not_silently_cap_non_daytona_resources(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    benchmark = asyncio.run(TerminalBenchBenchmark.create())
+    monkeypatch.setattr(service_module, "_request_sandbox_provider", lambda: object())
+
+    with pytest.raises(ValueError, match="bound provider"):
+        benchmark._sandbox_resources(  # pyright: ignore[reportPrivateUsage]
+            "jax-speedrun-gpu",
+            "terminal-bench-4.0",
+            {"cpus": 1, "memory_mb": 1024, "storage_mb": 1000 * 1024},
+        )
 
 
 def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features() -> None:
@@ -73,6 +105,9 @@ def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features() 
     compose_response = asyncio.run(benchmark.retrieve_task("ctr-optimization", dataset="terminal-bench-4.0"))
     assert isinstance(compose_response.source, ComposeSource)
     assert "runtime.json" in compose_response.source.compose_command
+
+    image_response = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
+    assert isinstance(image_response.source, ComposeSource)
 
     assert benchmark._gradeable_artifacts("shadow-relay", "terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
     artifacts = benchmark._gradeable_artifacts("vba-userform-port", "terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]

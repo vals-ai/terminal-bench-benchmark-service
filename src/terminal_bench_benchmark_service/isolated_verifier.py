@@ -23,8 +23,11 @@ VERIFIER_CREATE_TIMEOUT_SECONDS = 600
 # Idleness is counted in sandbox events, not process liveness, so a grader that
 # runs quietly must outlast its own timeout by this margin.
 VERIFIER_AUTO_STOP_MARGIN_MINUTES = 30
-# An artifact passes through this process's memory, and the container is small.
-MAX_ARTIFACT_BYTES = 128 * 1024 * 1024
+# An artifact passes through this process's memory. TBench4's checkpoint
+# consolidation task produces a 186 MB safetensors file, so leave room for
+# that valid artifact while keeping transfers bounded below the verifier's
+# 1 GB expanded-artifact limit.
+MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 # Ratios above a thousand to one are easy to produce, so the packed bound alone
 # would let a small archive fill the verifier's disk.
 MAX_EXPANDED_ARTIFACT_BYTES = 1024 * 1024 * 1024

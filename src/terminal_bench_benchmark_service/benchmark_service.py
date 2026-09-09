@@ -6,7 +6,7 @@ import logging
 import shlex
 import tomllib
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar, cast
@@ -21,6 +21,7 @@ from benchmark_service.sandbox import (
     SandboxError,
     SandboxProvider,
 )
+from benchmark_service.sandbox.daytona import DaytonaSandboxProvider
 from benchmark_service.schemas import (
     EvaluateResponseRequest,
     FinalScoreResult,
@@ -49,6 +50,13 @@ logger = logging.getLogger(__name__)
 
 # Deletes retry internally for minutes; past this the sweeper can have it.
 VERIFIER_DELETE_TIMEOUT_SECONDS = 120
+# Daytona currently rejects sandbox disks above 512 GB. TBench4's JAX task
+# declares 1000 GB, so keep the request launchable on the configured provider.
+MAX_DAYTONA_DISK_GB = 512
+# Daytona currently rejects sandbox CPU requests above 12 vCPUs. TBench4's
+# live-database-cutover task declares 16, so cap manifest-backed requests at
+# the provider limit while preserving the task's other resource requirements.
+MAX_DAYTONA_VCPU = 12
 
 # Process-wide: the bound is the container's memory, not one instance's.
 _ARTIFACT_TRANSFERS = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_TRANSFERS)
@@ -497,9 +505,41 @@ class TerminalBenchBenchmark(BenchmarkService):
         if self._dataset_spec(dataset).image_manifest is None:
             return None
         sidecars = self._compose_sidecar_images(task_id, dataset)
-        if not sidecars:
-            return None
         return compose_runtime_source(task_id, self._task_image(task_id, dataset), sidecars)
+
+    def _sandbox_resources(
+        self, task_id: str, dataset: str | None, resource_data: Mapping[str, Any]
+    ) -> OverrideResources:
+        resources = OverrideResources.model_validate(resource_data)
+        is_manifest_dataset = self._dataset_spec(dataset).image_manifest is not None
+        provider = _request_sandbox_provider()
+        is_daytona = provider is None or isinstance(provider, DaytonaSandboxProvider)
+        exceeds_daytona_limits = resources.vcpu > MAX_DAYTONA_VCPU or resources.disk > MAX_DAYTONA_DISK_GB
+        if is_manifest_dataset and not is_daytona and exceeds_daytona_limits:
+            provider_name = type(provider).__name__
+            raise ValueError(
+                f"Task {task_id!r} requests resources above Daytona's limits, but the bound provider "
+                f"is {provider_name!r}; provider-specific normalization is unavailable"
+            )
+        if is_manifest_dataset and is_daytona and resources.vcpu > MAX_DAYTONA_VCPU:
+            logger.warning(
+                "Capping CPU request for %s/%s from %s vCPUs to Daytona's %s vCPU limit",
+                dataset or "default",
+                task_id,
+                resources.vcpu,
+                MAX_DAYTONA_VCPU,
+            )
+            resources = resources.model_copy(update={"vcpu": MAX_DAYTONA_VCPU})
+        if is_manifest_dataset and is_daytona and resources.disk > MAX_DAYTONA_DISK_GB:
+            logger.warning(
+                "Capping disk request for %s/%s from %s GB to Daytona's %s GB limit",
+                dataset or "default",
+                task_id,
+                resources.disk,
+                MAX_DAYTONA_DISK_GB,
+            )
+            resources = resources.model_copy(update={"disk": MAX_DAYTONA_DISK_GB})
+        return resources
 
     def _task_cwd(self, task_id: str, dataset: str | None) -> str:
         """Working directory the agent starts in.
@@ -540,7 +580,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         environment: dict[str, Any] = task_def.get("environment", {})
 
         # Validate resources are correctly set
-        resources: OverrideResources = OverrideResources.model_validate(environment)
+        resources = self._sandbox_resources(task_id, dataset, environment)
 
         # Terminal-Bench 2.x tasks name a published image; datasets that ship only
         # a Dockerfile resolve their pinned image through the dataset manifest.
@@ -582,7 +622,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                 # Mark this before startup: a partial `pull`/`up` still needs a
                 # best-effort `down` if startup or the client stream fails.
                 compose_started = True
-                environment = task.get("task_definition", {}).get("environment", {})
+                environment = dict(task.get("task_definition", {}).get("environment", {}))
+                resources = self._sandbox_resources(task_id, dataset, environment)
+                environment["cpus"] = resources.vcpu
                 await start_compose_runtime(
                     self._task_dir(task_id, dataset),
                     task_id,
@@ -594,13 +636,21 @@ class TerminalBenchBenchmark(BenchmarkService):
                 sandbox = ComposeSandbox(sandbox, runtime_source)
 
             # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
-            # Write to both /etc/environment (read by PAM login sessions) and /etc/bash.bashrc
-            # (read by non-login interactive shells, which is what the PTY agent uses).
+            # TBench4 images may run as non-root, so only update system files when writable and
+            # otherwise persist the setting in the agent user's shell profile.
             await with_retry(
                 sandbox,
                 lambda: sandbox.exec(
-                    'grep -q "DEBIAN_FRONTEND" /etc/environment || echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment;'
-                    ' grep -q "DEBIAN_FRONTEND" /etc/bash.bashrc || echo "export DEBIAN_FRONTEND=noninteractive" >> /etc/bash.bashrc'
+                    "if [ -w /etc/environment ]; then "
+                    'grep -q "DEBIAN_FRONTEND" /etc/environment || echo "DEBIAN_FRONTEND=noninteractive" >> /etc/environment; '
+                    "fi; "
+                    "if [ -w /etc/bash.bashrc ]; then "
+                    'grep -q "DEBIAN_FRONTEND" /etc/bash.bashrc || echo "export DEBIAN_FRONTEND=noninteractive" >> /etc/bash.bashrc; '
+                    "fi; "
+                    'if [ -n "${HOME:-}" ] && [ -w "$HOME" ]; then '
+                    'touch "$HOME/.bashrc"; '
+                    'grep -q "DEBIAN_FRONTEND" "$HOME/.bashrc" || echo "export DEBIAN_FRONTEND=noninteractive" >> "$HOME/.bashrc"; '
+                    "fi"
                 ),
             )
 
@@ -788,7 +838,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         task_definition = self.get_dataset(dataset)[task_id].get("task_definition", {})
         environment: dict[str, Any] = dict(task_definition.get("environment", {}))
         environment.update(task_definition.get("verifier", {}).get("environment", {}))
-        return OverrideResources.model_validate(environment)
+        return self._sandbox_resources(task_id, dataset, environment)
 
     async def _create_verifier_sandbox(
         self,

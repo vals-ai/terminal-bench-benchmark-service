@@ -22,6 +22,7 @@ _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf
 _DOCKER_READY_ATTEMPTS = 30
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
+_EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
 
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
@@ -87,6 +88,8 @@ async def start_compose_runtime(
     timeout = _build_timeout(resources)
     await _run(sandbox, f"{compose} pull", timeout=timeout)
     await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
+    prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
+    await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
     await _run(sandbox, f"{compose} exec -T main true", timeout=_readiness_timeout(resources))
 
 
@@ -134,7 +137,9 @@ async def _stage_files(
 ) -> None:
     await _run(sandbox, f"mkdir -p {shlex.quote(_ENVIRONMENT_ROOT)}", timeout=30)
     runtime = runtime_compose_definition(task_image, sidecar_images, resources)
-    await sandbox.upload_file(_COMPOSE_FILE, (environment_dir / "docker-compose.yaml").read_bytes())
+    compose_file = environment_dir / "docker-compose.yaml"
+    compose_content = compose_file.read_bytes() if compose_file.is_file() else _EMPTY_COMPOSE_FILE
+    await sandbox.upload_file(_COMPOSE_FILE, compose_content)
     await sandbox.upload_file(_RUNTIME_FILE, json.dumps(runtime, sort_keys=True).encode())
     await _run(sandbox, f"mkdir -p {shlex.quote(_BUNDLE_DIR)}", timeout=30)
 
@@ -143,22 +148,31 @@ def runtime_compose_definition(
     task_image: str, sidecar_images: Mapping[str, str], resources: Mapping[str, Any]
 ) -> dict[str, Any]:
     """Return the JSON Compose overlay used to run one pinned task."""
+    main: dict[str, Any] = {
+        "image": task_image,
+        "pull_policy": "always",
+        "command": ["sh", "-c", "sleep infinity"],
+        "volumes": [f"{_BUNDLE_DIR}:{_BUNDLE_DIR}"],
+        "deploy": {
+            "resources": {
+                "limits": {
+                    "cpus": str(resources.get("cpus", 1)),
+                    "memory": f"{resources.get('memory_mb', 1024)}m",
+                }
+            }
+        },
+    }
+    gpu_count = int(resources.get("gpu", resources.get("gpus", 0)) or 0)
+    if gpu_count:
+        # The Daytona GPU allocation belongs to the outer sandbox. The pinned
+        # DIND image has no NVIDIA runtime, so a nested --gpus/device
+        # reservation would fail before the task starts. Privileged mode passes
+        # the outer device namespace through to the task container.
+        main["privileged"] = True
+
     return {
         "services": {
-            "main": {
-                "image": task_image,
-                "pull_policy": "always",
-                "command": ["sh", "-c", "sleep infinity"],
-                "volumes": [f"{_BUNDLE_DIR}:{_BUNDLE_DIR}"],
-                "deploy": {
-                    "resources": {
-                        "limits": {
-                            "cpus": str(resources.get("cpus", 1)),
-                            "memory": f"{resources.get('memory_mb', 1024)}m",
-                        }
-                    }
-                },
-            },
+            "main": main,
             **{service: {"image": image, "pull_policy": "always"} for service, image in sorted(sidecar_images.items())},
         }
     }

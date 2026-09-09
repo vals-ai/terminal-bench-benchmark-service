@@ -31,3 +31,18 @@ datasets/**/authoring/
 # TBench4 tasks are graded in their separate verifier image, which is built
 # with the tests already inside it.
 datasets/terminal-bench-4/**/tests/
+
+# TBench4 runs its task images behind the DIND/Compose wrapper. The service
+# reads compose definitions at setup time; keep only those small definitions
+# in the service image, not the source trees that were used to build them.
+!datasets/terminal-bench-4/
+!datasets/terminal-bench-4/tasks/
+!datasets/terminal-bench-4/tasks/**/
+!datasets/terminal-bench-4/**/environment/
+datasets/terminal-bench-4/**/environment/*
+!datasets/terminal-bench-4/**/environment/docker-compose.yaml
+# The broad task-directory re-inclusions above would otherwise undo these
+# source exclusions for TBench4.
+datasets/terminal-bench-4/**/tests/
+datasets/terminal-bench-4/**/solution/
+datasets/terminal-bench-4/**/authoring/
