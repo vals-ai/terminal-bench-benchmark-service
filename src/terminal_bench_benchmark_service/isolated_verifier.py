@@ -23,8 +23,11 @@ VERIFIER_CREATE_TIMEOUT_SECONDS = 600
 # Idleness is counted in sandbox events, not process liveness, so a grader that
 # runs quietly must outlast its own timeout by this margin.
 VERIFIER_AUTO_STOP_MARGIN_MINUTES = 30
-# An artifact passes through this process's memory, and the container is small.
-MAX_ARTIFACT_BYTES = 128 * 1024 * 1024
+# An artifact passes through this process's memory. TBench4's checkpoint
+# consolidation task produces a 186 MB safetensors file, so leave room for
+# that valid artifact while keeping transfers bounded below the verifier's
+# 1 GB expanded-artifact limit.
+MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 # Ratios above a thousand to one are easy to produce, so the packed bound alone
 # would let a small archive fill the verifier's disk.
 MAX_EXPANDED_ARTIFACT_BYTES = 1024 * 1024 * 1024
@@ -39,10 +42,10 @@ PRESENT = "PRESENT"
 # tar pads a file that shrank while being read out to its listed length, so
 # the archive holds a right-sized member with a fabricated tail.
 SHRANK_MARKER = "File shrank"
-# Concurrent artifact transfers per process. Nothing else bounds concurrent
-# evaluations on this path, and each transfer holds roughly three times the
-# packed size while the bytes pass from one sandbox to the other.
-MAX_CONCURRENT_TRANSFERS = 2
+# The SDK upload boundary accepts bytes, so one transfer necessarily holds one
+# packed archive in process memory. Keep those bounded uploads serialized; the
+# download side is spooled to disk before the single upload copy is made.
+MAX_CONCURRENT_TRANSFERS = 1
 
 
 class UnsupportedArtifactError(ValueError):

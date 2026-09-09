@@ -26,6 +26,19 @@ class FailingCleanupSandbox:
         return ExecResult(exit_code=0, output="")
 
 
+class StagingSandbox:
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+        self.uploads: dict[str, bytes] = {}
+
+    async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+        self.commands.append(command)
+        return ExecResult(exit_code=0, output="")
+
+    async def upload_file(self, remote_path: str, content: bytes) -> None:
+        self.uploads[remote_path] = content
+
+
 def test_compose_source_uses_a_provider_compatible_outer_image() -> None:
     source = compose_runtime_source("task/one", "example/main@sha256:" + "a" * 64, {"api": "example/api"})
 
@@ -95,6 +108,34 @@ services:
         volume["source"] == "/bundle" and volume["target"] == "/bundle"
         for volume in config["services"]["main"]["volumes"]
     )
+    assert "privileged" not in config["services"]["main"]
+
+
+def test_runtime_overlay_passes_allocated_gpu_into_nested_task() -> None:
+    runtime = runtime_compose_definition(
+        "example/main@sha256:" + "a" * 64,
+        {},
+        {"cpus": 2, "memory_mb": 4096, "gpus": 1, "gpu_types": ["H100"]},
+    )
+
+    assert runtime["services"]["main"]["privileged"] is True
+
+
+def test_staging_uses_minimal_compose_for_tasks_without_sidecars(tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import _stage_files
+
+    sandbox = StagingSandbox()
+    asyncio.run(
+        _stage_files(
+            tmp_path / "environment",
+            "example/main@sha256:" + "a" * 64,
+            {},
+            {"cpus": 1, "memory_mb": 1024},
+            sandbox,  # type: ignore[arg-type]
+        )
+    )
+
+    assert sandbox.uploads["/terminal-bench/task.json"] == b'{"services":{"main":{}}}\n'
 
 
 def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
