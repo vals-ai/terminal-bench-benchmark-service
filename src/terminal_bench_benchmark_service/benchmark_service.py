@@ -1226,7 +1226,7 @@ class TerminalBenchBenchmark(BenchmarkService):
 
                 try:
                     rewards = {"score": isolated_verifier.parse_reward(reward.output)}
-                except (ValueError, IndexError) as error:
+                except (ValueError, IndexError, KeyError, TypeError) as error:
                     raise isolated_verifier.VerifierEnvironmentError(
                         f"Verifier wrote an unusable reward for `{task_id}`: {error}"
                     ) from error

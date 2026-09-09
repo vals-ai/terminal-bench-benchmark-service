@@ -73,7 +73,7 @@ def test_pack_does_not_take_its_status_from_the_last_pipeline_stage() -> None:
     """A find that fails part-way must not yield a truncated archive reporting success."""
     command = isolated_verifier.pack_command("/app/out", "/tmp/a.tar.gz")
 
-    assert command.startswith("set -e; find ")
+    assert command.startswith("set -e; ")
     assert "| tar" not in command
 
 
@@ -243,6 +243,39 @@ def test_reward_outside_the_unit_interval_is_refused() -> None:
     for bad in ("100", "-1", "1.5"):
         with pytest.raises(ValueError, match="outside"):
             isolated_verifier.parse_reward(bad)
+
+
+def test_reward_json_is_preferred_over_reward_txt() -> None:
+    """Harbor reads reward.json first; several v4 graders write only that file."""
+    command = isolated_verifier.read_reward_command()
+
+    assert command.index(isolated_verifier.REWARD_JSON_PATH) < command.index(isolated_verifier.REWARD_PATH)
+    assert isolated_verifier.parse_reward('{"reward": 1}\n') == 1.0
+    assert isolated_verifier.parse_reward('{\n  "reward": 0.0\n}\n') == 0.0
+    with pytest.raises(ValueError, match="outside"):
+        isolated_verifier.parse_reward('{"reward": 2}')
+    with pytest.raises(ValueError, match="not a number"):
+        isolated_verifier.parse_reward('{"reward": "1"}')
+    with pytest.raises(KeyError):
+        isolated_verifier.parse_reward('{"score": 1}')
+
+
+def test_artifact_commands_run_on_busybox_sidecars() -> None:
+    """redis:alpine and kafka-native ship BusyBox: no `find -xtype`, no `tar --null`.
+
+    BusyBox `find` exits 1 on `-xtype`, which the symlink gate read as a found link.
+    """
+    symlink_check = isolated_verifier.dir_symlink_command("/data")
+    pack = isolated_verifier.pack_command("/data", "/tmp/a.tar.gz")
+
+    assert "-xtype" not in symlink_check
+    assert "-exec test -d {} \\;" in symlink_check
+    assert "--null" not in pack
+    assert "-print0" not in pack
+    # A newline-delimited list would split such a name into two missing members
+    # and ship the archive without it under the status-1 allowance.
+    assert pack.index("printf '*\\n*'") < pack.index("-print >")
+    assert "exit 2" in pack
 
 
 def test_pack_skips_a_member_that_disappeared() -> None:

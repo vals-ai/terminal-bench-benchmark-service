@@ -10,6 +10,7 @@ as hostile input on the way across.
 from __future__ import annotations
 
 import hashlib
+import json
 import shlex
 from collections.abc import Sequence
 from posixpath import dirname
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 REWARD_PATH = "/logs/verifier/reward.txt"
+REWARD_JSON_PATH = "/logs/verifier/reward.json"
 GRADE_COMMAND = "bash /tests/test.sh"
 CONVENTION_ARTIFACT_DIR = "/logs/artifacts"
 VERIFIER_CREATE_TIMEOUT_SECONDS = 600
@@ -208,16 +210,27 @@ def strip_privileged_bits_command(stage: str) -> str:
 
 
 def read_reward_command() -> str:
-    return f"cat {REWARD_PATH}"
+    """Print the reward, preferring ``reward.json`` over ``reward.txt`` as Harbor does."""
+    return f"if [ -e {REWARD_JSON_PATH} ]; then cat {REWARD_JSON_PATH}; else cat {REWARD_PATH}; fi"
 
 
 def parse_reward(raw: str) -> float:
     """Read the verifier's reward, rejecting anything outside [0, 1].
 
-    The value is meaned into a percentage downstream, so an out-of-range reward
-    would silently inflate the whole board rather than fail.
+    ``reward.json`` holds ``{"reward": <number>}``; ``reward.txt`` holds a bare
+    number on its last line. The value is meaned into a percentage downstream,
+    so an out-of-range reward would silently inflate the whole board rather
+    than fail.
     """
-    value = float(raw.strip().splitlines()[-1])
+    text = raw.strip()
+    if text.startswith("{"):
+        rewards = cast(dict[str, object], json.loads(text))
+        reward = rewards["reward"]
+        if isinstance(reward, bool) or not isinstance(reward, (int, float)):
+            raise ValueError(f"reward {reward!r} is not a number")
+        value = float(reward)
+    else:
+        value = float(text.splitlines()[-1])
     if not 0.0 <= value <= 1.0:
         raise ValueError(f"reward {value} is outside [0, 1]")
     return value
@@ -283,6 +296,12 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
 
     No size is reported here: the agent owns this sandbox's tooling, so the
     bounds are enforced on bytes the service holds and on the verifier's own tar.
+
+    Compose sidecars (redis:alpine, kafka-native) ship BusyBox find and tar, so
+    the member list is newline-separated and only GNU-specific flags that tar
+    accepts are passed: BusyBox tar already skips a vanished member with exit 1.
+    A name holding a newline would split into two missing members, so packing
+    refuses it instead of shipping an archive without that file.
     """
     quoted_source = shlex.quote(source)
     quoted_archive = shlex.quote(archive)
@@ -294,9 +313,13 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
     if exclude_args:
         exclude_args = f" {exclude_args}"
     return (
-        f"set -e; find {quoted_source} \\( -type f -o -type d \\) -print0 > {members}; "
-        f"find {quoted_source} -type l -exec test -f {{}} \\; -print0 >> {members}; "
-        f"set +e; tar -czhf {quoted_archive}{exclude_args} --null --no-recursion --ignore-failed-read "
+        f"set -e; "
+        f'if [ -n "$(find {quoted_source} -name "$(printf \'*\\n*\')" -print -quit)" ]; then '
+        'echo "an artifact file name contains a newline"; exit 2; fi; '
+        f"find {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
+        f"find {quoted_source} -type l -exec test -f {{}} \\; -print >> {members}; "
+        "set +e; ignore=$(tar --ignore-failed-read --version >/dev/null 2>&1 && echo --ignore-failed-read); "
+        f"tar -czhf {quoted_archive}{exclude_args} --no-recursion $ignore "
         f"-T {members} 2>&1; status=$?; "
         f"rm -f {members}; "
         f'[ "$status" -le 1 ] || exit "$status"'
@@ -332,10 +355,11 @@ def dir_symlink_command(source: str) -> str:
     """Find a symlinked directory in the artifact, which packing cannot follow.
 
     Its subtree would be left out of the archive with no error, and the grader
-    would mark the model down for output it produced.
+    would mark the model down for output it produced. ``test -d`` follows the
+    link; BusyBox find has no ``-xtype``.
     """
     quoted = shlex.quote(source)
-    return f'found=$(find {quoted} -type l -xtype d -print -quit) && test -z "$found"'
+    return f'found=$(find {quoted} -type l -exec test -d {{}} \\; -print -quit) && test -z "$found"'
 
 
 def fabricated_content(pack_output: str) -> bool:
