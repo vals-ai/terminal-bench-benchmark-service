@@ -958,7 +958,9 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         ``Sandbox.upload_file`` currently accepts bytes, so the final read is
         unavoidable. Spooling the provider stream avoids keeping both a growing
-        bytearray and its immutable upload copy alive at the same time.
+        bytearray and its immutable upload copy alive at the same time. File
+        operations run in a worker thread so a large artifact does not block
+        the service's event loop.
         """
         content_size = 0
         with SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b") as content:
@@ -969,9 +971,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                         f"Artifact {source} packs to more than the "
                         f"{isolated_verifier.MAX_ARTIFACT_BYTES} byte transfer limit"
                     )
-                content.write(chunk)
-            content.seek(0)
-            return content.read()
+                await asyncio.to_thread(content.write, chunk)
+            await asyncio.to_thread(content.seek, 0)
+            return await asyncio.to_thread(content.read)
 
     async def _check_expansion(self, verifier: Sandbox, archive: str, source: str) -> None:
         """Measure the archive with the verifier's own tar before unpacking it."""
