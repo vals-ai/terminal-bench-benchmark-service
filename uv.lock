@@ -450,8 +450,8 @@ wheels = [
 
 [[package]]
 name = "create-benchmark-service"
-version = "0.32.0"
-source = { git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.32.0#d70607f54ba802705bd0867ab405051dff11b10d" }
+version = "0.37.2"
+source = { git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.2#74d5398dc3805ac67ccaadc77225c21c0b764feb" }
 dependencies = [
     { name = "boto3" },
     { name = "cachetools" },
@@ -2173,7 +2173,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.32.0" },
+    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.2" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
