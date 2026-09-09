@@ -1,0 +1,2993 @@
+{
+  "dataset_package": "terminal-bench/terminal-bench",
+  "image_count": 157,
+  "image_repository": "harborframework/terminal-bench",
+  "release_tag": "v4.0.0",
+  "schema_version": 1,
+  "task_count": 66,
+  "tasks": [
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:2879e29fdb7a997c4dd32e12b026a9f95f17670e4b5619b52c62b3cdbb5a71de",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:atrx-vep-crispr-environment-942b2c3a7def0a2e@sha256:2879e29fdb7a997c4dd32e12b026a9f95f17670e4b5619b52c62b3cdbb5a71de",
+          "ref": "harborframework/terminal-bench:atrx-vep-crispr-environment-942b2c3a7def0a2e",
+          "release_ref": "harborframework/terminal-bench:atrx-vep-crispr-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "atrx-vep-crispr"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:935ef7ba68b484c20b48857a4b086e10076897b003819c2c3356fae2f28a46f3",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:atrx-vep-crispr-verifier-4727aa67ef5af0f2@sha256:935ef7ba68b484c20b48857a4b086e10076897b003819c2c3356fae2f28a46f3",
+          "ref": "harborframework/terminal-bench:atrx-vep-crispr-verifier-4727aa67ef5af0f2",
+          "release_ref": "harborframework/terminal-bench:atrx-vep-crispr-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "atrx-vep-crispr"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "atrx-vep-crispr",
+      "task_package": "terminal-bench/atrx-vep-crispr"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:73e931f5311398037c2230a4aa1a179fde8619942ecdaa9d98f4fdea548dba47",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:batched-eval-parity-environment-00a2f89ac64b1a55@sha256:73e931f5311398037c2230a4aa1a179fde8619942ecdaa9d98f4fdea548dba47",
+          "ref": "harborframework/terminal-bench:batched-eval-parity-environment-00a2f89ac64b1a55",
+          "release_ref": "harborframework/terminal-bench:batched-eval-parity-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "batched-eval-parity"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:ed22ecd4714d6f9455421cca5278b43a1421a2a35e5479d8d663671a5b1c84b3",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:batched-eval-parity-verifier-4ec557b03f34f592@sha256:ed22ecd4714d6f9455421cca5278b43a1421a2a35e5479d8d663671a5b1c84b3",
+          "ref": "harborframework/terminal-bench:batched-eval-parity-verifier-4ec557b03f34f592",
+          "release_ref": "harborframework/terminal-bench:batched-eval-parity-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "batched-eval-parity"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "batched-eval-parity",
+      "task_package": "terminal-bench/batched-eval-parity"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:ad16a57e6a031a5937dc77e9e7cc3c7aada8159ccf192731f5de783fa7667624",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:biped-contact-dynamics-environment-3d0b2d5b2223e011@sha256:ad16a57e6a031a5937dc77e9e7cc3c7aada8159ccf192731f5de783fa7667624",
+          "ref": "harborframework/terminal-bench:biped-contact-dynamics-environment-3d0b2d5b2223e011",
+          "release_ref": "harborframework/terminal-bench:biped-contact-dynamics-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "biped-contact-dynamics"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:333df062b1a4b04d0b0777aaedc61715714bb5f8f749d0a4ac0669a24842bfb3",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:biped-contact-dynamics-verifier-c9389decdbd82efc@sha256:333df062b1a4b04d0b0777aaedc61715714bb5f8f749d0a4ac0669a24842bfb3",
+          "ref": "harborframework/terminal-bench:biped-contact-dynamics-verifier-c9389decdbd82efc",
+          "release_ref": "harborframework/terminal-bench:biped-contact-dynamics-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "biped-contact-dynamics"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "biped-contact-dynamics",
+      "task_package": "terminal-bench/biped-contact-dynamics"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:63c69d9bc2334b93f3e17662670ee3d283238029ef94542aa84eb0c91207518e",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:bun-sourcemap-leak-environment-af9a682ece894ebd@sha256:63c69d9bc2334b93f3e17662670ee3d283238029ef94542aa84eb0c91207518e",
+          "ref": "harborframework/terminal-bench:bun-sourcemap-leak-environment-af9a682ece894ebd",
+          "release_ref": "harborframework/terminal-bench:bun-sourcemap-leak-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "bun-sourcemap-leak"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:5757c422d338c7b9ef9d7f008d5c8e5b98572379713aeee88cf3b3d5bdf67ea3",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:bun-sourcemap-leak-verifier-4f21b4a5a4e1a334@sha256:5757c422d338c7b9ef9d7f008d5c8e5b98572379713aeee88cf3b3d5bdf67ea3",
+          "ref": "harborframework/terminal-bench:bun-sourcemap-leak-verifier-4f21b4a5a4e1a334",
+          "release_ref": "harborframework/terminal-bench:bun-sourcemap-leak-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "bun-sourcemap-leak"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "bun-sourcemap-leak",
+      "task_package": "terminal-bench/bun-sourcemap-leak"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:988e1ff362f361ceb1fc93e99cafc1d90f5b6c5d8fed13a5695c23b3669a127c",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:cad-model-environment-db08203ec880d2cc@sha256:988e1ff362f361ceb1fc93e99cafc1d90f5b6c5d8fed13a5695c23b3669a127c",
+          "ref": "harborframework/terminal-bench:cad-model-environment-db08203ec880d2cc",
+          "release_ref": "harborframework/terminal-bench:cad-model-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "cad-model"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:7d38bc61497dffd5be75b554385d59ac71996b89fb23aa80b5bcf4f4e6cc40ec",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:cad-model-verifier-0cf09c47914ff3da@sha256:7d38bc61497dffd5be75b554385d59ac71996b89fb23aa80b5bcf4f4e6cc40ec",
+          "ref": "harborframework/terminal-bench:cad-model-verifier-0cf09c47914ff3da",
+          "release_ref": "harborframework/terminal-bench:cad-model-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "cad-model"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "cad-model",
+      "task_package": "terminal-bench/cad-model"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:dc2ca2bbf8e3fb46d2eae0360eef9770c17000bba640bdaf9ed328261ebfcfbe",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:cargo-flight-dispatch-environment-0e8f4594c29582c9@sha256:dc2ca2bbf8e3fb46d2eae0360eef9770c17000bba640bdaf9ed328261ebfcfbe",
+          "ref": "harborframework/terminal-bench:cargo-flight-dispatch-environment-0e8f4594c29582c9",
+          "release_ref": "harborframework/terminal-bench:cargo-flight-dispatch-environment-v4.0.0",
+          "role": "environment",
+          "status": "cached",
+          "task": "cargo-flight-dispatch"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:30fcb24407f742d82dedda1649ceae39b57e69901a9ef3be177fbfe517fdd10e",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:cargo-flight-dispatch-verifier-e183ee232dcd5d6d@sha256:30fcb24407f742d82dedda1649ceae39b57e69901a9ef3be177fbfe517fdd10e",
+          "ref": "harborframework/terminal-bench:cargo-flight-dispatch-verifier-e183ee232dcd5d6d",
+          "release_ref": "harborframework/terminal-bench:cargo-flight-dispatch-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "cargo-flight-dispatch"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "cargo-flight-dispatch",
+      "task_package": "terminal-bench/cargo-flight-dispatch"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:f170c71c691b03c14a5bf482593c3f568dc2e4e48db3e8716f87ccfe31923055",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:coq-block-bound-environment-b28abe9458ead071@sha256:f170c71c691b03c14a5bf482593c3f568dc2e4e48db3e8716f87ccfe31923055",
+          "ref": "harborframework/terminal-bench:coq-block-bound-environment-b28abe9458ead071",
+          "release_ref": "harborframework/terminal-bench:coq-block-bound-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "coq-block-bound"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:32d3b0e016acfc56093546aa9a18c6a3ec477471b040d63b93bc01fd3bf9f28c",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:coq-block-bound-verifier-63ae9707b37def0c@sha256:32d3b0e016acfc56093546aa9a18c6a3ec477471b040d63b93bc01fd3bf9f28c",
+          "ref": "harborframework/terminal-bench:coq-block-bound-verifier-63ae9707b37def0c",
+          "release_ref": "harborframework/terminal-bench:coq-block-bound-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "coq-block-bound"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "coq-block-bound",
+      "task_package": "terminal-bench/coq-block-bound"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "api"
+            }
+          ],
+          "context": "environment/api",
+          "digest": "sha256:4dee63e20e07c00cdab5b1ba977b1f848a074f967bd8f97c9cda9027725e17d5",
+          "dockerfile": "environment/api/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:ctr-optimization-sidecar-api-35cd5fe7841b4933@sha256:4dee63e20e07c00cdab5b1ba977b1f848a074f967bd8f97c9cda9027725e17d5",
+          "ref": "harborframework/terminal-bench:ctr-optimization-sidecar-api-35cd5fe7841b4933",
+          "release_ref": "harborframework/terminal-bench:ctr-optimization-sidecar-api-v4.0.0",
+          "role": "sidecar-api",
+          "status": "cached",
+          "task": "ctr-optimization"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:718822ca93c5d49694d69a094a84a68a8b6e3f09415ff23fb2baf01c209bd3c2",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:ctr-optimization-environment-f22bf10e7c9a34e7@sha256:718822ca93c5d49694d69a094a84a68a8b6e3f09415ff23fb2baf01c209bd3c2",
+          "ref": "harborframework/terminal-bench:ctr-optimization-environment-f22bf10e7c9a34e7",
+          "release_ref": "harborframework/terminal-bench:ctr-optimization-environment-v4.0.0",
+          "role": "environment",
+          "status": "cached",
+          "task": "ctr-optimization"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:5b1c5955a918a75c15795660644a1c1e5525d99eca650fe9ddaea8c994b27693",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:ctr-optimization-verifier-95230a1e10470b64@sha256:5b1c5955a918a75c15795660644a1c1e5525d99eca650fe9ddaea8c994b27693",
+          "ref": "harborframework/terminal-bench:ctr-optimization-verifier-95230a1e10470b64",
+          "release_ref": "harborframework/terminal-bench:ctr-optimization-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "cached",
+          "task": "ctr-optimization"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "ctr-optimization",
+      "task_package": "terminal-bench/ctr-optimization"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "barber-shop-data-backend"
+            }
+          ],
+          "context": "environment/barber-shop-data-backend",
+          "digest": "sha256:1f40268536b534165e32aa58b910eaa422a863c39cc6de005a09e3536efd9dda",
+          "dockerfile": "environment/barber-shop-data-backend/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:cumulative-layout-shift-sidecar-barber-shop-data-backend-57bd45dbb96a662e@sha256:1f40268536b534165e32aa58b910eaa422a863c39cc6de005a09e3536efd9dda",
+          "ref": "harborframework/terminal-bench:cumulative-layout-shift-sidecar-barber-shop-data-backend-57bd45dbb96a662e",
+          "release_ref": "harborframework/terminal-bench:cumulative-layout-shift-sidecar-barber-shop-data-backend-v4.0.0",
+          "role": "sidecar-barber-shop-data-backend",
+          "status": "built",
+          "task": "cumulative-layout-shift"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:d840b99ee43fffbd7a76eab8e28d996063de8571725d2f4dbb5869d5d018baa1",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:cumulative-layout-shift-environment-7c5f839ce1345e4b@sha256:d840b99ee43fffbd7a76eab8e28d996063de8571725d2f4dbb5869d5d018baa1",
+          "ref": "harborframework/terminal-bench:cumulative-layout-shift-environment-7c5f839ce1345e4b",
+          "release_ref": "harborframework/terminal-bench:cumulative-layout-shift-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "cumulative-layout-shift"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:1f720bbb344fadc91460eb6e3e8d6c577521246807288e6369bf9ca48a86cd14",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:cumulative-layout-shift-verifier-11f8afe9c3e2df5f@sha256:1f720bbb344fadc91460eb6e3e8d6c577521246807288e6369bf9ca48a86cd14",
+          "ref": "harborframework/terminal-bench:cumulative-layout-shift-verifier-11f8afe9c3e2df5f",
+          "release_ref": "harborframework/terminal-bench:cumulative-layout-shift-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "cumulative-layout-shift"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "cumulative-layout-shift",
+      "task_package": "terminal-bench/cumulative-layout-shift"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:15e6ecdae19768a5daa5fd326c70ef7a44e8c75c82e7cb1d7cde3503f6d02329",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:data-anonymization-environment-093726f22cfc5916@sha256:15e6ecdae19768a5daa5fd326c70ef7a44e8c75c82e7cb1d7cde3503f6d02329",
+          "ref": "harborframework/terminal-bench:data-anonymization-environment-093726f22cfc5916",
+          "release_ref": "harborframework/terminal-bench:data-anonymization-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "data-anonymization"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:8ad8a2cd7fd11a6fefded057703c3a4833a9eec448821d7b2de0ffa2df4b2372",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:data-anonymization-verifier-4ba65655b6d96556@sha256:8ad8a2cd7fd11a6fefded057703c3a4833a9eec448821d7b2de0ffa2df4b2372",
+          "ref": "harborframework/terminal-bench:data-anonymization-verifier-4ba65655b6d96556",
+          "release_ref": "harborframework/terminal-bench:data-anonymization-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "data-anonymization"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "data-anonymization",
+      "task_package": "terminal-bench/data-anonymization"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:662f82603e0c0897123c35ce946995788c90fa8bbeab941005779be0e08364be",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:distributed-dedup-environment-53ace6a7986f44ab@sha256:662f82603e0c0897123c35ce946995788c90fa8bbeab941005779be0e08364be",
+          "ref": "harborframework/terminal-bench:distributed-dedup-environment-53ace6a7986f44ab",
+          "release_ref": "harborframework/terminal-bench:distributed-dedup-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "distributed-dedup"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:207b3f1c1e514143aff668b591c12ff807a2dbcc03a25a872921cba09d1bd2ce",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:distributed-dedup-verifier-80dfba7b8ac81d03@sha256:207b3f1c1e514143aff668b591c12ff807a2dbcc03a25a872921cba09d1bd2ce",
+          "ref": "harborframework/terminal-bench:distributed-dedup-verifier-80dfba7b8ac81d03",
+          "release_ref": "harborframework/terminal-bench:distributed-dedup-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "distributed-dedup"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "distributed-dedup",
+      "task_package": "terminal-bench/distributed-dedup"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:02e1353b0893a2fa43f88a58141e91d6558a3f0ab013ab9c4007c47bd47f5183",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:embedding-drift-monitor-environment-64921d5ad388b5f3@sha256:02e1353b0893a2fa43f88a58141e91d6558a3f0ab013ab9c4007c47bd47f5183",
+          "ref": "harborframework/terminal-bench:embedding-drift-monitor-environment-64921d5ad388b5f3",
+          "release_ref": "harborframework/terminal-bench:embedding-drift-monitor-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "embedding-drift-monitor"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:5f3c5824b551cda5165408736d1b58d072ff260bb97e9e39d19d274a5fccfdac",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:embedding-drift-monitor-verifier-ba6079d4e153d027@sha256:5f3c5824b551cda5165408736d1b58d072ff260bb97e9e39d19d274a5fccfdac",
+          "ref": "harborframework/terminal-bench:embedding-drift-monitor-verifier-ba6079d4e153d027",
+          "release_ref": "harborframework/terminal-bench:embedding-drift-monitor-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "embedding-drift-monitor"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "embedding-drift-monitor",
+      "task_package": "terminal-bench/embedding-drift-monitor"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:99da0ead996b32412b132ecc59fee12d065d61c7d54738e1613cbd0b63f7e066",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:fin-saccr-rwa-environment-2b3426a115c87bef@sha256:99da0ead996b32412b132ecc59fee12d065d61c7d54738e1613cbd0b63f7e066",
+          "ref": "harborframework/terminal-bench:fin-saccr-rwa-environment-2b3426a115c87bef",
+          "release_ref": "harborframework/terminal-bench:fin-saccr-rwa-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "fin-saccr-rwa"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:938d6e69653a40479c9cd09363d28a66f1eda2ce6e6202f0e09e0affd1186304",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:fin-saccr-rwa-verifier-ebc8805d1bc20f9f@sha256:938d6e69653a40479c9cd09363d28a66f1eda2ce6e6202f0e09e0affd1186304",
+          "ref": "harborframework/terminal-bench:fin-saccr-rwa-verifier-ebc8805d1bc20f9f",
+          "release_ref": "harborframework/terminal-bench:fin-saccr-rwa-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "fin-saccr-rwa"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "fin-saccr-rwa",
+      "task_package": "terminal-bench/fin-saccr-rwa"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:5177fbfb37bf67fe1a0c85f71a895ea16f5906f60f86c27fcab44be607f3875b",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:foodstuff-beta-activity-environment-4e8c3175f7aa3144@sha256:5177fbfb37bf67fe1a0c85f71a895ea16f5906f60f86c27fcab44be607f3875b",
+          "ref": "harborframework/terminal-bench:foodstuff-beta-activity-environment-4e8c3175f7aa3144",
+          "release_ref": "harborframework/terminal-bench:foodstuff-beta-activity-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "foodstuff-beta-activity"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:4e45b4f49b74e2b1ee094da0ab237c512ea167f5891a88521475f2d95012ad7d",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:foodstuff-beta-activity-verifier-befed3de24c268d9@sha256:4e45b4f49b74e2b1ee094da0ab237c512ea167f5891a88521475f2d95012ad7d",
+          "ref": "harborframework/terminal-bench:foodstuff-beta-activity-verifier-befed3de24c268d9",
+          "release_ref": "harborframework/terminal-bench:foodstuff-beta-activity-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "foodstuff-beta-activity"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "foodstuff-beta-activity",
+      "task_package": "terminal-bench/foodstuff-beta-activity"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:522d2bd46845e0bc1ba8ae6be6c6bc137cda568b2cc0db631921164d533af273",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:formal-crypto-environment-3c0066bab9089eba@sha256:522d2bd46845e0bc1ba8ae6be6c6bc137cda568b2cc0db631921164d533af273",
+          "ref": "harborframework/terminal-bench:formal-crypto-environment-3c0066bab9089eba",
+          "release_ref": "harborframework/terminal-bench:formal-crypto-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "formal-crypto"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:09517a19225bce8be7fa99251a2d4b0e334ebf0c3015aa3fb9f4d632daf1f0e6",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:formal-crypto-verifier-2f48b8010d0c3998@sha256:09517a19225bce8be7fa99251a2d4b0e334ebf0c3015aa3fb9f4d632daf1f0e6",
+          "ref": "harborframework/terminal-bench:formal-crypto-verifier-2f48b8010d0c3998",
+          "release_ref": "harborframework/terminal-bench:formal-crypto-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "formal-crypto"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "formal-crypto",
+      "task_package": "terminal-bench/formal-crypto"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:2ff70c4fda8432085a4df9bb6565c309058077de0b93d827ed68c1cede55e055",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-environment-c6108b9484d3fcde@sha256:2ff70c4fda8432085a4df9bb6565c309058077de0b93d827ed68c1cede55e055",
+          "ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-environment-c6108b9484d3fcde",
+          "release_ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "fp8-rmsnorm-gemm"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:50e696b2cd95d7713c352b0f2c57f92e0383828c19fac139d6803f15cdbfdd53",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-verifier-c271bffb46b7613f@sha256:50e696b2cd95d7713c352b0f2c57f92e0383828c19fac139d6803f15cdbfdd53",
+          "ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-verifier-c271bffb46b7613f",
+          "release_ref": "harborframework/terminal-bench:fp8-rmsnorm-gemm-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "fp8-rmsnorm-gemm"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "fp8-rmsnorm-gemm",
+      "task_package": "terminal-bench/fp8-rmsnorm-gemm"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:8db26e0067fce1ba499bc788fdb226902903959f584c6dc82616927a7f34522f",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:freecad-impeller-environment-857daa7d56e8af05@sha256:8db26e0067fce1ba499bc788fdb226902903959f584c6dc82616927a7f34522f",
+          "ref": "harborframework/terminal-bench:freecad-impeller-environment-857daa7d56e8af05",
+          "release_ref": "harborframework/terminal-bench:freecad-impeller-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "freecad-impeller"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:88f74667d395495b5e2bbaadd1c9e2b7bd4c3e8a667b0e2d748a7e1d69b939d1",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:freecad-impeller-verifier-4b4a95b5b055e4b2@sha256:88f74667d395495b5e2bbaadd1c9e2b7bd4c3e8a667b0e2d748a7e1d69b939d1",
+          "ref": "harborframework/terminal-bench:freecad-impeller-verifier-4b4a95b5b055e4b2",
+          "release_ref": "harborframework/terminal-bench:freecad-impeller-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "freecad-impeller"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "freecad-impeller",
+      "task_package": "terminal-bench/freecad-impeller"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:0af594347ef82260f0e34491a28aa47344b6cdc3d38397bea0cfc6528df00a64",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:freecad-platform-drawing-environment-3dafc5df7f3ec548@sha256:0af594347ef82260f0e34491a28aa47344b6cdc3d38397bea0cfc6528df00a64",
+          "ref": "harborframework/terminal-bench:freecad-platform-drawing-environment-3dafc5df7f3ec548",
+          "release_ref": "harborframework/terminal-bench:freecad-platform-drawing-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "freecad-platform-drawing"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:68711d63427fb1755c2331481913b2dda688c32d9be905ac7cf29d8286be9bb0",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:freecad-platform-drawing-verifier-f8d7515ad73628f5@sha256:68711d63427fb1755c2331481913b2dda688c32d9be905ac7cf29d8286be9bb0",
+          "ref": "harborframework/terminal-bench:freecad-platform-drawing-verifier-f8d7515ad73628f5",
+          "release_ref": "harborframework/terminal-bench:freecad-platform-drawing-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "freecad-platform-drawing"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "freecad-platform-drawing",
+      "task_package": "terminal-bench/freecad-platform-drawing"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:a0106585542716d3114bffe1dc0e492536ab032d3f2be45f0c4789ad8bae78f7",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:freecad-spring-clip-environment-857daa7d56e8af05@sha256:a0106585542716d3114bffe1dc0e492536ab032d3f2be45f0c4789ad8bae78f7",
+          "ref": "harborframework/terminal-bench:freecad-spring-clip-environment-857daa7d56e8af05",
+          "release_ref": "harborframework/terminal-bench:freecad-spring-clip-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "freecad-spring-clip"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:3ebc4314228ce4d15270065a0924db0dea54ebd45aa4e05e8e1e1a257b1b9488",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:freecad-spring-clip-verifier-2303c306f4550661@sha256:3ebc4314228ce4d15270065a0924db0dea54ebd45aa4e05e8e1e1a257b1b9488",
+          "ref": "harborframework/terminal-bench:freecad-spring-clip-verifier-2303c306f4550661",
+          "release_ref": "harborframework/terminal-bench:freecad-spring-clip-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "freecad-spring-clip"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "freecad-spring-clip",
+      "task_package": "terminal-bench/freecad-spring-clip"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "event-feed"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:f5975c403f3d3edc43e926ac49a63ea8561f9731ea63366180424380ad952782",
+          "dockerfile": "environment/event_feed/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:freight-dispatch-shift-sidecar-event-feed-42859b8ef057c829@sha256:f5975c403f3d3edc43e926ac49a63ea8561f9731ea63366180424380ad952782",
+          "ref": "harborframework/terminal-bench:freight-dispatch-shift-sidecar-event-feed-42859b8ef057c829",
+          "release_ref": "harborframework/terminal-bench:freight-dispatch-shift-sidecar-event-feed-v4.0.0",
+          "role": "sidecar-event-feed",
+          "status": "built",
+          "task": "freight-dispatch-shift"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "main"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:f9ffe49f11bcc6e77e33fd1bacd0a60027547526d716575c71e52517ac96daf8",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:freight-dispatch-shift-environment-b8a25b24cf23c8d7@sha256:f9ffe49f11bcc6e77e33fd1bacd0a60027547526d716575c71e52517ac96daf8",
+          "ref": "harborframework/terminal-bench:freight-dispatch-shift-environment-b8a25b24cf23c8d7",
+          "release_ref": "harborframework/terminal-bench:freight-dispatch-shift-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "freight-dispatch-shift"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:5f8a8a3d18fbe18836dbd9c292bdb1182277c701e980c4d734aca848e0a4f0ba",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:freight-dispatch-shift-verifier-3a05c31659f4dcad@sha256:5f8a8a3d18fbe18836dbd9c292bdb1182277c701e980c4d734aca848e0a4f0ba",
+          "ref": "harborframework/terminal-bench:freight-dispatch-shift-verifier-3a05c31659f4dcad",
+          "release_ref": "harborframework/terminal-bench:freight-dispatch-shift-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "freight-dispatch-shift"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "freight-dispatch-shift",
+      "task_package": "terminal-bench/freight-dispatch-shift"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:825463f0016da4d719d8a169fa76815c989f479053aabc06e35f5d5d85a583c1",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:glycan-ms2-elucidation-environment-bb9eb36539c5ff23@sha256:825463f0016da4d719d8a169fa76815c989f479053aabc06e35f5d5d85a583c1",
+          "ref": "harborframework/terminal-bench:glycan-ms2-elucidation-environment-bb9eb36539c5ff23",
+          "release_ref": "harborframework/terminal-bench:glycan-ms2-elucidation-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "glycan-ms2-elucidation"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:afb6a4b9e33e003c76e7d5bfb9a247ac8e1664cc36f1f53392dd1fe33aa17ae8",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:glycan-ms2-elucidation-verifier-743094642de5bfc2@sha256:afb6a4b9e33e003c76e7d5bfb9a247ac8e1664cc36f1f53392dd1fe33aa17ae8",
+          "ref": "harborframework/terminal-bench:glycan-ms2-elucidation-verifier-743094642de5bfc2",
+          "release_ref": "harborframework/terminal-bench:glycan-ms2-elucidation-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "glycan-ms2-elucidation"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "glycan-ms2-elucidation",
+      "task_package": "terminal-bench/glycan-ms2-elucidation"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:fada63d4d1036fa3e6ac03006c184e677fe9e2277dd524a264e0eb573f892d1f",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:gsea-proteomics-environment-7136c78ad59182b0@sha256:fada63d4d1036fa3e6ac03006c184e677fe9e2277dd524a264e0eb573f892d1f",
+          "ref": "harborframework/terminal-bench:gsea-proteomics-environment-7136c78ad59182b0",
+          "release_ref": "harborframework/terminal-bench:gsea-proteomics-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "gsea-proteomics"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:97bbe5fe5cbeed012e55763cfb088d65543213a6a139968cf08b94fb1028513f",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:gsea-proteomics-verifier-f623d825c65f5564@sha256:97bbe5fe5cbeed012e55763cfb088d65543213a6a139968cf08b94fb1028513f",
+          "ref": "harborframework/terminal-bench:gsea-proteomics-verifier-f623d825c65f5564",
+          "release_ref": "harborframework/terminal-bench:gsea-proteomics-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "gsea-proteomics"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "gsea-proteomics",
+      "task_package": "terminal-bench/gsea-proteomics"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "warranty-portal"
+            }
+          ],
+          "context": "environment/warranty_portal",
+          "digest": "sha256:c754da3670b3455e05c7a6f52608a0906e9b102cad2957b6a84e853461079a08",
+          "dockerfile": "environment/warranty_portal/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-portal-9b1856ffd65950a9@sha256:c754da3670b3455e05c7a6f52608a0906e9b102cad2957b6a84e853461079a08",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-portal-9b1856ffd65950a9",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-portal-v4.0.0",
+          "role": "sidecar-warranty-portal",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "asset-ledger"
+            }
+          ],
+          "context": "environment/asset_ledger",
+          "digest": "sha256:4906b2be733507125a12559fcb7a1162f483f397dd835bd66d94f463f2ef0da8",
+          "dockerfile": "environment/asset_ledger/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-asset-ledger-61c5ee7eb0a19cd7@sha256:4906b2be733507125a12559fcb7a1162f483f397dd835bd66d94f463f2ef0da8",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-asset-ledger-61c5ee7eb0a19cd7",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-asset-ledger-v4.0.0",
+          "role": "sidecar-asset-ledger",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "document-vault"
+            }
+          ],
+          "context": "environment/document_vault",
+          "digest": "sha256:2f309687721bdd0e55dd08193832051ebf064f6b84053f3ae6f6a79365687e34",
+          "dockerfile": "environment/document_vault/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-document-vault-61247c2a9becac9d@sha256:2f309687721bdd0e55dd08193832051ebf064f6b84053f3ae6f6a79365687e34",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-document-vault-61247c2a9becac9d",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-document-vault-v4.0.0",
+          "role": "sidecar-document-vault",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "returns-ledger"
+            }
+          ],
+          "context": "environment/returns_ledger",
+          "digest": "sha256:94a3e3f4423ddde7d84405c463d1738d1a680d63846ef5f7aca3d3dac88c1888",
+          "dockerfile": "environment/returns_ledger/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-returns-ledger-0a15c968bfd78180@sha256:94a3e3f4423ddde7d84405c463d1738d1a680d63846ef5f7aca3d3dac88c1888",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-returns-ledger-0a15c968bfd78180",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-returns-ledger-v4.0.0",
+          "role": "sidecar-returns-ledger",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "compliance-ledger"
+            }
+          ],
+          "context": "environment/compliance_ledger",
+          "digest": "sha256:e7191e63c1f7609f9b1fd5c2bcc83511537f2b107df325acbbf7201d0d1c138f",
+          "dockerfile": "environment/compliance_ledger/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-compliance-ledger-55a4e36df409fe04@sha256:e7191e63c1f7609f9b1fd5c2bcc83511537f2b107df325acbbf7201d0d1c138f",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-compliance-ledger-55a4e36df409fe04",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-compliance-ledger-v4.0.0",
+          "role": "sidecar-compliance-ledger",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "warranty-inbox"
+            }
+          ],
+          "context": "environment/warranty_inbox",
+          "digest": "sha256:2e5e263df61ecd255c04952270ef3f3bb3c0bd2a819b210836661bdf5cfc3d61",
+          "dockerfile": "environment/warranty_inbox/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-inbox-1b35b5032cd7e558@sha256:2e5e263df61ecd255c04952270ef3f3bb3c0bd2a819b210836661bdf5cfc3d61",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-inbox-1b35b5032cd7e558",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-sidecar-warranty-inbox-v4.0.0",
+          "role": "sidecar-warranty-inbox",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "main"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:8245f02d4346749433b53cf2d2ea281e624c2410aa697394a8d70a32ae2c1a99",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-environment-760b960d24b30b4c@sha256:8245f02d4346749433b53cf2d2ea281e624c2410aa697394a8d70a32ae2c1a99",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-environment-760b960d24b30b4c",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:4d3730e4fac2dc4fce918f86888cd209af7c630686ff6c97eafde1aac49c0365",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:heat-pump-warranty-verifier-f396506fe36af39b@sha256:4d3730e4fac2dc4fce918f86888cd209af7c630686ff6c97eafde1aac49c0365",
+          "ref": "harborframework/terminal-bench:heat-pump-warranty-verifier-f396506fe36af39b",
+          "release_ref": "harborframework/terminal-bench:heat-pump-warranty-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "heat-pump-warranty"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "heat-pump-warranty",
+      "task_package": "terminal-bench/heat-pump-warranty"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:5b3fd0b5ff13696137fd4350ad75d5f63cf7a1ab70c57b1bd33aa87b296eea5e",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:hof-topology-interpenetration-environment-97d810c502498c4b@sha256:5b3fd0b5ff13696137fd4350ad75d5f63cf7a1ab70c57b1bd33aa87b296eea5e",
+          "ref": "harborframework/terminal-bench:hof-topology-interpenetration-environment-97d810c502498c4b",
+          "release_ref": "harborframework/terminal-bench:hof-topology-interpenetration-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "hof-topology-interpenetration"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:d9087f406a7ce12e410b392d15c07a57a33df20cdb5cd8b477694b80d6f4d91b",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:hof-topology-interpenetration-verifier-4503ab4aabacc3de@sha256:d9087f406a7ce12e410b392d15c07a57a33df20cdb5cd8b477694b80d6f4d91b",
+          "ref": "harborframework/terminal-bench:hof-topology-interpenetration-verifier-4503ab4aabacc3de",
+          "release_ref": "harborframework/terminal-bench:hof-topology-interpenetration-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "hof-topology-interpenetration"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "hof-topology-interpenetration",
+      "task_package": "terminal-bench/hof-topology-interpenetration"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:72aefd5ceb952e93e1fbc6e14787b9b91975adc218912b73ab3fb86e335fdcbf",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:html-js-filter-environment-84a8dc9541acfe09@sha256:72aefd5ceb952e93e1fbc6e14787b9b91975adc218912b73ab3fb86e335fdcbf",
+          "ref": "harborframework/terminal-bench:html-js-filter-environment-84a8dc9541acfe09",
+          "release_ref": "harborframework/terminal-bench:html-js-filter-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "html-js-filter"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:dd983453dd5361f3c8b632dcaf3bca845c47670b107f10b29643c4b50afeb62a",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:html-js-filter-verifier-ac9fd00a91ed471d@sha256:dd983453dd5361f3c8b632dcaf3bca845c47670b107f10b29643c4b50afeb62a",
+          "ref": "harborframework/terminal-bench:html-js-filter-verifier-ac9fd00a91ed471d",
+          "release_ref": "harborframework/terminal-bench:html-js-filter-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "html-js-filter"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "html-js-filter",
+      "task_package": "terminal-bench/html-js-filter"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:683e32f166cb4698c641bf45cb7efbeb631e879d8d5143bc6cdf799f16d4b592",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:interleaved-vigenere-environment-9d9fa0a5aba4b859@sha256:683e32f166cb4698c641bf45cb7efbeb631e879d8d5143bc6cdf799f16d4b592",
+          "ref": "harborframework/terminal-bench:interleaved-vigenere-environment-9d9fa0a5aba4b859",
+          "release_ref": "harborframework/terminal-bench:interleaved-vigenere-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "interleaved-vigenere"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:bfe3a07dc06a39182f64dbb1d92af539340587f778409fe62bd82bfacb36f259",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:interleaved-vigenere-verifier-16783c64c1923947@sha256:bfe3a07dc06a39182f64dbb1d92af539340587f778409fe62bd82bfacb36f259",
+          "ref": "harborframework/terminal-bench:interleaved-vigenere-verifier-16783c64c1923947",
+          "release_ref": "harborframework/terminal-bench:interleaved-vigenere-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "interleaved-vigenere"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "interleaved-vigenere",
+      "task_package": "terminal-bench/interleaved-vigenere"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "odoo"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:5b35fea6469419b2f2fafd9a562cbe9bab0d38decfdcdf27a3c8f8fc4acf9778",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-odoo-5ac013ecb7a2351d@sha256:5b35fea6469419b2f2fafd9a562cbe9bab0d38decfdcdf27a3c8f8fc4acf9778",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-odoo-5ac013ecb7a2351d",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-odoo-v4.0.0",
+          "role": "sidecar-odoo",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "compliance-hub"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:c019cea99f27450679b0390571e6d68640dff055534b0f5c5e798fa30661138e",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-compliance-hub-5ac013ecb7a2351d@sha256:c019cea99f27450679b0390571e6d68640dff055534b0f5c5e798fa30661138e",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-compliance-hub-5ac013ecb7a2351d",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-compliance-hub-v4.0.0",
+          "role": "sidecar-compliance-hub",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "idev"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:b1ec3caa5ca80a7b2a00ec28ec54a51dbc7680ea297578a5bf27ab4ae79949e1",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-idev-5ac013ecb7a2351d@sha256:b1ec3caa5ca80a7b2a00ec28ec54a51dbc7680ea297578a5bf27ab4ae79949e1",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-idev-5ac013ecb7a2351d",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-idev-v4.0.0",
+          "role": "sidecar-idev",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "services"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:e7af68dd2519d09eefc6e68d714e4115ef35f67ca8b674507bd3f93ac0d3f9c0",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-services-5ac013ecb7a2351d@sha256:e7af68dd2519d09eefc6e68d714e4115ef35f67ca8b674507bd3f93ac0d3f9c0",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-services-5ac013ecb7a2351d",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-services-v4.0.0",
+          "role": "sidecar-services",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "dms"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:5722eaf160ff537576d713a09e4c3ebd9b200d6b5054e02ab607e434a7dfd082",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-dms-5ac013ecb7a2351d@sha256:5722eaf160ff537576d713a09e4c3ebd9b200d6b5054e02ab607e434a7dfd082",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-dms-5ac013ecb7a2351d",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-sidecar-dms-v4.0.0",
+          "role": "sidecar-dms",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "main"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:6357248f210a333fb08d0fc28f23020b909364ef1a67db132418e651e71bb788",
+          "dockerfile": "environment/Dockerfile.agent",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-environment-8ee45061a2f8d64c@sha256:6357248f210a333fb08d0fc28f23020b909364ef1a67db132418e651e71bb788",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-environment-8ee45061a2f8d64c",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "intrastat-meldung"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:c9ede6308df3ae229a469071b58c6deb2a23ceb87abe44b2cd66ebea31b8c1a9",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:intrastat-meldung-verifier-50a738477a28b2e6@sha256:c9ede6308df3ae229a469071b58c6deb2a23ceb87abe44b2cd66ebea31b8c1a9",
+          "ref": "harborframework/terminal-bench:intrastat-meldung-verifier-50a738477a28b2e6",
+          "release_ref": "harborframework/terminal-bench:intrastat-meldung-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "intrastat-meldung"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "intrastat-meldung",
+      "task_package": "terminal-bench/intrastat-meldung"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:d091f08f4076c6e37c0e395740c8defaab655aa7d89811b004f1243772d7712d",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:jax-speedrun-gpu-environment-03138eca1759d833@sha256:d091f08f4076c6e37c0e395740c8defaab655aa7d89811b004f1243772d7712d",
+          "ref": "harborframework/terminal-bench:jax-speedrun-gpu-environment-03138eca1759d833",
+          "release_ref": "harborframework/terminal-bench:jax-speedrun-gpu-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "jax-speedrun-gpu"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:ce97526fdfdd6c0a69a13d1328590396d5e75d60296840a2fb93585506475408",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:jax-speedrun-gpu-verifier-b5f55f05e039ed20@sha256:ce97526fdfdd6c0a69a13d1328590396d5e75d60296840a2fb93585506475408",
+          "ref": "harborframework/terminal-bench:jax-speedrun-gpu-verifier-b5f55f05e039ed20",
+          "release_ref": "harborframework/terminal-bench:jax-speedrun-gpu-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "jax-speedrun-gpu"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "jax-speedrun-gpu",
+      "task_package": "terminal-bench/jax-speedrun-gpu"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:0675bf671a3210bf3a3cddbb8a25892d5d8ba7a7f2eced7bd711c41354b182af",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:ks-solver-cpp-environment-51c99d0afd53676d@sha256:0675bf671a3210bf3a3cddbb8a25892d5d8ba7a7f2eced7bd711c41354b182af",
+          "ref": "harborframework/terminal-bench:ks-solver-cpp-environment-51c99d0afd53676d",
+          "release_ref": "harborframework/terminal-bench:ks-solver-cpp-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "ks-solver-cpp"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:b039eb06e664258595691440578497ffd933d0bb4b708638f837abd0d6030010",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:ks-solver-cpp-verifier-df928848fea91753@sha256:b039eb06e664258595691440578497ffd933d0bb4b708638f837abd0d6030010",
+          "ref": "harborframework/terminal-bench:ks-solver-cpp-verifier-df928848fea91753",
+          "release_ref": "harborframework/terminal-bench:ks-solver-cpp-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "ks-solver-cpp"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "ks-solver-cpp",
+      "task_package": "terminal-bench/ks-solver-cpp"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "loadgen"
+            }
+          ],
+          "context": "environment/loadgen",
+          "digest": "sha256:ecb13e07d75c8d041ab0f6357d2d84cc6112fc1ce1a182a7de71f2ab420f3fd5",
+          "dockerfile": "environment/loadgen/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:kv-live-surgery-sidecar-loadgen-e42e01bb667f9fd9@sha256:ecb13e07d75c8d041ab0f6357d2d84cc6112fc1ce1a182a7de71f2ab420f3fd5",
+          "ref": "harborframework/terminal-bench:kv-live-surgery-sidecar-loadgen-e42e01bb667f9fd9",
+          "release_ref": "harborframework/terminal-bench:kv-live-surgery-sidecar-loadgen-v4.0.0",
+          "role": "sidecar-loadgen",
+          "status": "built",
+          "task": "kv-live-surgery"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:dd272ea1f98a6529bfee74e4a52330a44e414017a0cad756add94e23cac1473a",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:kv-live-surgery-environment-6e8d8c54429dfc9f@sha256:dd272ea1f98a6529bfee74e4a52330a44e414017a0cad756add94e23cac1473a",
+          "ref": "harborframework/terminal-bench:kv-live-surgery-environment-6e8d8c54429dfc9f",
+          "release_ref": "harborframework/terminal-bench:kv-live-surgery-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "kv-live-surgery"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:f235830f84d6b5a87921603d6f7ce9a238f5a0de4b84ca003db0318f274b9cc6",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:kv-live-surgery-verifier-8b631950635ab7d6@sha256:f235830f84d6b5a87921603d6f7ce9a238f5a0de4b84ca003db0318f274b9cc6",
+          "ref": "harborframework/terminal-bench:kv-live-surgery-verifier-8b631950635ab7d6",
+          "release_ref": "harborframework/terminal-bench:kv-live-surgery-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "kv-live-surgery"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "kv-live-surgery",
+      "task_package": "terminal-bench/kv-live-surgery"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:c7c7b68d683b29a4453764e9dca7d5d3939e448e48fe330d169eaf779e300d85",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:lake-temp-glm-environment-3ae3d0cb406426b3@sha256:c7c7b68d683b29a4453764e9dca7d5d3939e448e48fe330d169eaf779e300d85",
+          "ref": "harborframework/terminal-bench:lake-temp-glm-environment-3ae3d0cb406426b3",
+          "release_ref": "harborframework/terminal-bench:lake-temp-glm-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "lake-temp-glm"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:9aedaa876a10b8106e4836ce61b2abcc2a17a6b12e8d671f9f07ba492e31a1b2",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:lake-temp-glm-verifier-fe8b78a552d8a4e8@sha256:9aedaa876a10b8106e4836ce61b2abcc2a17a6b12e8d671f9f07ba492e31a1b2",
+          "ref": "harborframework/terminal-bench:lake-temp-glm-verifier-fe8b78a552d8a4e8",
+          "release_ref": "harborframework/terminal-bench:lake-temp-glm-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "lake-temp-glm"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "lake-temp-glm",
+      "task_package": "terminal-bench/lake-temp-glm"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:4e0950673218d66a9884a65a8b8fe4e7608a21ff0d34fd5f05ebbaa23de1304a",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:layout-config-recreation-environment-c8f24ca4c004dba0@sha256:4e0950673218d66a9884a65a8b8fe4e7608a21ff0d34fd5f05ebbaa23de1304a",
+          "ref": "harborframework/terminal-bench:layout-config-recreation-environment-c8f24ca4c004dba0",
+          "release_ref": "harborframework/terminal-bench:layout-config-recreation-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "layout-config-recreation"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:3ade8f7386ae44fed7501a92ed065d0c73516d00e89444020f1fdc2dc2df3d0f",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:layout-config-recreation-verifier-7a4fc980fb8ee4c4@sha256:3ade8f7386ae44fed7501a92ed065d0c73516d00e89444020f1fdc2dc2df3d0f",
+          "ref": "harborframework/terminal-bench:layout-config-recreation-verifier-7a4fc980fb8ee4c4",
+          "release_ref": "harborframework/terminal-bench:layout-config-recreation-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "layout-config-recreation"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "layout-config-recreation",
+      "task_package": "terminal-bench/layout-config-recreation"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:c08989cd9fc6858e7ec7488acf65b2840ece53581fb4327b3e667ff15da23724",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:layout-config-recreation2-environment-9caa9d6614e4ae31@sha256:c08989cd9fc6858e7ec7488acf65b2840ece53581fb4327b3e667ff15da23724",
+          "ref": "harborframework/terminal-bench:layout-config-recreation2-environment-9caa9d6614e4ae31",
+          "release_ref": "harborframework/terminal-bench:layout-config-recreation2-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "layout-config-recreation2"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:6f428236b1ffbef143a9f8c70d732155796c45b4ab4a7e80ab8dced97b4cfaaa",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:layout-config-recreation2-verifier-5f249ec0c47d9285@sha256:6f428236b1ffbef143a9f8c70d732155796c45b4ab4a7e80ab8dced97b4cfaaa",
+          "ref": "harborframework/terminal-bench:layout-config-recreation2-verifier-5f249ec0c47d9285",
+          "release_ref": "harborframework/terminal-bench:layout-config-recreation2-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "layout-config-recreation2"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "layout-config-recreation2",
+      "task_package": "terminal-bench/layout-config-recreation2"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "legacy-workstation"
+            }
+          ],
+          "context": "environment/workstation",
+          "digest": "sha256:706a7124caa138c3e8fc116af4413a637087869cd1dd7bf7e86c2069afa682a4",
+          "dockerfile": "environment/workstation/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-workstation-e8775dad9c6bd514@sha256:706a7124caa138c3e8fc116af4413a637087869cd1dd7bf7e86c2069afa682a4",
+          "ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-workstation-e8775dad9c6bd514",
+          "release_ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-workstation-v4.0.0",
+          "role": "sidecar-legacy-workstation",
+          "status": "built",
+          "task": "legacy-utility-triage"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "legacy-app"
+            }
+          ],
+          "context": "environment/legacy_app",
+          "digest": "sha256:f381021e014f4f36f619068edf0f3a2ed54b05cfa84245301afbedc2d9dd3042",
+          "dockerfile": "environment/legacy_app/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-app-44fa7b126bb99cb6@sha256:f381021e014f4f36f619068edf0f3a2ed54b05cfa84245301afbedc2d9dd3042",
+          "ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-app-44fa7b126bb99cb6",
+          "release_ref": "harborframework/terminal-bench:legacy-utility-triage-sidecar-legacy-app-v4.0.0",
+          "role": "sidecar-legacy-app",
+          "status": "built",
+          "task": "legacy-utility-triage"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "main"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:f599a42278c8fd1b0185933752c29c33d4dfa5850cbabd7e712e70654d96a643",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:legacy-utility-triage-environment-5cc1128c429e8d05@sha256:f599a42278c8fd1b0185933752c29c33d4dfa5850cbabd7e712e70654d96a643",
+          "ref": "harborframework/terminal-bench:legacy-utility-triage-environment-5cc1128c429e8d05",
+          "release_ref": "harborframework/terminal-bench:legacy-utility-triage-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "legacy-utility-triage"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:df47bb8f0b6cf490d380c294e38769cc755b4fbf3720ff23b960647d86bae403",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:legacy-utility-triage-verifier-5b9caa2f94d1848e@sha256:df47bb8f0b6cf490d380c294e38769cc755b4fbf3720ff23b960647d86bae403",
+          "ref": "harborframework/terminal-bench:legacy-utility-triage-verifier-5b9caa2f94d1848e",
+          "release_ref": "harborframework/terminal-bench:legacy-utility-triage-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "legacy-utility-triage"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "legacy-utility-triage",
+      "task_package": "terminal-bench/legacy-utility-triage"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "mysql-db"
+            }
+          ],
+          "context": "environment/mysql",
+          "digest": "sha256:79bf81670ba7d98dfb04552ccad598331c5729b92b8311dfb1b5edcd84d6c55b",
+          "dockerfile": "environment/mysql/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-mysql-db-15531a3d85d91c9d@sha256:79bf81670ba7d98dfb04552ccad598331c5729b92b8311dfb1b5edcd84d6c55b",
+          "ref": "harborframework/terminal-bench:live-database-cutover-sidecar-mysql-db-15531a3d85d91c9d",
+          "release_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-mysql-db-v4.0.0",
+          "role": "sidecar-mysql-db",
+          "status": "built",
+          "task": "live-database-cutover"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "postgres-db"
+            }
+          ],
+          "context": "environment/postgres",
+          "digest": "sha256:20d349253b3b0ead577aaf2208de0d7648692e3064e0efe88e5125e0b63be8c9",
+          "dockerfile": "environment/postgres/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-postgres-db-42772d973839630b@sha256:20d349253b3b0ead577aaf2208de0d7648692e3064e0efe88e5125e0b63be8c9",
+          "ref": "harborframework/terminal-bench:live-database-cutover-sidecar-postgres-db-42772d973839630b",
+          "release_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-postgres-db-v4.0.0",
+          "role": "sidecar-postgres-db",
+          "status": "built",
+          "task": "live-database-cutover"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "customer"
+            }
+          ],
+          "context": "environment/customer",
+          "digest": "sha256:aa5a2a5c2b9c1e334125f0e5953e1b082ac61fdb4c2b1291c9171045b5af3dcf",
+          "dockerfile": "environment/customer/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-customer-53744832a5bce5e9@sha256:aa5a2a5c2b9c1e334125f0e5953e1b082ac61fdb4c2b1291c9171045b5af3dcf",
+          "ref": "harborframework/terminal-bench:live-database-cutover-sidecar-customer-53744832a5bce5e9",
+          "release_ref": "harborframework/terminal-bench:live-database-cutover-sidecar-customer-v4.0.0",
+          "role": "sidecar-customer",
+          "status": "built",
+          "task": "live-database-cutover"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:dbd2997e95d6bdde237f94cefb8cdc45ef5c7bbd44ecde02052a6dffcde14054",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:live-database-cutover-environment-5997c5b486ffe2b0@sha256:dbd2997e95d6bdde237f94cefb8cdc45ef5c7bbd44ecde02052a6dffcde14054",
+          "ref": "harborframework/terminal-bench:live-database-cutover-environment-5997c5b486ffe2b0",
+          "release_ref": "harborframework/terminal-bench:live-database-cutover-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "live-database-cutover"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:ef8c2eb446624c3e8a37f8487771b5b6dbe853e4b42cac856ef1f518b3a214ac",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:live-database-cutover-verifier-414377563ab8198b@sha256:ef8c2eb446624c3e8a37f8487771b5b6dbe853e4b42cac856ef1f518b3a214ac",
+          "ref": "harborframework/terminal-bench:live-database-cutover-verifier-414377563ab8198b",
+          "release_ref": "harborframework/terminal-bench:live-database-cutover-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "live-database-cutover"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "live-database-cutover",
+      "task_package": "terminal-bench/live-database-cutover"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:a58366cc4b4192c2b74612b6a2adfe0404a3ca48807ddc4447a5708e9f473773",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:math-eval-grader-environment-ca68d32d17d9a0bb@sha256:a58366cc4b4192c2b74612b6a2adfe0404a3ca48807ddc4447a5708e9f473773",
+          "ref": "harborframework/terminal-bench:math-eval-grader-environment-ca68d32d17d9a0bb",
+          "release_ref": "harborframework/terminal-bench:math-eval-grader-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "math-eval-grader"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:533d93f5c35875fa688d63dbb216c1ba3900cd06bb9c44e6617187e2ee72c8ee",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:math-eval-grader-verifier-0192759c2b864045@sha256:533d93f5c35875fa688d63dbb216c1ba3900cd06bb9c44e6617187e2ee72c8ee",
+          "ref": "harborframework/terminal-bench:math-eval-grader-verifier-0192759c2b864045",
+          "release_ref": "harborframework/terminal-bench:math-eval-grader-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "math-eval-grader"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "math-eval-grader",
+      "task_package": "terminal-bench/math-eval-grader"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "playwright-mcp"
+            }
+          ],
+          "context": "environment/playwright-novnc",
+          "digest": "sha256:9a5080ae6a8d839875f4a5536145a279a9321721dcfd0ac15286de8caffb3aff",
+          "dockerfile": "environment/playwright-novnc/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-playwright-mcp-8867302f7b779be5@sha256:9a5080ae6a8d839875f4a5536145a279a9321721dcfd0ac15286de8caffb3aff",
+          "ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-playwright-mcp-8867302f7b779be5",
+          "release_ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-playwright-mcp-v4.0.0",
+          "role": "sidecar-playwright-mcp",
+          "status": "built",
+          "task": "medical-claims-processing"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "workspace"
+            }
+          ],
+          "context": "environment/workspace",
+          "digest": "sha256:d18cb02cc2d98bb1a9d92ed5804792bf52347cee129dbfe1a5bc3c853afe268e",
+          "dockerfile": "environment/workspace/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-workspace-37f3799ffc402618@sha256:d18cb02cc2d98bb1a9d92ed5804792bf52347cee129dbfe1a5bc3c853afe268e",
+          "ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-workspace-37f3799ffc402618",
+          "release_ref": "harborframework/terminal-bench:medical-claims-processing-sidecar-workspace-v4.0.0",
+          "role": "sidecar-workspace",
+          "status": "built",
+          "task": "medical-claims-processing"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "main"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:dc51c3e3da8c9b5758b095543f94f4c5082ff401a8d63414a2898708e787d541",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:medical-claims-processing-environment-98fb909bc55e54a7@sha256:dc51c3e3da8c9b5758b095543f94f4c5082ff401a8d63414a2898708e787d541",
+          "ref": "harborframework/terminal-bench:medical-claims-processing-environment-98fb909bc55e54a7",
+          "release_ref": "harborframework/terminal-bench:medical-claims-processing-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "medical-claims-processing"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:452fabedbea53b205cecbf28a97c2ccec6d51f746a2eba87531db61e5fd8c17d",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:medical-claims-processing-verifier-10f6ae885fcf9fe6@sha256:452fabedbea53b205cecbf28a97c2ccec6d51f746a2eba87531db61e5fd8c17d",
+          "ref": "harborframework/terminal-bench:medical-claims-processing-verifier-10f6ae885fcf9fe6",
+          "release_ref": "harborframework/terminal-bench:medical-claims-processing-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "medical-claims-processing"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "medical-claims-processing",
+      "task_package": "terminal-bench/medical-claims-processing"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:50c0e61cab4540d182d7d6485947f8a7992a1f4ce2e95065a4a8b8177701656d",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-environment-ec6c265be75f814b@sha256:50c0e61cab4540d182d7d6485947f8a7992a1f4ce2e95065a4a8b8177701656d",
+          "ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-environment-ec6c265be75f814b",
+          "release_ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "mp-checkpoint-consolidation"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:dbefb3198c1fe21d9a0e8dabb0f9fffa47591ab4a60f68211e77454a1d3686d8",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-verifier-d33d17c6b0f7e532@sha256:dbefb3198c1fe21d9a0e8dabb0f9fffa47591ab4a60f68211e77454a1d3686d8",
+          "ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-verifier-d33d17c6b0f7e532",
+          "release_ref": "harborframework/terminal-bench:mp-checkpoint-consolidation-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "mp-checkpoint-consolidation"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "mp-checkpoint-consolidation",
+      "task_package": "terminal-bench/mp-checkpoint-consolidation"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:26953c07a02fdb9075dbb647f8a277e68b96bf0bed6603d9155fa3c6202167f2",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:music-harmony-environment-9c139576eb79ce7a@sha256:26953c07a02fdb9075dbb647f8a277e68b96bf0bed6603d9155fa3c6202167f2",
+          "ref": "harborframework/terminal-bench:music-harmony-environment-9c139576eb79ce7a",
+          "release_ref": "harborframework/terminal-bench:music-harmony-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "music-harmony"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:ec35f8a983ca8c8700b868ef7fd5f0fa6d721cf5bb820e938efc6e559c67aa49",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:music-harmony-verifier-2faaea77d607aa40@sha256:ec35f8a983ca8c8700b868ef7fd5f0fa6d721cf5bb820e938efc6e559c67aa49",
+          "ref": "harborframework/terminal-bench:music-harmony-verifier-2faaea77d607aa40",
+          "release_ref": "harborframework/terminal-bench:music-harmony-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "music-harmony"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "music-harmony",
+      "task_package": "terminal-bench/music-harmony"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:4f86b06046a0d4def8b779cf0f3ed0ac61165e3cd8ef9ae82d89a8075888bd7f",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:mvcc-lsm-compaction-environment-3a74f5fdb94f7d43@sha256:4f86b06046a0d4def8b779cf0f3ed0ac61165e3cd8ef9ae82d89a8075888bd7f",
+          "ref": "harborframework/terminal-bench:mvcc-lsm-compaction-environment-3a74f5fdb94f7d43",
+          "release_ref": "harborframework/terminal-bench:mvcc-lsm-compaction-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "mvcc-lsm-compaction"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:d65f351fece158955ff26b320988f1349c54aaeae607e34064495fc4ab7fd1d9",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:mvcc-lsm-compaction-verifier-1cb69b730abb8ada@sha256:d65f351fece158955ff26b320988f1349c54aaeae607e34064495fc4ab7fd1d9",
+          "ref": "harborframework/terminal-bench:mvcc-lsm-compaction-verifier-1cb69b730abb8ada",
+          "release_ref": "harborframework/terminal-bench:mvcc-lsm-compaction-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "mvcc-lsm-compaction"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "mvcc-lsm-compaction",
+      "task_package": "terminal-bench/mvcc-lsm-compaction"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "warehouse-api"
+            }
+          ],
+          "context": "environment",
+          "digest": "sha256:1b3bc750097ca5004dc7c5315835702616926e8901c03b2fe8b3017c48cabbf9",
+          "dockerfile": "environment/Dockerfile.api",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:nextjs-performance-sidecar-warehouse-api-ad5ec787ca3cb3eb@sha256:1b3bc750097ca5004dc7c5315835702616926e8901c03b2fe8b3017c48cabbf9",
+          "ref": "harborframework/terminal-bench:nextjs-performance-sidecar-warehouse-api-ad5ec787ca3cb3eb",
+          "release_ref": "harborframework/terminal-bench:nextjs-performance-sidecar-warehouse-api-v4.0.0",
+          "role": "sidecar-warehouse-api",
+          "status": "built",
+          "task": "nextjs-performance"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:c2b1ae7f93b579cc3378d13b4e613ac7e8c0a5f06e4a295142dc2a07459399f0",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:nextjs-performance-environment-6069ddb935a93aee@sha256:c2b1ae7f93b579cc3378d13b4e613ac7e8c0a5f06e4a295142dc2a07459399f0",
+          "ref": "harborframework/terminal-bench:nextjs-performance-environment-6069ddb935a93aee",
+          "release_ref": "harborframework/terminal-bench:nextjs-performance-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "nextjs-performance"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:9779ef143cc897dcaf255f82167d0e070c2d2fa3671a57517fc8ef779d88610a",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:nextjs-performance-verifier-2db77624d85783b8@sha256:9779ef143cc897dcaf255f82167d0e070c2d2fa3671a57517fc8ef779d88610a",
+          "ref": "harborframework/terminal-bench:nextjs-performance-verifier-2db77624d85783b8",
+          "release_ref": "harborframework/terminal-bench:nextjs-performance-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "nextjs-performance"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "nextjs-performance",
+      "task_package": "terminal-bench/nextjs-performance"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:c148b1263df8b40853c796440b3c9846d50a7716d342be0dcca993a093f67a49",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:ontology-kg-querying-environment-754adf02ebb0aafe@sha256:c148b1263df8b40853c796440b3c9846d50a7716d342be0dcca993a093f67a49",
+          "ref": "harborframework/terminal-bench:ontology-kg-querying-environment-754adf02ebb0aafe",
+          "release_ref": "harborframework/terminal-bench:ontology-kg-querying-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "ontology-kg-querying"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:722158661c83dadf49facfae89d413dbe80405896e2d780f5d8bda355ca85cb7",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:ontology-kg-querying-verifier-034faff24d3c2e46@sha256:722158661c83dadf49facfae89d413dbe80405896e2d780f5d8bda355ca85cb7",
+          "ref": "harborframework/terminal-bench:ontology-kg-querying-verifier-034faff24d3c2e46",
+          "release_ref": "harborframework/terminal-bench:ontology-kg-querying-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "ontology-kg-querying"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "ontology-kg-querying",
+      "task_package": "terminal-bench/ontology-kg-querying"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "seeder"
+            }
+          ],
+          "context": "environment/seeder",
+          "digest": "sha256:d74e2040609ab0c266aa8d36f7927f6966d393e5b28b0a594428b4b48e589259",
+          "dockerfile": "environment/seeder/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-seeder-dfa2b554b10ec940@sha256:d74e2040609ab0c266aa8d36f7927f6966d393e5b28b0a594428b4b48e589259",
+          "ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-seeder-dfa2b554b10ec940",
+          "release_ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-seeder-v4.0.0",
+          "role": "sidecar-seeder",
+          "status": "built",
+          "task": "payments-pipeline-fix"
+        },
+        {
+          "compose_services": [
+            {
+              "path": "environment/docker-compose.yaml",
+              "service": "customer"
+            }
+          ],
+          "context": "environment/customer",
+          "digest": "sha256:29995da6ac028ab31f407430596a9fa5328e74ba20ee018f998af9e354b5c7ad",
+          "dockerfile": "environment/customer/Dockerfile",
+          "kind": "sidecar",
+          "pinned_ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-customer-7526dda72acc4b73@sha256:29995da6ac028ab31f407430596a9fa5328e74ba20ee018f998af9e354b5c7ad",
+          "ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-customer-7526dda72acc4b73",
+          "release_ref": "harborframework/terminal-bench:payments-pipeline-fix-sidecar-customer-v4.0.0",
+          "role": "sidecar-customer",
+          "status": "built",
+          "task": "payments-pipeline-fix"
+        },
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:be62f14692d1aafaaffe40c46a01b034baa53a6e333931f9705c343054398f7e",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:payments-pipeline-fix-environment-18a0d069e5ba5a20@sha256:be62f14692d1aafaaffe40c46a01b034baa53a6e333931f9705c343054398f7e",
+          "ref": "harborframework/terminal-bench:payments-pipeline-fix-environment-18a0d069e5ba5a20",
+          "release_ref": "harborframework/terminal-bench:payments-pipeline-fix-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "payments-pipeline-fix"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:0f9eccbfc074584d8c5dfa24d6254626bf76c59609e3ba043a10a344d50e1a3c",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:payments-pipeline-fix-verifier-c570b6cbbabf3203@sha256:0f9eccbfc074584d8c5dfa24d6254626bf76c59609e3ba043a10a344d50e1a3c",
+          "ref": "harborframework/terminal-bench:payments-pipeline-fix-verifier-c570b6cbbabf3203",
+          "release_ref": "harborframework/terminal-bench:payments-pipeline-fix-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "payments-pipeline-fix"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "payments-pipeline-fix",
+      "task_package": "terminal-bench/payments-pipeline-fix"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:95b69206e60d9ced34686c80c34c9088cb652493065bbf32ecc54c5092484263",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:photonic-waveguide-routing-environment-8f60c11211ea24d5@sha256:95b69206e60d9ced34686c80c34c9088cb652493065bbf32ecc54c5092484263",
+          "ref": "harborframework/terminal-bench:photonic-waveguide-routing-environment-8f60c11211ea24d5",
+          "release_ref": "harborframework/terminal-bench:photonic-waveguide-routing-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "photonic-waveguide-routing"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:f0b54b54e85b950cef472761c26de6fd2e734c8c2fd9b8caf271a0a6572522cb",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:photonic-waveguide-routing-verifier-f25114d144b12353@sha256:f0b54b54e85b950cef472761c26de6fd2e734c8c2fd9b8caf271a0a6572522cb",
+          "ref": "harborframework/terminal-bench:photonic-waveguide-routing-verifier-f25114d144b12353",
+          "release_ref": "harborframework/terminal-bench:photonic-waveguide-routing-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "photonic-waveguide-routing"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "photonic-waveguide-routing",
+      "task_package": "terminal-bench/photonic-waveguide-routing"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:19a95b38f036934e0acbe2c16ba01d203c2920882aff7d12b2e87d343acd64e7",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:pretrain-shard-corruption-environment-8c9cb8274f9108d2@sha256:19a95b38f036934e0acbe2c16ba01d203c2920882aff7d12b2e87d343acd64e7",
+          "ref": "harborframework/terminal-bench:pretrain-shard-corruption-environment-8c9cb8274f9108d2",
+          "release_ref": "harborframework/terminal-bench:pretrain-shard-corruption-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "pretrain-shard-corruption"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:6f6b2c661ef7e83649c991811b2b52790f7f4a7c5c8655055daf2f87c74fc561",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:pretrain-shard-corruption-verifier-79203a9e06963ec4@sha256:6f6b2c661ef7e83649c991811b2b52790f7f4a7c5c8655055daf2f87c74fc561",
+          "ref": "harborframework/terminal-bench:pretrain-shard-corruption-verifier-79203a9e06963ec4",
+          "release_ref": "harborframework/terminal-bench:pretrain-shard-corruption-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "pretrain-shard-corruption"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "pretrain-shard-corruption",
+      "task_package": "terminal-bench/pretrain-shard-corruption"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:e208937f1b0afee417543774020e03ac578621cb62a5daa2a21da1e1cc585afe",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:production-planning-environment-9f109deeb56285c3@sha256:e208937f1b0afee417543774020e03ac578621cb62a5daa2a21da1e1cc585afe",
+          "ref": "harborframework/terminal-bench:production-planning-environment-9f109deeb56285c3",
+          "release_ref": "harborframework/terminal-bench:production-planning-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "production-planning"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:0d34f331489adb16b84f7855509cdca671efff715db263a6642d0377acb25d24",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:production-planning-verifier-5f92eb4288d90375@sha256:0d34f331489adb16b84f7855509cdca671efff715db263a6642d0377acb25d24",
+          "ref": "harborframework/terminal-bench:production-planning-verifier-5f92eb4288d90375",
+          "release_ref": "harborframework/terminal-bench:production-planning-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "production-planning"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "production-planning",
+      "task_package": "terminal-bench/production-planning"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:66f68c5d49ef0b2d31a2f3436f13f2b76be078066839044b1d4506be51b702f4",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:protein-autointerp-disulfide-environment-9e76839f79cb638a@sha256:66f68c5d49ef0b2d31a2f3436f13f2b76be078066839044b1d4506be51b702f4",
+          "ref": "harborframework/terminal-bench:protein-autointerp-disulfide-environment-9e76839f79cb638a",
+          "release_ref": "harborframework/terminal-bench:protein-autointerp-disulfide-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "protein-autointerp-disulfide"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:d26c2efef786b9542c0a5b85bfb20c99ca5fb34e3e134cc4288cac481dd4576e",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:protein-autointerp-disulfide-verifier-21dadfd19ba60765@sha256:d26c2efef786b9542c0a5b85bfb20c99ca5fb34e3e134cc4288cac481dd4576e",
+          "ref": "harborframework/terminal-bench:protein-autointerp-disulfide-verifier-21dadfd19ba60765",
+          "release_ref": "harborframework/terminal-bench:protein-autointerp-disulfide-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "protein-autointerp-disulfide"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "protein-autointerp-disulfide",
+      "task_package": "terminal-bench/protein-autointerp-disulfide"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:df7f7d6faa482b2988767cfaa82a101ffbd7602ae33ee7a2ce505d46bb5362e0",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:react-lead-form-environment-0c310f9153d5acfe@sha256:df7f7d6faa482b2988767cfaa82a101ffbd7602ae33ee7a2ce505d46bb5362e0",
+          "ref": "harborframework/terminal-bench:react-lead-form-environment-0c310f9153d5acfe",
+          "release_ref": "harborframework/terminal-bench:react-lead-form-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "react-lead-form"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:e754f993d14cf7270a99d777cd546910ec8f3677530fadb9c4e6ddaf31922ee2",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:react-lead-form-verifier-ea3260a28fc75f28@sha256:e754f993d14cf7270a99d777cd546910ec8f3677530fadb9c4e6ddaf31922ee2",
+          "ref": "harborframework/terminal-bench:react-lead-form-verifier-ea3260a28fc75f28",
+          "release_ref": "harborframework/terminal-bench:react-lead-form-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "react-lead-form"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "react-lead-form",
+      "task_package": "terminal-bench/react-lead-form"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:920823da842d15a23b5c65da49ca8fec9939e1a97b75ea732347a3de4d280e21",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:retro-console-soc-environment-4694536af2c13b46@sha256:920823da842d15a23b5c65da49ca8fec9939e1a97b75ea732347a3de4d280e21",
+          "ref": "harborframework/terminal-bench:retro-console-soc-environment-4694536af2c13b46",
+          "release_ref": "harborframework/terminal-bench:retro-console-soc-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "retro-console-soc"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:74fa22af4d6cc9d19ad8598c958eacc83a96030f8b40e79b4ee29aeeb5c624df",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:retro-console-soc-verifier-b4558a6d339954de@sha256:74fa22af4d6cc9d19ad8598c958eacc83a96030f8b40e79b4ee29aeeb5c624df",
+          "ref": "harborframework/terminal-bench:retro-console-soc-verifier-b4558a6d339954de",
+          "release_ref": "harborframework/terminal-bench:retro-console-soc-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "retro-console-soc"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "retro-console-soc",
+      "task_package": "terminal-bench/retro-console-soc"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:70ddcc08fd13a993f6bf38198ec63033f93a88d00ebf7d5aeee0e121a006bcf9",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:risk-scorer-replay-environment-d17e46d0dc017f4b@sha256:70ddcc08fd13a993f6bf38198ec63033f93a88d00ebf7d5aeee0e121a006bcf9",
+          "ref": "harborframework/terminal-bench:risk-scorer-replay-environment-d17e46d0dc017f4b",
+          "release_ref": "harborframework/terminal-bench:risk-scorer-replay-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "risk-scorer-replay"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:ad52052aad1904dc5dd90705374344403e1293b38d666c3546095ac0963a9831",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:risk-scorer-replay-verifier-d5f329d7aa3d21c7@sha256:ad52052aad1904dc5dd90705374344403e1293b38d666c3546095ac0963a9831",
+          "ref": "harborframework/terminal-bench:risk-scorer-replay-verifier-d5f329d7aa3d21c7",
+          "release_ref": "harborframework/terminal-bench:risk-scorer-replay-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "risk-scorer-replay"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "risk-scorer-replay",
+      "task_package": "terminal-bench/risk-scorer-replay"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:d08338e632e4dcb41c7d5dfd107b8e0edc54af01bbae65f351c2cfbcb157ac14",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:roy-polymorph-cn-environment-404d1936e5238380@sha256:d08338e632e4dcb41c7d5dfd107b8e0edc54af01bbae65f351c2cfbcb157ac14",
+          "ref": "harborframework/terminal-bench:roy-polymorph-cn-environment-404d1936e5238380",
+          "release_ref": "harborframework/terminal-bench:roy-polymorph-cn-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "roy-polymorph-cn"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:4353fcbd45e2eb9f748475667d1de570824361bf37c241b3eae5318c09a13778",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:roy-polymorph-cn-verifier-db06703104efc4ed@sha256:4353fcbd45e2eb9f748475667d1de570824361bf37c241b3eae5318c09a13778",
+          "ref": "harborframework/terminal-bench:roy-polymorph-cn-verifier-db06703104efc4ed",
+          "release_ref": "harborframework/terminal-bench:roy-polymorph-cn-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "roy-polymorph-cn"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "roy-polymorph-cn",
+      "task_package": "terminal-bench/roy-polymorph-cn"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:207aa8b9546ba775ea1fc50811e710139fad54a25aa8de401716efdd554b8c20",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:rs-archive-clone-environment-db7a31120e4ea4bf@sha256:207aa8b9546ba775ea1fc50811e710139fad54a25aa8de401716efdd554b8c20",
+          "ref": "harborframework/terminal-bench:rs-archive-clone-environment-db7a31120e4ea4bf",
+          "release_ref": "harborframework/terminal-bench:rs-archive-clone-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "rs-archive-clone"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:1a1f1eadf4e4913b2b61930fcee5b4a95ea9fba621a2028c3b58f73cff1f64c2",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:rs-archive-clone-verifier-07241a10a5e9d8a2@sha256:1a1f1eadf4e4913b2b61930fcee5b4a95ea9fba621a2028c3b58f73cff1f64c2",
+          "ref": "harborframework/terminal-bench:rs-archive-clone-verifier-07241a10a5e9d8a2",
+          "release_ref": "harborframework/terminal-bench:rs-archive-clone-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "rs-archive-clone"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "rs-archive-clone",
+      "task_package": "terminal-bench/rs-archive-clone"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:818f600ce1ab17d3a537e69ac848c268dc40cf21086a054f495e77fe4c4e4e56",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:satb-audio-transcription-environment-61476d1957ff1e72@sha256:818f600ce1ab17d3a537e69ac848c268dc40cf21086a054f495e77fe4c4e4e56",
+          "ref": "harborframework/terminal-bench:satb-audio-transcription-environment-61476d1957ff1e72",
+          "release_ref": "harborframework/terminal-bench:satb-audio-transcription-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "satb-audio-transcription"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:f3833c50b415010b2682ab2060e2241c92e3f55b4689a4013f0f97c9c84d2b08",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:satb-audio-transcription-verifier-9b454531ac2baac4@sha256:f3833c50b415010b2682ab2060e2241c92e3f55b4689a4013f0f97c9c84d2b08",
+          "ref": "harborframework/terminal-bench:satb-audio-transcription-verifier-9b454531ac2baac4",
+          "release_ref": "harborframework/terminal-bench:satb-audio-transcription-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "satb-audio-transcription"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "satb-audio-transcription",
+      "task_package": "terminal-bench/satb-audio-transcription"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:b5fb99c6a88ba1274fea1abeb3209f23869e5d8a483d50f8f3d925bdbdbe5f8f",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:session-window-debug-environment-a05048a37a8c0198@sha256:b5fb99c6a88ba1274fea1abeb3209f23869e5d8a483d50f8f3d925bdbdbe5f8f",
+          "ref": "harborframework/terminal-bench:session-window-debug-environment-a05048a37a8c0198",
+          "release_ref": "harborframework/terminal-bench:session-window-debug-environment-v4.0.0",
+          "role": "environment",
+          "status": "cached",
+          "task": "session-window-debug"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:8ee1a52619501d6b7e40dfc56f0307d6f476afce4b6d45fd980c5dd6f5a7c592",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:session-window-debug-verifier-5f15b536bd15c598@sha256:8ee1a52619501d6b7e40dfc56f0307d6f476afce4b6d45fd980c5dd6f5a7c592",
+          "ref": "harborframework/terminal-bench:session-window-debug-verifier-5f15b536bd15c598",
+          "release_ref": "harborframework/terminal-bench:session-window-debug-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "cached",
+          "task": "session-window-debug"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "session-window-debug",
+      "task_package": "terminal-bench/session-window-debug"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:7b089021e0e2970de1131b570e6666a358527e80d10e9b95cbf4720c9bb3bc75",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:sglang-qwen-burst-environment-d4290738d466a0c9@sha256:7b089021e0e2970de1131b570e6666a358527e80d10e9b95cbf4720c9bb3bc75",
+          "ref": "harborframework/terminal-bench:sglang-qwen-burst-environment-d4290738d466a0c9",
+          "release_ref": "harborframework/terminal-bench:sglang-qwen-burst-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "sglang-qwen-burst"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:28823a1f27df2d0bc48043a28e0b03e0b16e7847424faf286e7b4658ab3552de",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:sglang-qwen-burst-verifier-eaa673d0eed14722@sha256:28823a1f27df2d0bc48043a28e0b03e0b16e7847424faf286e7b4658ab3552de",
+          "ref": "harborframework/terminal-bench:sglang-qwen-burst-verifier-eaa673d0eed14722",
+          "release_ref": "harborframework/terminal-bench:sglang-qwen-burst-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "sglang-qwen-burst"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "sglang-qwen-burst",
+      "task_package": "terminal-bench/sglang-qwen-burst"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:85ed6579499c6c890ce0f8ceb77af4a22af21122ca6c639f80cbedf6b92faf09",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:shadow-relay-environment-af3a553c2d31f40a@sha256:85ed6579499c6c890ce0f8ceb77af4a22af21122ca6c639f80cbedf6b92faf09",
+          "ref": "harborframework/terminal-bench:shadow-relay-environment-af3a553c2d31f40a",
+          "release_ref": "harborframework/terminal-bench:shadow-relay-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "shadow-relay"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:144df5448fa71d5b3c9e857d300ab25d30bb74bf99badb352b4b13ed1ffdf63d",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:shadow-relay-verifier-6b5fcf69fa09a003@sha256:144df5448fa71d5b3c9e857d300ab25d30bb74bf99badb352b4b13ed1ffdf63d",
+          "ref": "harborframework/terminal-bench:shadow-relay-verifier-6b5fcf69fa09a003",
+          "release_ref": "harborframework/terminal-bench:shadow-relay-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "shadow-relay"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "shadow-relay",
+      "task_package": "terminal-bench/shadow-relay"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:fdc4c21a9e32df1a756e43db9550d74c43be866470653e82d069d50a3d297b61",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:sound-change-cascade-environment-55194a2779f3596e@sha256:fdc4c21a9e32df1a756e43db9550d74c43be866470653e82d069d50a3d297b61",
+          "ref": "harborframework/terminal-bench:sound-change-cascade-environment-55194a2779f3596e",
+          "release_ref": "harborframework/terminal-bench:sound-change-cascade-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "sound-change-cascade"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:d5652b2c014fe8b3dc36ef4b23054bcf643504ff43d3526c3eeb9cacb5de9f6c",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:sound-change-cascade-verifier-46b541ccb17a88b9@sha256:d5652b2c014fe8b3dc36ef4b23054bcf643504ff43d3526c3eeb9cacb5de9f6c",
+          "ref": "harborframework/terminal-bench:sound-change-cascade-verifier-46b541ccb17a88b9",
+          "release_ref": "harborframework/terminal-bench:sound-change-cascade-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "sound-change-cascade"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "sound-change-cascade",
+      "task_package": "terminal-bench/sound-change-cascade"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:827f3562ff749dfaa09c01f99bbe26b7e113ee1238c7a3213b3b710acfeb63aa",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:takens-embedding-lean-environment-ea8170629831d6d7@sha256:827f3562ff749dfaa09c01f99bbe26b7e113ee1238c7a3213b3b710acfeb63aa",
+          "ref": "harborframework/terminal-bench:takens-embedding-lean-environment-ea8170629831d6d7",
+          "release_ref": "harborframework/terminal-bench:takens-embedding-lean-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "takens-embedding-lean"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:972142bdfd4c9e3b515625b9bc64628bd182df4fb88be1db63dfda5a2768b026",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:takens-embedding-lean-verifier-759175b7913049c8@sha256:972142bdfd4c9e3b515625b9bc64628bd182df4fb88be1db63dfda5a2768b026",
+          "ref": "harborframework/terminal-bench:takens-embedding-lean-verifier-759175b7913049c8",
+          "release_ref": "harborframework/terminal-bench:takens-embedding-lean-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "takens-embedding-lean"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "takens-embedding-lean",
+      "task_package": "terminal-bench/takens-embedding-lean"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:2182d9c24d959710063973913832c41c2dffb08f0f403d6054255e73d801ebb2",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:telecom-entity-resolution-environment-d0137fc961c9cd0d@sha256:2182d9c24d959710063973913832c41c2dffb08f0f403d6054255e73d801ebb2",
+          "ref": "harborframework/terminal-bench:telecom-entity-resolution-environment-d0137fc961c9cd0d",
+          "release_ref": "harborframework/terminal-bench:telecom-entity-resolution-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "telecom-entity-resolution"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:d525cb703393c7b5bea87b945633e2b196a5cb1b2dece4503ccc976486417369",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:telecom-entity-resolution-verifier-c455956143382d00@sha256:d525cb703393c7b5bea87b945633e2b196a5cb1b2dece4503ccc976486417369",
+          "ref": "harborframework/terminal-bench:telecom-entity-resolution-verifier-c455956143382d00",
+          "release_ref": "harborframework/terminal-bench:telecom-entity-resolution-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "telecom-entity-resolution"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "telecom-entity-resolution",
+      "task_package": "terminal-bench/telecom-entity-resolution"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:659199eba775d65277a40437a63a7b2417bef53c9efd3b909d809f5f8cb0e4d3",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:uefi-bootkit-environment-e48e84f866a86b30@sha256:659199eba775d65277a40437a63a7b2417bef53c9efd3b909d809f5f8cb0e4d3",
+          "ref": "harborframework/terminal-bench:uefi-bootkit-environment-e48e84f866a86b30",
+          "release_ref": "harborframework/terminal-bench:uefi-bootkit-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "uefi-bootkit"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:2a8c74f079abf61ddbba7dd74e2c84bbc5a554702ca7b91735abf74dd78420be",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:uefi-bootkit-verifier-0954691a0670b88b@sha256:2a8c74f079abf61ddbba7dd74e2c84bbc5a554702ca7b91735abf74dd78420be",
+          "ref": "harborframework/terminal-bench:uefi-bootkit-verifier-0954691a0670b88b",
+          "release_ref": "harborframework/terminal-bench:uefi-bootkit-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "uefi-bootkit"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "uefi-bootkit",
+      "task_package": "terminal-bench/uefi-bootkit"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:c69155e05f747c75cf3b8320989979df8ceab622a8729f3ac813baca71d78b64",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:vba-userform-port-environment-6440e5b47411548a@sha256:c69155e05f747c75cf3b8320989979df8ceab622a8729f3ac813baca71d78b64",
+          "ref": "harborframework/terminal-bench:vba-userform-port-environment-6440e5b47411548a",
+          "release_ref": "harborframework/terminal-bench:vba-userform-port-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "vba-userform-port"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:f71902eab191f92cde999097091628cd8f236715b08bd8338ecf45b88fa15424",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:vba-userform-port-verifier-e1bd4ac3ebb909cc@sha256:f71902eab191f92cde999097091628cd8f236715b08bd8338ecf45b88fa15424",
+          "ref": "harborframework/terminal-bench:vba-userform-port-verifier-e1bd4ac3ebb909cc",
+          "release_ref": "harborframework/terminal-bench:vba-userform-port-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "vba-userform-port"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "vba-userform-port",
+      "task_package": "terminal-bench/vba-userform-port"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:092389cf724b06c60a67e108c6a1cd6bcb18a9f5e1b0aba87691668d6cbfecd0",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:vf2-speedup-networkx-environment-73a0e69b7d24da37@sha256:092389cf724b06c60a67e108c6a1cd6bcb18a9f5e1b0aba87691668d6cbfecd0",
+          "ref": "harborframework/terminal-bench:vf2-speedup-networkx-environment-73a0e69b7d24da37",
+          "release_ref": "harborframework/terminal-bench:vf2-speedup-networkx-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "vf2-speedup-networkx"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:c2d59fdb9e18517aa9cd8025df2bee96bb080df38ac772690cde16359d922f9e",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:vf2-speedup-networkx-verifier-759c5dcc555bc1ab@sha256:c2d59fdb9e18517aa9cd8025df2bee96bb080df38ac772690cde16359d922f9e",
+          "ref": "harborframework/terminal-bench:vf2-speedup-networkx-verifier-759c5dcc555bc1ab",
+          "release_ref": "harborframework/terminal-bench:vf2-speedup-networkx-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "vf2-speedup-networkx"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "vf2-speedup-networkx",
+      "task_package": "terminal-bench/vf2-speedup-networkx"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:2bbccf4d1c264df16294be81c91be386961938dcc1d58c6b74a04425a7ff0bf3",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:vllm-deepseek-streaming-environment-a6e209d1612afee4@sha256:2bbccf4d1c264df16294be81c91be386961938dcc1d58c6b74a04425a7ff0bf3",
+          "ref": "harborframework/terminal-bench:vllm-deepseek-streaming-environment-a6e209d1612afee4",
+          "release_ref": "harborframework/terminal-bench:vllm-deepseek-streaming-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "vllm-deepseek-streaming"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:bf50893791878aef03381ee543698baf0c2c16ff5e94ac6c03d9eba3b735c2d5",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:vllm-deepseek-streaming-verifier-83c62854223894b0@sha256:bf50893791878aef03381ee543698baf0c2c16ff5e94ac6c03d9eba3b735c2d5",
+          "ref": "harborframework/terminal-bench:vllm-deepseek-streaming-verifier-83c62854223894b0",
+          "release_ref": "harborframework/terminal-bench:vllm-deepseek-streaming-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "vllm-deepseek-streaming"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "vllm-deepseek-streaming",
+      "task_package": "terminal-bench/vllm-deepseek-streaming"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:cf91023f3f7bf5f27e9213d1b0764ff41fa7375814df5278813ef5d784fc42f8",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:vpp-loss-divergence-environment-50b7c56494675e27@sha256:cf91023f3f7bf5f27e9213d1b0764ff41fa7375814df5278813ef5d784fc42f8",
+          "ref": "harborframework/terminal-bench:vpp-loss-divergence-environment-50b7c56494675e27",
+          "release_ref": "harborframework/terminal-bench:vpp-loss-divergence-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "vpp-loss-divergence"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:2a7bd7c59d18c5bd9acc158d832345fe1506d83e4d9f0f121e3ea8c8767c8761",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:vpp-loss-divergence-verifier-d007cef259b500ae@sha256:2a7bd7c59d18c5bd9acc158d832345fe1506d83e4d9f0f121e3ea8c8767c8761",
+          "ref": "harborframework/terminal-bench:vpp-loss-divergence-verifier-d007cef259b500ae",
+          "release_ref": "harborframework/terminal-bench:vpp-loss-divergence-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "vpp-loss-divergence"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "vpp-loss-divergence",
+      "task_package": "terminal-bench/vpp-loss-divergence"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:71d215eab08bf95f60d828a5328d7bc1424b4a048ebf6551027267a651396657",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:wal-recovery-ordering-environment-4b8e041ddc112263@sha256:71d215eab08bf95f60d828a5328d7bc1424b4a048ebf6551027267a651396657",
+          "ref": "harborframework/terminal-bench:wal-recovery-ordering-environment-4b8e041ddc112263",
+          "release_ref": "harborframework/terminal-bench:wal-recovery-ordering-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "wal-recovery-ordering"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:f053156f29885278a914665f9320541b78fbb971001d5bb5d5d3b72eccc45d11",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:wal-recovery-ordering-verifier-9652d9f57fa673d2@sha256:f053156f29885278a914665f9320541b78fbb971001d5bb5d5d3b72eccc45d11",
+          "ref": "harborframework/terminal-bench:wal-recovery-ordering-verifier-9652d9f57fa673d2",
+          "release_ref": "harborframework/terminal-bench:wal-recovery-ordering-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "wal-recovery-ordering"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "wal-recovery-ordering",
+      "task_package": "terminal-bench/wal-recovery-ordering"
+    },
+    {
+      "dataset_package": "terminal-bench/terminal-bench",
+      "image_repository": "harborframework/terminal-bench",
+      "images": [
+        {
+          "compose_services": [],
+          "context": "environment",
+          "digest": "sha256:4f499bbf1ac6c14260d96b1333530a7fb2b81ab4e8666cd894d930533a6271fc",
+          "dockerfile": "environment/Dockerfile",
+          "kind": "environment",
+          "pinned_ref": "harborframework/terminal-bench:wdm-design-environment-407d1d42601ed972@sha256:4f499bbf1ac6c14260d96b1333530a7fb2b81ab4e8666cd894d930533a6271fc",
+          "ref": "harborframework/terminal-bench:wdm-design-environment-407d1d42601ed972",
+          "release_ref": "harborframework/terminal-bench:wdm-design-environment-v4.0.0",
+          "role": "environment",
+          "status": "built",
+          "task": "wdm-design"
+        },
+        {
+          "compose_services": [],
+          "context": "tests",
+          "digest": "sha256:4c68a20dd4ec86aad777e900951c8c5e4970bc1e96fcbddce38bb034eb446ab3",
+          "dockerfile": "tests/Dockerfile",
+          "kind": "verifier",
+          "pinned_ref": "harborframework/terminal-bench:wdm-design-verifier-48398335c6ed5e1d@sha256:4c68a20dd4ec86aad777e900951c8c5e4970bc1e96fcbddce38bb034eb446ab3",
+          "ref": "harborframework/terminal-bench:wdm-design-verifier-48398335c6ed5e1d",
+          "release_ref": "harborframework/terminal-bench:wdm-design-verifier-v4.0.0",
+          "role": "verifier",
+          "status": "built",
+          "task": "wdm-design"
+        }
+      ],
+      "release_tag": "v4.0.0",
+      "schema_version": 1,
+      "source_repository": "https://github.com/harbor-framework/terminal-bench",
+      "source_sha": "452bf305c6daa62fc59061d22133a7cbc7c1572e",
+      "task": "wdm-design",
+      "task_package": "terminal-bench/wdm-design"
+    }
+  ]
+}
