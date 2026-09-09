@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -20,7 +21,7 @@ from pydantic import ValidationError
 
 import terminal_bench_benchmark_service.benchmark_service as service_module
 import terminal_bench_benchmark_service.eval_resume as resume_module
-from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
+from terminal_bench_benchmark_service.benchmark_service import DatasetSpec, TerminalBenchBenchmark
 from terminal_bench_benchmark_service.eval_resume import (
     SNAPSHOT_TIMEOUT_SECONDS,
     EvalResumeState,
@@ -103,6 +104,14 @@ def service() -> TerminalBenchBenchmark:
         },
     }
     benchmark.datasets = {"default": {"task-1": task}, "other": {"task-1": task}}
+    benchmark._DATASETS = {  # pyright: ignore[reportPrivateUsage]
+        "default": DatasetSpec(Path("/tmp/test-terminal-bench-2.1")),
+        "other": DatasetSpec(Path("/tmp/test-terminal-bench-other")),
+    }
+    benchmark._task_paths = {  # pyright: ignore[reportPrivateUsage]
+        "default": {"task-1": Path("/tmp/test-terminal-bench-2.1/task-1")},
+        "other": {"task-1": Path("/tmp/test-terminal-bench-other/task-1")},
+    }
     return benchmark
 
 

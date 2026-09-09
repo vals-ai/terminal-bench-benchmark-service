@@ -5,7 +5,7 @@
 Edit `src/terminal_bench_benchmark_service/benchmark_service.py` and implement the six abstract methods on `ExampleBenchmark`:
 
 | Method | What to do |
-|--------|------------|
+|--------|-------------|
 | `load_datasets()` | Return `dict[dataset_name, dict[task_id, ...]]` of all datasets |
 | `retrieve_task()` | Return docker image, problem statement, and resource requirements |
 | `setup_task()` | Prepare the sandbox before evaluation (upload files, run install commands) |
@@ -19,13 +19,37 @@ Edit `src/terminal_bench_benchmark_service/benchmark_service.py` and implement t
 
 The service loads Terminal-Bench datasets from git submodules under `datasets/`.
 
-| Dataset name | Source path |
-|--------------|-------------|
-| `default` | `datasets/terminal-bench-2.1/tasks` |
-| `terminal-bench-2.1` | `datasets/terminal-bench-2.1/tasks` |
-| `terminal-bench-2.0` | `datasets/terminal-bench-2` |
+| Dataset name | Source path | Layout |
+|--------------|-------------|--------|
+| `default` | `datasets/terminal-bench-4/tasks` | flat |
+| `terminal-bench-2.1` | `datasets/terminal-bench-2.1/tasks` | flat |
+| `terminal-bench-2.0` | `datasets/terminal-bench-2` | flat |
+| `terminal-bench-4.0` | `datasets/terminal-bench-4/tasks` | flat |
 
-Requests that omit `dataset` use `default`, which currently aliases `terminal-bench-2.1`.
+Requests that omit `dataset` use `default`, which aliases `terminal-bench-4.0`.
+The explicit `terminal-bench-2.0` and `terminal-bench-2.1` names remain available
+for callers that need the published 2.x datasets.
+
+## Terminal-Bench 4
+
+`terminal-bench-4.0` is pinned to the upstream `v4.0.0` source tag and Harbor's
+published prebuilt-image release. The release asset is kept as
+`datasets/images/terminal-bench-4-prebuilt.json`; the checked-in service
+manifest is generated from it with:
+
+```bash
+python scripts/import_tbench4_release.py \
+  --source-manifest datasets/images/terminal-bench-4-prebuilt.json \
+  --output datasets/images/terminal-bench-4.json
+```
+
+The service supports all 66 v4 CPU/GPU tasks. Plain tasks use their digest-pinned
+environment and verifier images. Compose tasks use the digest-pinned
+`docker:28.3.3-dind` outer sandbox and digest-pinned service images from the
+release manifest. `verifier.collect` hooks run at their declared service and
+phase, and artifact `exclude` patterns are applied while packaging the original
+source path for the isolated verifier. The task Dockerfile's working directory
+is preserved.
 
 ## Evaluation retry
 
@@ -42,6 +66,7 @@ best-effort Daytona janitor that runs before initial and resumed evaluation.
 make install   # install dependencies
 make dev       # run local server
 make test      # run tests
-make help      # list all commands
+make lint      # run lint checks
+make typecheck # run type checks
 make install-submodules # Install the datasets
 ```
