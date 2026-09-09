@@ -300,6 +300,8 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
     Compose sidecars (redis:alpine, kafka-native) ship BusyBox find and tar, so
     the member list is newline-separated and only GNU-specific flags that tar
     accepts are passed: BusyBox tar already skips a vanished member with exit 1.
+    A name holding a newline would split into two missing members, so packing
+    refuses it instead of shipping an archive without that file.
     """
     quoted_source = shlex.quote(source)
     quoted_archive = shlex.quote(archive)
@@ -311,7 +313,10 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
     if exclude_args:
         exclude_args = f" {exclude_args}"
     return (
-        f"set -e; find {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
+        f"set -e; "
+        f'if [ -n "$(find {quoted_source} -name "$(printf \'*\\n*\')" -print -quit)" ]; then '
+        'echo "an artifact file name contains a newline"; exit 2; fi; '
+        f"find {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
         f"find {quoted_source} -type l -exec test -f {{}} \\; -print >> {members}; "
         "set +e; ignore=$(tar --ignore-failed-read --version >/dev/null 2>&1 && echo --ignore-failed-read); "
         f"tar -czhf {quoted_archive}{exclude_args} --no-recursion $ignore "

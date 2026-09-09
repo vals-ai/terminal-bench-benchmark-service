@@ -73,7 +73,7 @@ def test_pack_does_not_take_its_status_from_the_last_pipeline_stage() -> None:
     """A find that fails part-way must not yield a truncated archive reporting success."""
     command = isolated_verifier.pack_command("/app/out", "/tmp/a.tar.gz")
 
-    assert command.startswith("set -e; find ")
+    assert command.startswith("set -e; ")
     assert "| tar" not in command
 
 
@@ -272,6 +272,10 @@ def test_artifact_commands_run_on_busybox_sidecars() -> None:
     assert "-exec test -d {} \\;" in symlink_check
     assert "--null" not in pack
     assert "-print0" not in pack
+    # A newline-delimited list would split such a name into two missing members
+    # and ship the archive without it under the status-1 allowance.
+    assert pack.index("printf '*\\n*'") < pack.index("-print >")
+    assert "exit 2" in pack
 
 
 def test_pack_skips_a_member_that_disappeared() -> None:
