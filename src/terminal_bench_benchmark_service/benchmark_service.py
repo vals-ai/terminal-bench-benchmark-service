@@ -9,6 +9,7 @@ import uuid
 from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import SpooledTemporaryFile
 from typing import Any, ClassVar, cast
 
 from benchmark_service import BenchmarkService, ComposeSandbox, ComposeSource
@@ -953,16 +954,24 @@ class TerminalBenchBenchmark(BenchmarkService):
         return None
 
     async def _download_bounded(self, sandbox: Sandbox, archive: str, source: str) -> bytes:
-        """Read an archive, refusing it as soon as it passes the transfer bound."""
-        content = bytearray()
-        async for chunk in sandbox.stream_download(archive):
-            content.extend(chunk)
-            if len(content) > isolated_verifier.MAX_ARTIFACT_BYTES:
-                raise isolated_verifier.VerifierEnvironmentError(
-                    f"Artifact {source} packs to more than the "
-                    f"{isolated_verifier.MAX_ARTIFACT_BYTES} byte transfer limit"
-                )
-        return bytes(content)
+        """Read an archive through disk, refusing it as soon as it passes the transfer bound.
+
+        ``Sandbox.upload_file`` currently accepts bytes, so the final read is
+        unavoidable. Spooling the provider stream avoids keeping both a growing
+        bytearray and its immutable upload copy alive at the same time.
+        """
+        content_size = 0
+        with SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b") as content:
+            async for chunk in sandbox.stream_download(archive):
+                content_size += len(chunk)
+                if content_size > isolated_verifier.MAX_ARTIFACT_BYTES:
+                    raise isolated_verifier.VerifierEnvironmentError(
+                        f"Artifact {source} packs to more than the "
+                        f"{isolated_verifier.MAX_ARTIFACT_BYTES} byte transfer limit"
+                    )
+                content.write(chunk)
+            content.seek(0)
+            return content.read()
 
     async def _check_expansion(self, verifier: Sandbox, archive: str, source: str) -> None:
         """Measure the archive with the verifier's own tar before unpacking it."""

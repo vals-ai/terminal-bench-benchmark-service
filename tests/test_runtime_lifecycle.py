@@ -53,6 +53,16 @@ class FakeSandbox(Sandbox):
         return b"archive"
 
 
+class StreamingSandbox(FakeSandbox):
+    def __init__(self, chunks: list[bytes]) -> None:
+        super().__init__("streaming")
+        self.chunks = chunks
+
+    async def stream_download(self, remote_path: str) -> AsyncGenerator[bytes, None]:
+        for chunk in self.chunks:
+            yield chunk
+
+
 @pytest.fixture
 def benchmark() -> TerminalBenchBenchmark:
     return asyncio.run(TerminalBenchBenchmark.create())
@@ -130,6 +140,26 @@ async def _test_compose_setup_passes_normalized_cpu_to_nested_runtime(
     _ = [chunk async for chunk in benchmark.setup_task("live-database-cutover", outer, dataset="terminal-bench-4.0")]
 
     assert started["args"][4]["cpus"] == MAX_DAYTONA_VCPU
+
+
+def test_artifact_download_is_bounded_and_preserves_streamed_bytes(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asyncio.run(_test_artifact_download_is_bounded_and_preserves_streamed_bytes(benchmark, monkeypatch))
+
+
+async def _test_artifact_download_is_bounded_and_preserves_streamed_bytes(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    chunks = [b"first", b"second"]
+    sandbox = StreamingSandbox(chunks)
+
+    result = await benchmark._download_bounded(sandbox, "/tmp/archive", "/app/output")  # pyright: ignore[reportPrivateUsage]
+
+    assert result == b"firstsecond"
+    monkeypatch.setattr(isolated_verifier, "MAX_ARTIFACT_BYTES", 5)
+    with pytest.raises(isolated_verifier.VerifierEnvironmentError, match="transfer limit"):
+        await benchmark._download_bounded(sandbox, "/tmp/archive", "/app/output")  # pyright: ignore[reportPrivateUsage]
 
 
 def test_compose_evaluation_preserves_outer_and_tears_down(
