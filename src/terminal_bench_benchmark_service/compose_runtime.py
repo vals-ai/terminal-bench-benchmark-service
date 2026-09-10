@@ -23,6 +23,12 @@ _DOCKER_READY_ATTEMPTS = 30
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
 _EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
+INSTALL_TERMINAL_TOOLS = (
+    "command -v tmux >/dev/null 2>&1 && command -v asciinema >/dev/null 2>&1 && exit 0; "
+    "command -v apt-get >/dev/null 2>&1 || exit 0; "
+    "export DEBIAN_FRONTEND=noninteractive; "
+    "apt-get -o Acquire::Check-Valid-Until=false update -qq && apt-get install -y -qq tmux asciinema"
+)
 
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
@@ -90,6 +96,7 @@ async def start_compose_runtime(
     await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
+    await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(INSTALL_TERMINAL_TOOLS)}", timeout=timeout)
     await _run(sandbox, f"{compose} exec -T main true", timeout=_readiness_timeout(resources))
 
 
