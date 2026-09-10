@@ -193,9 +193,9 @@ async def _pull_task_image(sandbox: Sandbox, task_image: str, timeout: float) ->
 def import_changes(config: Mapping[str, Any]) -> list[str]:
     """Return the ``docker import -c`` instructions that carry an image's runtime config."""
     env: list[str] = config.get("Env") or []
-    changes = [f"ENV {variable}" for variable in env]
+    changes = [f"ENV {name}={_dockerfile_quote(value)}" for name, value in (variable.split("=", 1) for variable in env)]
     if config.get("WorkingDir"):
-        changes.append(f"WORKDIR {config['WorkingDir']}")
+        changes.append(f"WORKDIR {_dockerfile_quote(config['WorkingDir'])}")
     if config.get("User"):
         changes.append(f"USER {config['User']}")
     if config.get("Entrypoint"):
@@ -203,6 +203,11 @@ def import_changes(config: Mapping[str, Any]) -> list[str]:
     if config.get("Cmd"):
         changes.append(f"CMD {json.dumps(config['Cmd'])}")
     return changes
+
+
+def _dockerfile_quote(value: str) -> str:
+    """Quote a Dockerfile word so whitespace, quotes, backslashes and ``$`` survive parsing."""
+    return '"' + re.sub(r'(["\\$])', r"\\\1", value) + '"'
 
 
 async def _stage_files(

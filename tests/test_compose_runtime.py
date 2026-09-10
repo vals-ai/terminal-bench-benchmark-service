@@ -173,7 +173,7 @@ def test_unmappable_image_owners_are_rewritten_and_imported_locally(tmp_path: Pa
 
     (import_command,) = [command for command in sandbox.commands if "docker import" in command]
     assert "crane export example/main@sha256:" in import_command
-    assert "-c 'ENV PATH=/x' -c 'WORKDIR /app'" in import_command
+    assert "-c 'ENV PATH=\"/x\"' -c 'WORKDIR \"/app\"'" in import_command
     runtime = json.loads(sandbox.uploads["/terminal-bench/runtime.json"])
     assert runtime["services"]["main"]["image"] == "terminal-bench/main:reowned"
     assert runtime["services"]["main"]["pull_policy"] == "never"
@@ -202,6 +202,27 @@ def test_other_pull_failures_are_not_reimported(tmp_path: Path) -> None:
             )
         )
     assert not any("docker import" in command for command in sandbox.commands)
+
+
+def test_import_changes_preserve_env_values_with_spaces_quotes_and_dollars() -> None:
+    from terminal_bench_benchmark_service.compose_runtime import import_changes
+
+    changes = import_changes(
+        {
+            "Env": ['JAVA_OPTS=-Xmx2g -Dfoo="bar" \\ $HOME', "EMPTY="],
+            "WorkingDir": "/app",
+            "User": "agent",
+            "Cmd": ["sh", "-c", "echo hi"],
+        }
+    )
+
+    assert changes == [
+        'ENV JAVA_OPTS="-Xmx2g -Dfoo=\\"bar\\" \\\\ \\$HOME"',
+        'ENV EMPTY=""',
+        'WORKDIR "/app"',
+        "USER agent",
+        'CMD ["sh", "-c", "echo hi"]',
+    ]
 
 
 def test_reown_script_rewrites_only_owners_outside_the_id_maps(tmp_path: Path) -> None:
