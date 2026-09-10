@@ -201,13 +201,14 @@ def test_pack_and_unpack_quote_hostile_paths() -> None:
         assert "; rm -rf / &&" not in command
 
 
-def test_prepare_logs_does_not_relax_hardened_directories() -> None:
-    """Some images set /logs/verifier to 0700 on purpose; recreating it loses that."""
+def test_prepare_logs_opens_the_verifier_directory_to_unprivileged_graders() -> None:
+    """live-database-cutover starts postgres as `postgres` with -l /logs/verifier/pg.log;
+    Harbor chmods the directory to 777 before grading, so the grader relies on it."""
     command = isolated_verifier.prepare_logs_command()
 
-    assert "chmod" not in command
     assert "rm -rf /logs/verifier" not in command
     assert "find /logs/verifier -mindepth 1 -delete" in command
+    assert command.endswith("&& chmod 777 /logs/verifier")
 
 
 def test_staged_archive_rejects_members_packing_could_not_produce() -> None:

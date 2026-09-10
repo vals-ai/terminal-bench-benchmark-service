@@ -135,7 +135,7 @@ class DatasetSpec:
     nested: bool = False
     # Tasks that ship no environment.docker_image resolve their image here.
     image_manifest: Path | None = None
-    # Grade in a separate, network-blocked sandbox rather than the agent's own,
+    # Grade in a separate sandbox rather than the agent's own,
     # for datasets whose tasks declare verifier.environment_mode = "separate".
     grades_in_separate_sandbox: bool = False
 
@@ -850,12 +850,11 @@ class TerminalBenchBenchmark(BenchmarkService):
         verifier_timeout: float,
         attempt: str,
     ) -> Sandbox:
-        """Start a sandbox from the task's verifier image with egress blocked."""
+        """Start a sandbox from the task's verifier image."""
         request = SandboxCreateRequest(
             source=ImageSource(image=self._verifier_image(task_id, dataset)),
             name=isolated_verifier.verifier_sandbox_name(task_id, agent_sandbox.id, attempt),
             resources=self._verifier_resources(task_id, dataset),
-            network_block_all=True,
             auto_stop_interval=isolated_verifier.auto_stop_minutes(verifier_timeout),
             create_timeout=isolated_verifier.VERIFIER_CREATE_TIMEOUT_SECONDS,
             # The run's labels, so the verifier is attributable to the same
@@ -1061,8 +1060,8 @@ class TerminalBenchBenchmark(BenchmarkService):
         """Grade in a second sandbox the agent never had access to.
 
         The agent's environment decides nothing here: the grader runs from the
-        task's own verifier image, sees only the declared artifacts, and has no
-        network. Failing to build that environment is reported as a grading
+        task's own verifier image and sees only the declared artifacts.
+        Failing to build that environment is reported as a grading
         fault rather than a zero, so a broken run is retried instead of being
         published as a model's score.
         """
