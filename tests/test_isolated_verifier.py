@@ -260,6 +260,20 @@ def test_reward_json_is_preferred_over_reward_txt() -> None:
         isolated_verifier.parse_reward('{"score": 1}')
 
 
+def test_reward_json_is_found_behind_the_pty_echoed_command_line() -> None:
+    """The PTY exec echoes the shell's own setup line before `cat` prints the file.
+
+    medical-claims-processing wrote a valid reward.json and was still scored as an
+    error: `float('{"reward": 0.0}')`.
+    """
+    pty_output = 'root@tb-verifier:/# stty -echo; unset _CBS_PTY_CREATE_MARKER\r\n{"reward": 0.0}\r\n'
+
+    assert isolated_verifier.parse_reward(pty_output) == 0.0
+    assert (
+        isolated_verifier.parse_reward("root@tb-verifier:/# stty -echo; unset _CBS_PTY_CREATE_MARKER\r\n1\r\n") == 1.0
+    )
+
+
 def test_artifact_commands_run_on_busybox_sidecars() -> None:
     """redis:alpine and kafka-native ship BusyBox: no `find -xtype`, no `tar --null`.
 
