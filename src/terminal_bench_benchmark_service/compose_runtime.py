@@ -23,6 +23,39 @@ _DOCKER_READY_ATTEMPTS = 30
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
 _EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
+_REOWNED_TASK_IMAGE = "terminal-bench/main:reowned"
+_UNMAPPED_OWNER_ERROR = "failed to Lchown"
+_REOWN_SCRIPT = f"{_COMPOSE_ROOT}/reown.py"
+_REOWN_SCRIPT_SOURCE = """\
+import sys
+import tarfile
+
+
+def id_ranges(path):
+    ranges = []
+    with open(path) as id_map:
+        for line in id_map:
+            start, _, count = (int(field) for field in line.split())
+            ranges.append(range(start, start + count))
+    return ranges
+
+
+uids = id_ranges(sys.argv[1])
+gids = id_ranges(sys.argv[2])
+with (
+    tarfile.open(fileobj=sys.stdin.buffer, mode="r|") as source,
+    tarfile.open(fileobj=sys.stdout.buffer, mode="w|", format=tarfile.PAX_FORMAT) as target,
+):
+    for member in source:
+        if not any(member.uid in ids for ids in uids):
+            member.uid = 0
+            member.pax_headers.pop("uid", None)
+        if not any(member.gid in ids for ids in gids):
+            member.gid = 0
+            member.pax_headers.pop("gid", None)
+        member.uname = member.gname = ""
+        target.addfile(member, source.extractfile(member) if member.isreg() else None)
+"""
 
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
@@ -78,14 +111,15 @@ async def start_compose_runtime(
 
     await _run(sandbox, "dockerd-entrypoint.sh dockerd > /var/log/dockerd.log 2>&1 &", timeout=10)
     await _wait_for_docker(sandbox)
-    await _stage_files(task_dir / "environment", task_image, sidecar_images, resources, sandbox)
+    timeout = _build_timeout(resources)
+    main_image = await _pull_task_image(sandbox, task_image, timeout)
+    await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
 
     compose = compose_runtime_source(task_id, task_image, sidecar_images).compose_command
     services = await _run(sandbox, f"{compose} config --services", timeout=60)
     if "main" not in services.output.splitlines():
         raise RuntimeError("Terminal-Bench compose runtime requires a `main` service")
 
-    timeout = _build_timeout(resources)
     await _run(sandbox, f"{compose} pull", timeout=timeout)
     await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
@@ -128,6 +162,54 @@ async def stop_compose_main(task_id: str, sandbox: Sandbox) -> None:
         raise RuntimeError(f"Could not stop Terminal-Bench main service: {result.output[-1000:]}")
 
 
+async def _pull_task_image(sandbox: Sandbox, task_image: str, timeout: float) -> str:
+    """Pull the task image, re-importing it with root-owned files when its owners are unmappable.
+
+    The sandbox's user namespace maps a bounded ID range and the nested daemon
+    rejects layers owned by IDs outside it, so such an image is flattened with
+    ``crane export``, its unmapped owners rewritten, and re-imported locally
+    with the original runtime config.
+    """
+    pull = await sandbox.exec(f"docker pull {shlex.quote(task_image)}", timeout=timeout)
+    if pull.exit_code == 0:
+        return task_image
+    if _UNMAPPED_OWNER_ERROR not in pull.output:
+        raise RuntimeError(f"Command failed: docker pull {task_image}\n{pull.output}")
+
+    await _run(sandbox, "apk add --no-cache crane python3", timeout=300)
+    config = await _run(sandbox, f"crane config {shlex.quote(task_image)}", timeout=120)
+    changes = " ".join(f"-c {shlex.quote(change)}" for change in import_changes(json.loads(config.output)["config"]))
+    await sandbox.upload_file(_REOWN_SCRIPT, _REOWN_SCRIPT_SOURCE.encode())
+    await _run(
+        sandbox,
+        f"set -o pipefail && crane export {shlex.quote(task_image)} - "
+        f"| python3 {_REOWN_SCRIPT} /proc/self/uid_map /proc/self/gid_map "
+        f"| docker import {changes} - {_REOWNED_TASK_IMAGE}",
+        timeout=timeout,
+    )
+    return _REOWNED_TASK_IMAGE
+
+
+def import_changes(config: Mapping[str, Any]) -> list[str]:
+    """Return the ``docker import -c`` instructions that carry an image's runtime config."""
+    env: list[str] = config.get("Env") or []
+    changes = [f"ENV {name}={_dockerfile_quote(value)}" for name, value in (variable.split("=", 1) for variable in env)]
+    if config.get("WorkingDir"):
+        changes.append(f"WORKDIR {_dockerfile_quote(config['WorkingDir'])}")
+    if config.get("User"):
+        changes.append(f"USER {config['User']}")
+    if config.get("Entrypoint"):
+        changes.append(f"ENTRYPOINT {json.dumps(config['Entrypoint'])}")
+    if config.get("Cmd"):
+        changes.append(f"CMD {json.dumps(config['Cmd'])}")
+    return changes
+
+
+def _dockerfile_quote(value: str) -> str:
+    """Quote a Dockerfile word so whitespace, quotes, backslashes and ``$`` survive parsing."""
+    return '"' + re.sub(r'(["\\$])', r"\\\1", value) + '"'
+
+
 async def _stage_files(
     environment_dir: Path,
     task_image: str,
@@ -150,7 +232,7 @@ def runtime_compose_definition(
     """Return the JSON Compose overlay used to run one pinned task."""
     main: dict[str, Any] = {
         "image": task_image,
-        "pull_policy": "always",
+        "pull_policy": "never",
         "command": ["sh", "-c", "sleep infinity"],
         "volumes": [f"{_BUNDLE_DIR}:{_BUNDLE_DIR}"],
         "deploy": {
