@@ -1,8 +1,8 @@
-"""Grading in a separate, network-blocked sandbox.
+"""Grading in a separate sandbox.
 
 For datasets whose tasks declare ``verifier.environment_mode = "separate"``:
 the grader and its dependencies live in the task's verifier image, and the
-grader must see neither the agent's environment nor the network. The agent is
+grader must not see the agent's environment. The agent is
 root in its own sandbox for its whole phase, so anything it produces is treated
 as hostile input on the way across.
 """
@@ -152,20 +152,20 @@ def sidecar_artifacts(artifacts: Sequence[ArtifactSpec]) -> list[ArtifactSpec]:
 
 
 def prepare_logs_command() -> str:
-    """Create the directories graders write into, without relaxing them.
+    """Create the directories graders write into, world-writable as in Harbor.
 
     Upstream graders assume the harness has already made ``/logs/verifier``;
-    several write into it without creating it first. Some verifier images
-    deliberately harden those directories to 700 because the grader runs the
-    agent's code as an unprivileged user, so this only creates what is missing
-    and never chmods a tree the image set up on purpose.
+    several write into it without creating it first, some as an unprivileged
+    user the grader drops to.
 
     The verifier directory is removed first, and this runs after the agent's
     artifacts have been unpacked: an archive that planted a file, a directory or
     a symlink there cannot survive to catch the grader's reward.
     """
     return (
-        "mkdir -p /logs/verifier /logs/agent " + CONVENTION_ARTIFACT_DIR + " && find /logs/verifier -mindepth 1 -delete"
+        "mkdir -p /logs/verifier /logs/agent "
+        + CONVENTION_ARTIFACT_DIR
+        + " && find /logs/verifier -mindepth 1 -delete && chmod 777 /logs/verifier"
     )
 
 
@@ -221,10 +221,14 @@ def parse_reward(raw: str) -> float:
     number on its last line. The value is meaned into a percentage downstream,
     so an out-of-range reward would silently inflate the whole board rather
     than fail.
+
+    The file is read through a PTY exec, whose output opens with the shell's
+    echoed command line, so the reward is located inside the output rather
+    than read from its start.
     """
     text = raw.strip()
-    if text.startswith("{"):
-        rewards = cast(dict[str, object], json.loads(text))
+    if (start := text.find("{")) != -1:
+        rewards = cast(dict[str, object], json.loads(text[start:]))
         reward = rewards["reward"]
         if isinstance(reward, bool) or not isinstance(reward, (int, float)):
             raise ValueError(f"reward {reward!r} is not a number")
