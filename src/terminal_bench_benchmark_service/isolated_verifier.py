@@ -221,10 +221,14 @@ def parse_reward(raw: str) -> float:
     number on its last line. The value is meaned into a percentage downstream,
     so an out-of-range reward would silently inflate the whole board rather
     than fail.
+
+    The file is read through a PTY exec, whose output opens with the shell's
+    echoed command line, so the reward is located inside the output rather
+    than read from its start.
     """
     text = raw.strip()
-    if text.startswith("{"):
-        rewards = cast(dict[str, object], json.loads(text))
+    if (start := text.find("{")) != -1:
+        rewards = cast(dict[str, object], json.loads(text[start:]))
         reward = rewards["reward"]
         if isinstance(reward, bool) or not isinstance(reward, (int, float)):
             raise ValueError(f"reward {reward!r} is not a number")
