@@ -49,8 +49,10 @@ with (
     for member in source:
         if not any(member.uid in ids for ids in uids):
             member.uid = 0
+            member.pax_headers.pop("uid", None)
         if not any(member.gid in ids for ids in gids):
             member.gid = 0
+            member.pax_headers.pop("gid", None)
         member.uname = member.gname = ""
         target.addfile(member, source.extractfile(member) if member.isreg() else None)
 """

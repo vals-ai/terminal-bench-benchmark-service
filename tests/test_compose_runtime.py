@@ -216,8 +216,8 @@ def test_reown_script_rewrites_only_owners_outside_the_id_maps(tmp_path: Path) -
     script = tmp_path / "reown.py"
     script.write_text(_REOWN_SCRIPT_SOURCE)
     source = io.BytesIO()
-    with tarfile.open(fileobj=source, mode="w") as archive:
-        for name, uid, gid in [("vep", 197609, 197121), ("mine", 1000, 65535)]:
+    with tarfile.open(fileobj=source, mode="w", format=tarfile.PAX_FORMAT) as archive:
+        for name, uid, gid in [("vep", 197609, 197121), ("huge", 3_000_000, 3_000_000), ("mine", 1000, 65535)]:
             info = tarfile.TarInfo(name)
             info.uid, info.gid, info.uname, info.gname = uid, gid, "juancmunoz", ""
             info.size = 5
@@ -236,6 +236,7 @@ def test_reown_script_rewrites_only_owners_outside_the_id_maps(tmp_path: Path) -
     with tarfile.open(fileobj=io.BytesIO(result.stdout)) as rewritten:
         members = {member.name: member for member in rewritten.getmembers()}
         assert (members["vep"].uid, members["vep"].gid, members["vep"].uname) == (0, 0, "")
+        assert (members["huge"].uid, members["huge"].gid) == (0, 0)
         assert (members["mine"].uid, members["mine"].gid) == (1000, 65535)
         assert members["link"].issym() and members["link"].linkname == "vep" and members["link"].uid == 0
         assert rewritten.extractfile("vep").read() == b"hello"  # type: ignore[union-attr]
