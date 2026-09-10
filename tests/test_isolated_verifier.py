@@ -201,13 +201,14 @@ def test_pack_and_unpack_quote_hostile_paths() -> None:
         assert "; rm -rf / &&" not in command
 
 
-def test_prepare_logs_does_not_relax_hardened_directories() -> None:
-    """Some images set /logs/verifier to 0700 on purpose; recreating it loses that."""
+def test_prepare_logs_opens_the_verifier_directory_to_unprivileged_graders() -> None:
+    """live-database-cutover starts postgres as `postgres` with -l /logs/verifier/pg.log;
+    Harbor chmods the directory to 777 before grading, so the grader relies on it."""
     command = isolated_verifier.prepare_logs_command()
 
-    assert "chmod" not in command
     assert "rm -rf /logs/verifier" not in command
     assert "find /logs/verifier -mindepth 1 -delete" in command
+    assert command.endswith("&& chmod 777 /logs/verifier")
 
 
 def test_staged_archive_rejects_members_packing_could_not_produce() -> None:
@@ -258,6 +259,20 @@ def test_reward_json_is_preferred_over_reward_txt() -> None:
         isolated_verifier.parse_reward('{"reward": "1"}')
     with pytest.raises(KeyError):
         isolated_verifier.parse_reward('{"score": 1}')
+
+
+def test_reward_json_is_found_behind_the_pty_echoed_command_line() -> None:
+    """The PTY exec echoes the shell's own setup line before `cat` prints the file.
+
+    medical-claims-processing wrote a valid reward.json and was still scored as an
+    error: `float('{"reward": 0.0}')`.
+    """
+    pty_output = 'root@tb-verifier:/# stty -echo; unset _CBS_PTY_CREATE_MARKER\r\n{"reward": 0.0}\r\n'
+
+    assert isolated_verifier.parse_reward(pty_output) == 0.0
+    assert (
+        isolated_verifier.parse_reward("root@tb-verifier:/# stty -echo; unset _CBS_PTY_CREATE_MARKER\r\n1\r\n") == 1.0
+    )
 
 
 def test_artifact_commands_run_on_busybox_sidecars() -> None:

@@ -56,6 +56,12 @@ with (
         member.uname = member.gname = ""
         target.addfile(member, source.extractfile(member) if member.isreg() else None)
 """
+INSTALL_TERMINAL_TOOLS = (
+    "command -v tmux >/dev/null 2>&1 && command -v asciinema >/dev/null 2>&1 && exit 0; "
+    "command -v apt-get >/dev/null 2>&1 || exit 0; "
+    "export DEBIAN_FRONTEND=noninteractive; "
+    "apt-get -o Acquire::Check-Valid-Until=false update -qq && apt-get install -y -qq tmux asciinema"
+)
 
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
@@ -124,6 +130,7 @@ async def start_compose_runtime(
     await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
+    await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(INSTALL_TERMINAL_TOOLS)}", timeout=timeout)
     await _run(sandbox, f"{compose} exec -T main true", timeout=_readiness_timeout(resources))
 
 
@@ -206,7 +213,13 @@ def import_changes(config: Mapping[str, Any]) -> list[str]:
 
 
 def _dockerfile_quote(value: str) -> str:
-    """Quote a Dockerfile word so whitespace, quotes, backslashes and ``$`` survive parsing."""
+    """Quote a Dockerfile word so whitespace, quotes, backslashes and ``$`` survive parsing.
+
+    ``docker import -c`` parses each change as one Dockerfile line, so a value
+    holding a newline cannot be expressed and is rejected up front.
+    """
+    if "\n" in value:
+        raise RuntimeError(f"Cannot re-import task image: config value contains a newline: {value!r}")
     return '"' + re.sub(r'(["\\$])', r"\\\1", value) + '"'
 
 

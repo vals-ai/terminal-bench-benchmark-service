@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -225,6 +226,15 @@ def test_import_changes_preserve_env_values_with_spaces_quotes_and_dollars() -> 
     ]
 
 
+def test_import_changes_reject_env_values_with_newlines() -> None:
+    """`docker import -c` parses each change as one Dockerfile line; a literal newline makes the
+    daemon reject the change (`b" is not a valid change command`), so fail before exporting the image."""
+    from terminal_bench_benchmark_service.compose_runtime import import_changes
+
+    with pytest.raises(RuntimeError, match="contains a newline"):
+        import_changes({"Env": ["MOTD=line one\nline two"]})
+
+
 def test_reown_script_rewrites_only_owners_outside_the_id_maps(tmp_path: Path) -> None:
     import io
     import subprocess
@@ -261,6 +271,38 @@ def test_reown_script_rewrites_only_owners_outside_the_id_maps(tmp_path: Path) -
         assert (members["mine"].uid, members["mine"].gid) == (1000, 65535)
         assert members["link"].issym() and members["link"].linkname == "vep" and members["link"].uid == 0
         assert rewritten.extractfile("vep").read() == b"hello"  # type: ignore[union-attr]
+
+
+def test_startup_installs_terminal_tools_as_root_before_the_agent_user_runs(tmp_path: Path) -> None:
+    """rs-archive-clone, risk-scorer-replay and fp8-rmsnorm-gemm run as a non-root
+    USER with no tmux; terminus2 cannot apt-get as that user, so the runtime must."""
+    from terminal_bench_benchmark_service.compose_runtime import INSTALL_TERMINAL_TOOLS, start_compose_runtime
+
+    class ReadySandbox(StagingSandbox):
+        async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+            self.commands.append(command)
+            if command.endswith("config --services"):
+                return ExecResult(exit_code=0, output="main\n")
+            return ExecResult(exit_code=0, output="")
+
+    sandbox = ReadySandbox()
+    asyncio.run(
+        start_compose_runtime(
+            tmp_path / "environment",
+            "task/one",
+            "example/main@sha256:" + "a" * 64,
+            {},
+            {"cpus": 1, "memory_mb": 1024},
+            sandbox,  # type: ignore[arg-type]
+        )
+    )
+
+    install = next(c for c in sandbox.commands if "tmux asciinema" in c)
+    assert "exec -T -u 0 main" in install
+    assert shlex.quote(INSTALL_TERMINAL_TOOLS) in install
+    assert sandbox.commands.index(install) < sandbox.commands.index(
+        next(c for c in sandbox.commands if c.endswith("exec -T main true"))
+    )
 
 
 def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
