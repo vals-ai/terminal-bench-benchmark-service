@@ -91,6 +91,36 @@ def test_pack_follows_a_symlinked_directory(tmp_path: Path, image: str) -> None:
     assert not any(member.issym() for member in members.values())
 
 
+@pytest.mark.parametrize("image", ["debian:bookworm-slim", "alpine:3.20"])
+def test_pack_refuses_a_newline_name_reached_through_a_symlinked_directory(tmp_path: Path, image: str) -> None:
+    """The newline guard must walk the same dereferenced tree as the member listing."""
+    (tmp_path / "elsewhere").mkdir()
+    (tmp_path / "elsewhere" / "part\n2.json").write_text("{}")
+    source = tmp_path / "generated_app"
+    source.mkdir()
+    (source / "external").symlink_to(tmp_path / "elsewhere")
+
+    result = subprocess.run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{tmp_path}:{tmp_path}",
+            image,
+            "sh",
+            "-c",
+            isolated_verifier.pack_command(str(source), str(tmp_path / "artifact.tar.gz")),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "contains a newline" in result.stdout
+    assert not (tmp_path / "artifact.tar.gz").exists()
+
+
 def test_pack_reports_no_size_of_its_own() -> None:
     """Bounds are enforced on bytes the service holds, not on the agent's word."""
     assert "wc -c" not in isolated_verifier.pack_command("/app/out", "/tmp/a.tar.gz")

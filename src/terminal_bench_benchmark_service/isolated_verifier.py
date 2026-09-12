@@ -321,7 +321,7 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
         exclude_args = f" {exclude_args}"
     return (
         f"set -e; "
-        f'if [ -n "$(find {quoted_source} -name "$(printf \'*\\n*\')" -print -quit)" ]; then '
+        f'if [ -n "$(find -L {quoted_source} -name "$(printf \'*\\n*\')" -print -quit)" ]; then '
         'echo "an artifact file name contains a newline"; exit 2; fi; '
         f"find -L {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
         "set +e; ignore=$(tar --ignore-failed-read --version >/dev/null 2>&1 && echo --ignore-failed-read); "
