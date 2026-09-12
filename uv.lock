@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -450,8 +450,8 @@ wheels = [
 
 [[package]]
 name = "create-benchmark-service"
-version = "0.37.2"
-source = { git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.2#74d5398dc3805ac67ccaadc77225c21c0b764feb" }
+version = "0.37.3"
+source = { git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.3#768ac3ee41016bb78c0e620736de2f88525b1e9b" }
 dependencies = [
     { name = "boto3" },
     { name = "cachetools" },
@@ -2173,7 +2173,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.2" },
+    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?tag=v0.37.3" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
