@@ -912,15 +912,6 @@ class TerminalBenchBenchmark(BenchmarkService):
         if present.output.strip().splitlines()[-1].strip() != isolated_verifier.PRESENT:
             return f"Artifact not produced by the agent: {artifact.source}"
 
-        followed = await with_retry(
-            source_sandbox, lambda: source_sandbox.exec(isolated_verifier.dir_symlink_command(source))
-        )
-        if followed.exit_code != 0:
-            raise isolated_verifier.VerifierEnvironmentError(
-                f"Artifact {artifact.source} contains a symlinked directory, whose contents "
-                "packing cannot carry: grading it would mark the model down for output it made"
-            )
-
         packed = await with_retry(
             source_sandbox,
             lambda: source_sandbox.exec(isolated_verifier.pack_command(source, archive, artifact.exclude)),

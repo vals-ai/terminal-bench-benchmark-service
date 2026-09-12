@@ -280,11 +280,14 @@ def exists_command(source: str) -> str:
 def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
     """Archive one artifact in the agent's sandbox and print its packed size.
 
-    Regular files, directories, and symlinks that resolve to a regular file --
-    those are dereferenced, so a submission that links to its own output still
-    carries it, while a dangling or non-regular link is left out rather than
-    failing the pack. The member list is built before the archive so a failing
-    `find` cannot yield a truncated archive that still reports success.
+    Regular files, directories, and symlinks that resolve to either -- those
+    are dereferenced by ``find -L`` and ``tar -h`` alike, so a submission that
+    links to its own output still carries it and a virtualenv's ``lib64 -> lib``
+    is packed as the directory it resolves to, while a dangling or non-regular
+    link is left out rather than failing the pack. A symlink loop fails the
+    listing (GNU find reports it; BusyBox runs out of path depth), and a failing
+    `find` cannot yield a truncated archive that still reports success because
+    the member list is built before the archive.
 
     A long-running agent can change the submission underneath the pack. A member
     that disappeared is skipped, one that grew is packed short and accepted, and
@@ -320,8 +323,7 @@ def pack_command(source: str, archive: str, exclude: Sequence[str] = ()) -> str:
         f"set -e; "
         f'if [ -n "$(find {quoted_source} -name "$(printf \'*\\n*\')" -print -quit)" ]; then '
         'echo "an artifact file name contains a newline"; exit 2; fi; '
-        f"find {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
-        f"find {quoted_source} -type l -exec test -f {{}} \\; -print >> {members}; "
+        f"find -L {quoted_source} \\( -type f -o -type d \\) -print > {members}; "
         "set +e; ignore=$(tar --ignore-failed-read --version >/dev/null 2>&1 && echo --ignore-failed-read); "
         f"tar -czhf {quoted_archive}{exclude_args} --no-recursion $ignore "
         f"-T {members} 2>&1; status=$?; "
@@ -353,17 +355,6 @@ def expanded_size_command(archive: str) -> str:
         f"members=$(wc -l < {listing}); rm -f {listing}; "
         'echo "$bytes $members"'
     )
-
-
-def dir_symlink_command(source: str) -> str:
-    """Find a symlinked directory in the artifact, which packing cannot follow.
-
-    Its subtree would be left out of the archive with no error, and the grader
-    would mark the model down for output it produced. ``test -d`` follows the
-    link; BusyBox find has no ``-xtype``.
-    """
-    quoted = shlex.quote(source)
-    return f'found=$(find {quoted} -type l -exec test -d {{}} \\; -print -quit) && test -z "$found"'
 
 
 def fabricated_content(pack_output: str) -> bool:
