@@ -185,6 +185,23 @@ def test_staging_discovers_gpu_driver_files_only_for_gpu_tasks(tmp_path: Path) -
     assert runtime["services"]["main"]["volumes"] == ["/bundle:/bundle"]
 
 
+def test_staging_fails_when_gpu_task_sandbox_has_no_driver_files(tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import _stage_files
+
+    sandbox = StagingSandbox()
+    with pytest.raises(RuntimeError, match="no NVIDIA driver userspace"):
+        asyncio.run(
+            _stage_files(
+                tmp_path / "environment",
+                "example/main@sha256:" + "a" * 64,
+                {},
+                {"cpus": 8, "memory_mb": 16384, "gpus": 1},
+                sandbox,  # type: ignore[arg-type]
+            )
+        )
+    assert "/terminal-bench/runtime.json" not in sandbox.uploads
+
+
 def test_staging_uses_minimal_compose_for_tasks_without_sidecars(tmp_path: Path) -> None:
     from terminal_bench_benchmark_service.compose_runtime import _stage_files
 

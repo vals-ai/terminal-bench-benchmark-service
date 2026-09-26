@@ -24,7 +24,7 @@ _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
 _FIND_GPU_DRIVER_FILES = (
     "find /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/bin -maxdepth 1 "
-    "\\( -name 'libcuda*' -o -name 'libnvidia*' -o -name 'nvidia-*' \\) 2>/dev/null"
+    "\\( -name 'libcuda*' -o -name 'libnvidia*' -o -name 'nvidia-*' \\)"
 )
 _EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
 _REOWNED_TASK_IMAGE = "terminal-bench/main:reowned"
@@ -246,8 +246,16 @@ async def _stage_files(
 
 async def _gpu_driver_files(sandbox: Sandbox) -> list[str]:
     """List the NVIDIA driver userspace files the provider injected into the outer sandbox."""
+    # ``find`` exits non-zero when one of the searched directories is missing,
+    # so success is judged by what it lists rather than its exit code.
     result = await sandbox.exec(_FIND_GPU_DRIVER_FILES, timeout=30)
-    return sorted(line for line in result.output.splitlines() if line.startswith("/"))
+    files = sorted(line for line in result.output.splitlines() if line.startswith("/"))
+    if not files:
+        raise RuntimeError(
+            "GPU task sandbox has no NVIDIA driver userspace (libcuda/libnvidia-*) to pass to the task\n"
+            f"{result.output[-1000:]}"
+        )
+    return files
 
 
 def _gpu_count(resources: Mapping[str, Any]) -> int:
