@@ -51,12 +51,10 @@ logger = logging.getLogger(__name__)
 
 # Deletes retry internally for minutes; past this the sweeper can have it.
 VERIFIER_DELETE_TIMEOUT_SECONDS = 120
-# Daytona currently rejects sandbox disks above 512 GB. TBench4's JAX task
-# declares 1000 GB, so keep the request launchable on the configured provider.
-MAX_DAYTONA_DISK_GB = 512
-# Daytona currently rejects sandbox CPU requests above 20 vCPUs. TBench4's
-# largest tasks declare 16, so cap manifest-backed requests at
-# the provider limit while preserving the task's other resource requirements.
+# Daytona sandbox limits for this org. TBench4's largest declarations (JAX: 1000 GB,
+# live-database-cutover/JAX: 16 vCPU) fit, so manifest-backed requests are only
+# capped if a task ever declares more than the provider allows.
+MAX_DAYTONA_DISK_GB = 1000
 MAX_DAYTONA_VCPU = 20
 
 # Process-wide: the bound is the container's memory, not one instance's.

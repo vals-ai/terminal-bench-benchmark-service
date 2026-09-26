@@ -11,7 +11,6 @@ from benchmark_service.v1_schemas import V1Task
 from scripts.import_tbench4_release import build_manifest
 import terminal_bench_benchmark_service.benchmark_service as service_module
 from terminal_bench_benchmark_service.benchmark_service import (
-    MAX_DAYTONA_DISK_GB,
     TerminalBenchBenchmark,
 )
 
@@ -61,9 +60,6 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     assert gpu_task.resources.gpu == 1
     assert gpu_task.resources.gpu_type == "H100"
 
-    jax_task = asyncio.run(benchmark.retrieve_task("jax-speedrun-gpu", dataset="terminal-bench-4.0"))
-    assert jax_task.resources.disk == MAX_DAYTONA_DISK_GB
-
     manifest = benchmark._image_manifest("terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
     assert manifest["release_tag"] == "v4.0.0"
     assert len(manifest["tasks"]) == 66
@@ -85,7 +81,7 @@ def test_tbench4_does_not_silently_cap_non_daytona_resources(
         benchmark._sandbox_resources(  # pyright: ignore[reportPrivateUsage]
             "jax-speedrun-gpu",
             "terminal-bench-4.0",
-            {"cpus": 1, "memory_mb": 1024, "storage_mb": 1000 * 1024},
+            {"cpus": 1, "memory_mb": 1024, "storage_mb": 4000 * 1024},
         )
 
 
