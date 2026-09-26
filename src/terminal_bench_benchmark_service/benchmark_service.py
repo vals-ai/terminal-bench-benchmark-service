@@ -74,6 +74,25 @@ def with_pinned_image_tools(command: str) -> str:
     return f"PATH=/bin:$PATH {command}"
 
 
+def mcp_servers_note(mcp_servers: list[dict[str, Any]]) -> str:
+    """Tell the agent about the task's `[[environment.mcp_servers]]`, as Harbor does.
+
+    The sidecars run whether or not the agent knows about them; Harbor's
+    mini-swe-agent adapter appends this listing to the instruction so a
+    tool-less agent can still reach them. Same wording, so the prompts match.
+    """
+    if not mcp_servers:
+        return ""
+    note = "\n\nMCP Servers:\nThe following MCP servers are available for this task.\n"
+    for s in mcp_servers:
+        if s["transport"] == "stdio":
+            args_str = " ".join(s.get("args", []))
+            note += f"- {s['name']}: stdio transport, command: {s['command']} {args_str}\n"
+        else:
+            note += f"- {s['name']}: {s['transport']} transport, url: {s['url']}\n"
+    return note
+
+
 class OverrideResources(Resources):
     @staticmethod
     def _normalize_resource(value: Any, fallback_key: str | None, data: dict[str, Any]) -> int | None:
@@ -419,6 +438,10 @@ class TerminalBenchBenchmark(BenchmarkService):
 
             with open(task_toml_path, "rb") as f:
                 task["task_definition"] = tomllib.load(f)
+
+            task["problem_statement"] += mcp_servers_note(
+                task["task_definition"].get("environment", {}).get("mcp_servers", [])
+            )
 
             dataset[task_id] = task
 
