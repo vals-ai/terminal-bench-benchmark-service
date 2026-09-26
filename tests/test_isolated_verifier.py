@@ -18,6 +18,38 @@ def test_prepare_creates_the_directories_graders_assume() -> None:
     assert isolated_verifier.CONVENTION_ARTIFACT_DIR in command
 
 
+def _run_grade(tmp_path: Path, environ: bytes, path: str) -> str:
+    """Run GRADE_COMMAND with a fake /tests/test.sh that reports its PATH, from a shell whose PATH was clobbered."""
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test.sh").write_text('printf %s "$PATH"\n')
+    environ_file = tmp_path / "environ"
+    environ_file.write_bytes(environ)
+    command = isolated_verifier.grade_command(str(environ_file)).replace(
+        "bash /tests/test.sh", f"bash {tests_dir}/test.sh"
+    )
+    result = subprocess.run(["bash", "-c", command], capture_output=True, text=True, env={"PATH": path}, check=True)
+    return result.stdout
+
+
+def test_grader_sees_the_image_path_after_a_login_shell_clobbered_it(tmp_path: Path) -> None:
+    """roy-polymorph-cn's verifier image sets ENV PATH=/opt/venv/bin:... for pytest; Debian's
+    /etc/profile resets PATH in the login shell the grader runs in, so `python` lost pytest."""
+    image_path = "/opt/venv/bin:/usr/local/bin:/usr/bin:/bin"
+    environ = b"HOME=/root\0PATH=" + image_path.encode() + b"\0TERM=dumb\0"
+
+    assert _run_grade(tmp_path, environ, "/usr/local/bin:/usr/bin:/bin") == image_path
+
+
+def test_grader_keeps_the_shell_path_when_pid1_has_none(tmp_path: Path) -> None:
+    assert _run_grade(tmp_path, b"HOME=/root\0", "/usr/local/bin:/usr/bin:/bin") == "/usr/local/bin:/usr/bin:/bin"
+
+
+def test_grade_command_reads_pid1_environ() -> None:
+    assert isolated_verifier.GRADE_COMMAND.startswith("_image_path=\"$(tr '\\0' '\\n' </proc/1/environ ")
+    assert isolated_verifier.GRADE_COMMAND.endswith('PATH="${_image_path:-$PATH}" bash /tests/test.sh')
+
+
 def test_sandbox_name_is_provider_safe_and_bounded() -> None:
     assert isolated_verifier.verifier_sandbox_name("some/task.id", "run id!", "ab12") == (
         "tb-verifier-some-task-id-run-id--ab12"
