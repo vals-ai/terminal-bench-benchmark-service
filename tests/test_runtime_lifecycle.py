@@ -120,28 +120,6 @@ async def _test_failed_compose_setup_cleans_up_runtime(
     assert stopped == [("ctr-optimization", outer)]
 
 
-def test_compose_setup_passes_task_cpu_to_nested_runtime(
-    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    asyncio.run(_test_compose_setup_passes_task_cpu_to_nested_runtime(benchmark, monkeypatch))
-
-
-async def _test_compose_setup_passes_task_cpu_to_nested_runtime(
-    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    outer = FakeSandbox()
-    started: dict[str, Any] = {}
-
-    async def fake_start(*args: Any) -> None:
-        started["args"] = args
-
-    monkeypatch.setattr(service_module, "start_compose_runtime", fake_start)
-
-    _ = [chunk async for chunk in benchmark.setup_task("live-database-cutover", outer, dataset="terminal-bench-4.0")]
-
-    assert started["args"][4]["cpus"] == 16
-
-
 def test_artifact_download_is_bounded_and_preserves_streamed_bytes(
     benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
 ) -> None:

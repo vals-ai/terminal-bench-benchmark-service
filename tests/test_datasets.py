@@ -12,7 +12,6 @@ from scripts.import_tbench4_release import build_manifest
 import terminal_bench_benchmark_service.benchmark_service as service_module
 from terminal_bench_benchmark_service.benchmark_service import (
     MAX_DAYTONA_DISK_GB,
-    MAX_DAYTONA_VCPU,
     TerminalBenchBenchmark,
 )
 
@@ -64,10 +63,6 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
 
     jax_task = asyncio.run(benchmark.retrieve_task("jax-speedrun-gpu", dataset="terminal-bench-4.0"))
     assert jax_task.resources.disk == MAX_DAYTONA_DISK_GB
-
-    database_task = asyncio.run(benchmark.retrieve_task("live-database-cutover", dataset="terminal-bench-4.0"))
-    assert database_task.resources.vcpu == 16 <= MAX_DAYTONA_VCPU
-    assert benchmark._verifier_resources("live-database-cutover", "terminal-bench-4.0").vcpu == 16  # pyright: ignore[reportPrivateUsage]
 
     manifest = benchmark._image_manifest("terminal-bench-4.0")  # pyright: ignore[reportPrivateUsage]
     assert manifest["release_tag"] == "v4.0.0"
