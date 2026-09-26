@@ -54,10 +54,10 @@ VERIFIER_DELETE_TIMEOUT_SECONDS = 120
 # Daytona currently rejects sandbox disks above 512 GB. TBench4's JAX task
 # declares 1000 GB, so keep the request launchable on the configured provider.
 MAX_DAYTONA_DISK_GB = 512
-# Daytona currently rejects sandbox CPU requests above 12 vCPUs. TBench4's
-# live-database-cutover task declares 16, so cap manifest-backed requests at
+# Daytona currently rejects sandbox CPU requests above 20 vCPUs. TBench4's
+# largest tasks declare 16, so cap manifest-backed requests at
 # the provider limit while preserving the task's other resource requirements.
-MAX_DAYTONA_VCPU = 12
+MAX_DAYTONA_VCPU = 20
 
 # Process-wide: the bound is the container's memory, not one instance's.
 _ARTIFACT_TRANSFERS = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_TRANSFERS)

@@ -10,7 +10,7 @@ from benchmark_service.schemas import StreamResultChunk
 
 import terminal_bench_benchmark_service.benchmark_service as service_module
 from terminal_bench_benchmark_service import isolated_verifier
-from terminal_bench_benchmark_service.benchmark_service import MAX_DAYTONA_VCPU, TerminalBenchBenchmark
+from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 
 
 class FakeSandbox(Sandbox):
@@ -120,13 +120,13 @@ async def _test_failed_compose_setup_cleans_up_runtime(
     assert stopped == [("ctr-optimization", outer)]
 
 
-def test_compose_setup_passes_normalized_cpu_to_nested_runtime(
+def test_compose_setup_passes_task_cpu_to_nested_runtime(
     benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    asyncio.run(_test_compose_setup_passes_normalized_cpu_to_nested_runtime(benchmark, monkeypatch))
+    asyncio.run(_test_compose_setup_passes_task_cpu_to_nested_runtime(benchmark, monkeypatch))
 
 
-async def _test_compose_setup_passes_normalized_cpu_to_nested_runtime(
+async def _test_compose_setup_passes_task_cpu_to_nested_runtime(
     benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     outer = FakeSandbox()
@@ -139,7 +139,7 @@ async def _test_compose_setup_passes_normalized_cpu_to_nested_runtime(
 
     _ = [chunk async for chunk in benchmark.setup_task("live-database-cutover", outer, dataset="terminal-bench-4.0")]
 
-    assert started["args"][4]["cpus"] == MAX_DAYTONA_VCPU
+    assert started["args"][4]["cpus"] == 16
 
 
 def test_artifact_download_is_bounded_and_preserves_streamed_bytes(
