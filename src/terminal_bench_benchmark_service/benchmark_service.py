@@ -241,6 +241,11 @@ class TerminalBenchBenchmark(BenchmarkService):
 
         return float(verifier_timeout_value)
 
+    def _verifier_env(self, task_id: str, dataset: str | None = None) -> dict[str, Any]:
+        """The task's `[verifier.env]`, which the grader expects in its environment."""
+        task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
+        return dict(task_def.get("verifier", {}).get("env", {}))
+
     async def _stream_command_with_timeout(
         self, sandbox: Sandbox, command: str, cwd: str, timeout: float
     ) -> AsyncGenerator[str, None]:
@@ -753,6 +758,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             # create an older user-local executable with the same name. Keep the image's
             # controlled toolchain ahead of user-local paths during evaluation.
             test_script = with_pinned_image_tools(test_script)
+            test_script = isolated_verifier.with_verifier_env(test_script, self._verifier_env(task_id, dataset))
 
             # Run the test, collect the test output and stream the logs to the client.
             # Use retries=1 (no retry) to avoid re-running test.sh on streaming errors —
@@ -1191,7 +1197,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                 # /tests is the image's: uploading ours over it would delete data
                 # generated at build time and undo its permission hardening.
                 await with_retry(verifier, lambda: verifier.exec(isolated_verifier.prepare_logs_command()))
-                test_script = isolated_verifier.GRADE_COMMAND
+                test_script = isolated_verifier.with_verifier_env(
+                    isolated_verifier.GRADE_COMMAND, self._verifier_env(task_id, dataset)
+                )
 
                 yield StreamMessageChunk(type="message", data=f"Running isolated tests for {task_id}...")
 
