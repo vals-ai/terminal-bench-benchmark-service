@@ -33,6 +33,16 @@ def grade_command(environ_path: str = IMAGE_ENVIRON_PATH) -> str:
 
 
 GRADE_COMMAND = grade_command()
+
+
+def with_verifier_env(command: str, env: dict[str, Any]) -> str:
+    """Export a task's ``[verifier.env]`` to the grader, as Harbor does."""
+    if not env:
+        return command
+    exports = " ".join(f"{key}={shlex.quote(str(value))}" for key, value in env.items())
+    return f"export {exports}; {command}"
+
+
 CONVENTION_ARTIFACT_DIR = "/logs/artifacts"
 VERIFIER_CREATE_TIMEOUT_SECONDS = 600
 # Idleness is counted in sandbox events, not process liveness, so a grader that
@@ -387,6 +397,11 @@ def unpack_command(source: str, archive: str) -> str:
     The destination is removed first so nothing is written through a symlink
     left there by an earlier member, and ``cp -a`` copies modes and timestamps
     through unchanged; the staging gate has already rejected any symlink.
+
+    The parent directory is opened up (``chmod 777``, as Harbor's artifact
+    upload does): graders that drop to an unprivileged user to run the agent's
+    submission still need to write next to it, e.g. ``sage`` preparsing
+    ``/app/solve.sage`` into ``/app/solve.sage.py``.
     """
     quoted_source = shlex.quote(source)
     relative = shlex.quote(source.lstrip("/"))
@@ -399,7 +414,7 @@ def unpack_command(source: str, archive: str) -> str:
         f"{reject_irregular_members_command(f'{archive}.stage')} && "
         f"{strip_privileged_bits_command(f'{archive}.stage')} && "
         f"test -e {stage}/{relative} && "
-        f"mkdir -p {parent} && rm -rf {quoted_source} && "
+        f"mkdir -p {parent} && chmod 777 {parent} && rm -rf {quoted_source} && "
         f"cp -a {stage}/{relative} {quoted_source} && "
         f"rm -rf {stage} {quoted_archive}"
     )

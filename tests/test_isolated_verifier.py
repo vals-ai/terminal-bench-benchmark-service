@@ -287,6 +287,42 @@ def test_unpack_copies_only_the_declared_path_out_of_staging() -> None:
     assert "rm -rf /tmp/a.tar.gz.stage /tmp/a.tar.gz" in command
 
 
+def test_unpack_opens_the_parent_dir_to_unprivileged_graders(tmp_path: Path) -> None:
+    """formal-crypto drops to `nobody` to run /app/solve.sage, and `sage` must
+    write the preparsed solve.sage.py beside it; Harbor chmod 777s the parent."""
+    command = isolated_verifier.unpack_command("/app/solve.sage", "/tmp/a.tar.gz")
+    assert "mkdir -p /app && chmod 777 /app && " in command
+
+    source = tmp_path / "verifier" / "app" / "solve.sage"
+    staged = tmp_path / "agent" / source.relative_to("/")
+    staged.parent.mkdir(parents=True)
+    staged.write_text("print(1)\n")
+    archive = tmp_path / "a.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(staged, arcname=str(source.relative_to("/")))
+    subprocess.run(["bash", "-ec", isolated_verifier.unpack_command(str(source), str(archive))], check=True)
+
+    assert source.read_text() == "print(1)\n"
+    assert source.parent.stat().st_mode & 0o777 == 0o777
+
+
+def test_verifier_env_is_exported_to_the_grader() -> None:
+    """live-database-cutover's grader boots the app with the task's [verifier.env]."""
+    command = isolated_verifier.with_verifier_env(
+        "bash /tests/test.sh", {"POSTGRES_HOST": "127.0.0.1", "SEED_USERS": 50000, "PW": "a b'c"}
+    )
+
+    assert command == "export POSTGRES_HOST=127.0.0.1 SEED_USERS=50000 PW='a b'\"'\"'c'; bash /tests/test.sh"
+    probe = isolated_verifier.with_verifier_env(
+        'echo "$POSTGRES_HOST|$PW"', {"POSTGRES_HOST": "127.0.0.1", "PW": "a b'c"}
+    )
+    assert subprocess.run(["bash", "-c", probe], capture_output=True, text=True).stdout == "127.0.0.1|a b'c\n"
+
+
+def test_no_verifier_env_leaves_the_grade_command_alone() -> None:
+    assert isolated_verifier.with_verifier_env("bash /tests/test.sh", {}) == "bash /tests/test.sh"
+
+
 def test_unpack_clears_the_destination_before_writing_it() -> None:
     """A symlink left at the destination must not be written through."""
     command = isolated_verifier.unpack_command("/app/out", "/tmp/a.tar.gz")
