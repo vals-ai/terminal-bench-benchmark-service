@@ -313,3 +313,47 @@ def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
         asyncio.run(stop_compose_runtime("task/one", sandbox))  # type: ignore[arg-type]
 
     assert sandbox.commands[-1] == "pkill -TERM dockerd || true"
+
+
+class FlakyDockerdSandbox:
+    """dockerd that only answers `docker info` after it has been relaunched."""
+
+    def __init__(self, ready_after_launches: int) -> None:
+        self.commands: list[str] = []
+        self.launches = 0
+        self.ready_after_launches = ready_after_launches
+
+    async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+        self.commands.append(command)
+        if command.startswith("dockerd-entrypoint.sh"):
+            self.launches += 1
+        if command == "docker info" and self.launches < self.ready_after_launches:
+            return ExecResult(exit_code=1, output="Cannot connect to the Docker daemon")
+        return ExecResult(exit_code=0, output="dockerd log line")
+
+
+def test_start_docker_relaunches_dockerd_when_it_never_becomes_ready(monkeypatch: pytest.MonkeyPatch) -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_ATTEMPTS", 2)
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_INTERVAL_SECONDS", 0.0)
+    sandbox = FlakyDockerdSandbox(ready_after_launches=2)
+
+    asyncio.run(compose_runtime._start_docker(sandbox))  # pyright: ignore[reportPrivateUsage]
+
+    assert sandbox.launches == 2
+    assert any(command.startswith("pkill -TERM dockerd") for command in sandbox.commands)
+
+
+def test_start_docker_gives_up_with_dockerd_log_after_all_attempts(monkeypatch: pytest.MonkeyPatch) -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_ATTEMPTS", 1)
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_INTERVAL_SECONDS", 0.0)
+    sandbox = FlakyDockerdSandbox(ready_after_launches=99)
+
+    with pytest.raises(RuntimeError, match="after 3 attempts") as excinfo:
+        asyncio.run(compose_runtime._start_docker(sandbox))
+
+    assert sandbox.launches == 3
+    assert "dockerd log line" in str(excinfo.value)

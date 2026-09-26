@@ -21,6 +21,12 @@ _BUNDLE_DIR = "/bundle"
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
 _DOCKER_READY_ATTEMPTS = 30
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
+_DOCKERD_START_ATTEMPTS = 3
+_DOCKERD_LOG = "/var/log/dockerd.log"
+_START_DOCKERD = f"dockerd-entrypoint.sh dockerd > {_DOCKERD_LOG} 2>&1 &"
+_RESET_DOCKERD = (
+    "pkill -TERM dockerd || true; sleep 2; pkill -KILL dockerd || true; rm -f /var/run/docker.pid /var/run/docker.sock"
+)
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
 _EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
 _REOWNED_TASK_IMAGE = "terminal-bench/main:reowned"
@@ -115,8 +121,7 @@ async def start_compose_runtime(
     rebuilding the source-level ``build`` entries that remain in the task file.
     """
 
-    await _run(sandbox, "dockerd-entrypoint.sh dockerd > /var/log/dockerd.log 2>&1 &", timeout=10)
-    await _wait_for_docker(sandbox)
+    await _start_docker(sandbox)
     timeout = _build_timeout(resources)
     main_image = await _pull_task_image(sandbox, task_image, timeout)
     await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
@@ -296,14 +301,35 @@ def _readiness_timeout(resources: Mapping[str, Any]) -> float:
     )
 
 
-async def _wait_for_docker(sandbox: Sandbox) -> None:
+async def _start_docker(sandbox: Sandbox) -> None:
+    """Launch the nested dockerd, restarting it when it fails to come up.
+
+    A DinD daemon occasionally never becomes ready on a fresh sandbox (slow
+    storage-driver init or a crashed first launch). Relaunching within the same
+    sandbox recovers most of those cases far more cheaply than failing setup.
+    """
+
+    for attempt in range(_DOCKERD_START_ATTEMPTS):
+        if attempt:
+            await sandbox.exec(_RESET_DOCKERD, timeout=30)
+        await _run(sandbox, _START_DOCKERD, timeout=10)
+        if await _wait_for_docker(sandbox):
+            return
+    log = await sandbox.exec(f"tail -n 40 {_DOCKERD_LOG}", timeout=10)
+    raise RuntimeError(
+        "Docker daemon did not become ready inside the compose sandbox "
+        f"after {_DOCKERD_START_ATTEMPTS} attempts\n{log.output[-2000:]}"
+    )
+
+
+async def _wait_for_docker(sandbox: Sandbox) -> bool:
     for attempt in range(_DOCKER_READY_ATTEMPTS):
         result = await sandbox.exec("docker info", timeout=10)
         if result.exit_code == 0:
-            return
+            return True
         if attempt < _DOCKER_READY_ATTEMPTS - 1:
             await asyncio.sleep(_DOCKER_READY_INTERVAL_SECONDS)
-    raise RuntimeError("Docker daemon did not become ready inside the compose sandbox")
+    return False
 
 
 async def _run(sandbox: Sandbox, command: str, *, timeout: float) -> ExecResult:
