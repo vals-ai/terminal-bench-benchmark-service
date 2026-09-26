@@ -32,8 +32,12 @@ for callers that need the published 2.x datasets.
 
 ## Terminal-Bench 4
 
-`terminal-bench-4.0` is pinned to the upstream `v4.0.0` source tag and Harbor's
-published prebuilt-image release. The release asset is kept as
+`terminal-bench-4.0` pins its task sources to upstream `main` past the `v4.0.0`
+tag (post-release task fixes: cad-model oracle, risk-scorer-replay verifier) and
+its images to Harbor's published `v4.0.0` prebuilt-image release. The
+post-release Dockerfile changes to fp8-rmsnorm-gemm and vpp-loss-divergence
+have no published images, so those two tasks still run the `v4.0.0` images.
+The release asset is kept as
 `datasets/images/terminal-bench-4-prebuilt.json`; the checked-in service
 manifest is generated from it with:
 
