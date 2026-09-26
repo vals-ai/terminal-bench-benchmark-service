@@ -114,11 +114,10 @@ def test_pack_follows_a_symlinked_directory(tmp_path: Path, image: str) -> None:
     with tarfile.open(archive, "r:gz") as tar:
         members = {member.name.removeprefix("work/generated_app/"): member for member in tar.getmembers()}
     assert members[".venv/lib64"].isdir(), "the symlinked directory is stored as a directory"
-    # GNU tar stores the second sighting of an inode as a hard link to the first; both extract as regular files.
-    assert members[".venv/lib64/site/mod.py"].isfile() or members[".venv/lib64/site/mod.py"].islnk(), (
-        "and its subtree is carried"
-    )
-    assert members[".venv/lib/site/mod.py"].isfile()
+    # GNU tar stores the second sighting of an inode as a hard link to the first, and find's
+    # directory order decides which path is seen first; both extract as regular files.
+    for path in (".venv/lib64/site/mod.py", ".venv/lib/site/mod.py"):
+        assert members[path].isfile() or members[path].islnk(), "and its subtree is carried"
     assert "dangling" not in members
     assert not any(member.issym() for member in members.values())
 
