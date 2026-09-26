@@ -43,6 +43,11 @@ def with_verifier_env(command: str, env: dict[str, Any]) -> str:
     return f"export {exports}; {command}"
 
 
+def with_thread_limit(command: str, variable: str, threads: int) -> str:
+    """Pin the grader's OpenMP-style thread pools to its CPU budget unless its image already did."""
+    return f'export {variable}="${{{variable}:-{threads}}}"; {command}'
+
+
 CONVENTION_ARTIFACT_DIR = "/logs/artifacts"
 VERIFIER_CREATE_TIMEOUT_SECONDS = 600
 # Idleness is counted in sandbox events, not process liveness, so a grader that

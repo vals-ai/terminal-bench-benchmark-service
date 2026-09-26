@@ -6,7 +6,7 @@ import asyncio
 import json
 import re
 import shlex
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -62,6 +62,11 @@ INSTALL_TERMINAL_TOOLS = (
     "export DEBIAN_FRONTEND=noninteractive; "
     "apt-get -o Acquire::Check-Valid-Until=false update -qq && apt-get install -y -qq tmux asciinema"
 )
+# The sandbox's cgroup quota caps CPU time, but the kernel still reports every
+# host core, so OpenMP-backed pools (PyTorch, OpenBLAS, MKL) size themselves
+# to the host and oversubscribe the quota. Pin them to the task's CPU budget
+# unless the task image chose its own value.
+THREAD_LIMIT_VARIABLE = "OMP_NUM_THREADS"
 
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
@@ -231,7 +236,8 @@ async def _stage_files(
     sandbox: Sandbox,
 ) -> None:
     await _run(sandbox, f"mkdir -p {shlex.quote(_ENVIRONMENT_ROOT)}", timeout=30)
-    runtime = runtime_compose_definition(task_image, sidecar_images, resources)
+    image_env = await _image_env(sandbox, task_image)
+    runtime = runtime_compose_definition(task_image, sidecar_images, resources, thread_limit_env(resources, image_env))
     compose_file = environment_dir / "docker-compose.yaml"
     compose_content = compose_file.read_bytes() if compose_file.is_file() else _EMPTY_COMPOSE_FILE
     await sandbox.upload_file(_COMPOSE_FILE, compose_content)
@@ -239,8 +245,30 @@ async def _stage_files(
     await _run(sandbox, f"mkdir -p {shlex.quote(_BUNDLE_DIR)}", timeout=30)
 
 
+async def _image_env(sandbox: Sandbox, task_image: str) -> list[str]:
+    """The ``ENV`` entries baked into an already-pulled image."""
+    result = await _run(
+        sandbox, f"docker image inspect --format '{{{{json .Config.Env}}}}' {shlex.quote(task_image)}", timeout=60
+    )
+    return list(json.loads(result.output) or [])
+
+
+def thread_limit_env(resources: Mapping[str, Any], image_env: Sequence[str]) -> dict[str, str]:
+    """Return the thread-pool pin for a task container, or nothing when the image sets its own."""
+    if any(variable.split("=", 1)[0] == THREAD_LIMIT_VARIABLE for variable in image_env):
+        return {}
+    return {THREAD_LIMIT_VARIABLE: str(thread_limit(resources.get("cpus", 1)))}
+
+
+def thread_limit(cpus: Any) -> int:
+    return max(1, int(float(cpus)))
+
+
 def runtime_compose_definition(
-    task_image: str, sidecar_images: Mapping[str, str], resources: Mapping[str, Any]
+    task_image: str,
+    sidecar_images: Mapping[str, str],
+    resources: Mapping[str, Any],
+    environment: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Return the JSON Compose overlay used to run one pinned task."""
     main: dict[str, Any] = {
@@ -264,6 +292,8 @@ def runtime_compose_definition(
         # reservation would fail before the task starts. Privileged mode passes
         # the outer device namespace through to the task container.
         main["privileged"] = True
+    if environment:
+        main["environment"] = dict(environment)
 
     return {
         "services": {

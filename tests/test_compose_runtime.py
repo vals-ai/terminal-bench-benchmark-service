@@ -13,6 +13,7 @@ from benchmark_service.sandbox.types import ExecResult
 from terminal_bench_benchmark_service.compose_runtime import (
     compose_runtime_source,
     runtime_compose_definition,
+    thread_limit_env,
 )
 
 
@@ -34,7 +35,7 @@ class StagingSandbox:
 
     async def exec(self, command: str, **_kwargs: object) -> ExecResult:
         self.commands.append(command)
-        return ExecResult(exit_code=0, output="")
+        return ExecResult(exit_code=0, output="null" if command.startswith("docker image inspect ") else "")
 
     async def upload_file(self, remote_path: str, content: bytes) -> None:
         self.uploads[remote_path] = content
@@ -122,6 +123,44 @@ def test_runtime_overlay_passes_allocated_gpu_into_nested_task() -> None:
     assert runtime["services"]["main"]["privileged"] is True
 
 
+def test_thread_pools_are_pinned_to_the_task_cpu_budget_unless_the_image_chose() -> None:
+    """vpp-loss-divergence (2 CPUs, image silent) times out with a thread per host core;
+    batched-eval-parity bakes OMP_NUM_THREADS=1 and must keep it."""
+    assert thread_limit_env({"cpus": 2}, ["PATH=/usr/bin"]) == {"OMP_NUM_THREADS": "2"}
+    assert thread_limit_env({"cpus": 0.5}, []) == {"OMP_NUM_THREADS": "1"}
+    assert thread_limit_env({"cpus": 2}, ["OMP_NUM_THREADS=1"]) == {}
+
+    runtime = runtime_compose_definition(
+        "example/main@sha256:" + "a" * 64, {}, {"cpus": 2, "memory_mb": 4096}, {"OMP_NUM_THREADS": "2"}
+    )
+    assert runtime["services"]["main"]["environment"] == {"OMP_NUM_THREADS": "2"}
+    assert "environment" not in runtime_compose_definition("example/main", {}, {"cpus": 2})["services"]["main"]
+
+
+def test_staging_reads_the_pulled_image_env_before_pinning_threads(tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import _stage_files
+
+    class PinnedImageSandbox(StagingSandbox):
+        async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+            self.commands.append(command)
+            if command.startswith("docker image inspect "):
+                return ExecResult(exit_code=0, output='["OMP_NUM_THREADS=1"]\n')
+            return ExecResult(exit_code=0, output="")
+
+    for sandbox, expected in ((StagingSandbox(), {"OMP_NUM_THREADS": "4"}), (PinnedImageSandbox(), None)):
+        asyncio.run(
+            _stage_files(
+                tmp_path / "environment",
+                "example/main@sha256:" + "a" * 64,
+                {},
+                {"cpus": 4, "memory_mb": 1024},
+                sandbox,  # type: ignore[arg-type]
+            )
+        )
+        main = json.loads(sandbox.uploads["/terminal-bench/runtime.json"])["services"]["main"]
+        assert main.get("environment") == expected
+
+
 def test_staging_uses_minimal_compose_for_tasks_without_sidecars(tmp_path: Path) -> None:
     from terminal_bench_benchmark_service.compose_runtime import _stage_files
 
@@ -144,6 +183,8 @@ class UnmappableOwnerSandbox(StagingSandbox):
 
     async def exec(self, command: str, **_kwargs: object) -> ExecResult:
         self.commands.append(command)
+        if command.startswith("docker image inspect "):
+            return ExecResult(exit_code=0, output="null")
         if command.startswith("docker pull "):
             return ExecResult(
                 exit_code=1,
@@ -186,6 +227,8 @@ def test_other_pull_failures_are_not_reimported(tmp_path: Path) -> None:
     class ManifestUnknownSandbox(StagingSandbox):
         async def exec(self, command: str, **_kwargs: object) -> ExecResult:
             self.commands.append(command)
+            if command.startswith("docker image inspect "):
+                return ExecResult(exit_code=0, output="null")
             if command.startswith("docker pull "):
                 return ExecResult(exit_code=1, output="manifest unknown")
             return ExecResult(exit_code=0, output="")
@@ -281,6 +324,8 @@ def test_startup_installs_terminal_tools_as_root_before_the_agent_user_runs(tmp_
     class ReadySandbox(StagingSandbox):
         async def exec(self, command: str, **_kwargs: object) -> ExecResult:
             self.commands.append(command)
+            if command.startswith("docker image inspect "):
+                return ExecResult(exit_code=0, output="null")
             if command.endswith("config --services"):
                 return ExecResult(exit_code=0, output="main\n")
             return ExecResult(exit_code=0, output="")

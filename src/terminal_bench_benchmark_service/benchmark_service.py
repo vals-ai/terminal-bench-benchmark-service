@@ -39,11 +39,13 @@ from pydantic import model_validator
 
 from terminal_bench_benchmark_service import isolated_verifier
 from terminal_bench_benchmark_service.compose_runtime import (
+    THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
     compose_service_sandbox,
     start_compose_runtime,
     stop_compose_main,
     stop_compose_runtime,
+    thread_limit,
 )
 from terminal_bench_benchmark_service.utils import with_retry
 
@@ -1222,6 +1224,11 @@ class TerminalBenchBenchmark(BenchmarkService):
                 await with_retry(verifier, lambda: verifier.exec(isolated_verifier.prepare_logs_command()))
                 test_script = isolated_verifier.with_verifier_env(
                     isolated_verifier.GRADE_COMMAND, self._verifier_env(task_id, dataset)
+                )
+                test_script = isolated_verifier.with_thread_limit(
+                    test_script,
+                    THREAD_LIMIT_VARIABLE,
+                    thread_limit(self._verifier_resources(task_id, dataset).vcpu),
                 )
 
                 yield StreamMessageChunk(type="message", data=f"Running isolated tests for {task_id}...")

@@ -323,6 +323,18 @@ def test_no_verifier_env_leaves_the_grade_command_alone() -> None:
     assert isolated_verifier.with_verifier_env("bash /tests/test.sh", {}) == "bash /tests/test.sh"
 
 
+def test_thread_limit_defers_to_a_value_the_verifier_image_already_set() -> None:
+    """vpp-loss-divergence's grader trains twice inside 900s: a thread per host core
+    starves its 2-CPU quota. batched-eval-parity's image pins its own value and keeps it."""
+    probe = isolated_verifier.with_thread_limit('echo "$OMP_NUM_THREADS"', "OMP_NUM_THREADS", 2)
+
+    assert probe == 'export OMP_NUM_THREADS="${OMP_NUM_THREADS:-2}"; echo "$OMP_NUM_THREADS"'
+    env = {"PATH": "/usr/bin:/bin"}
+    assert subprocess.run(["bash", "-c", probe], capture_output=True, text=True, env=env).stdout == "2\n"
+    pinned = {**env, "OMP_NUM_THREADS": "1"}
+    assert subprocess.run(["bash", "-c", probe], capture_output=True, text=True, env=pinned).stdout == "1\n"
+
+
 def test_unpack_clears_the_destination_before_writing_it() -> None:
     """A symlink left at the destination must not be written through."""
     command = isolated_verifier.unpack_command("/app/out", "/tmp/a.tar.gz")
