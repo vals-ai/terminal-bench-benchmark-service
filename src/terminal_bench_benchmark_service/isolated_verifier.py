@@ -19,7 +19,20 @@ from typing import Any, cast
 
 REWARD_PATH = "/logs/verifier/reward.txt"
 REWARD_JSON_PATH = "/logs/verifier/reward.json"
-GRADE_COMMAND = "bash /tests/test.sh"
+# The grader runs in a login shell, and Debian's /etc/profile replaces PATH,
+# dropping the verifier image's own entries (e.g. a /opt/venv holding pytest).
+# PID 1 still carries the image's PATH; prefer it, else keep the shell's.
+IMAGE_ENVIRON_PATH = "/proc/1/environ"
+
+
+def grade_command(environ_path: str = IMAGE_ENVIRON_PATH) -> str:
+    return (
+        f"_image_path=\"$(tr '\\0' '\\n' <{shlex.quote(environ_path)} 2>/dev/null | sed -n 's/^PATH=//p' | head -n 1)\"; "
+        'PATH="${_image_path:-$PATH}" bash /tests/test.sh'
+    )
+
+
+GRADE_COMMAND = grade_command()
 CONVENTION_ARTIFACT_DIR = "/logs/artifacts"
 VERIFIER_CREATE_TIMEOUT_SECONDS = 600
 # Idleness is counted in sandbox events, not process liveness, so a grader that
