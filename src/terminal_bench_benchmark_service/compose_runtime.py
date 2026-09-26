@@ -257,11 +257,11 @@ def thread_limit_env(resources: Mapping[str, Any], image_env: Sequence[str]) -> 
     """Return the thread-pool pin for a task container, or nothing when the image sets its own."""
     if any(variable.split("=", 1)[0] == THREAD_LIMIT_VARIABLE for variable in image_env):
         return {}
-    return {THREAD_LIMIT_VARIABLE: str(thread_limit(resources.get("cpus", 1)))}
+    return {THREAD_LIMIT_VARIABLE: str(thread_limit(float(resources.get("cpus", 1))))}
 
 
-def thread_limit(cpus: Any) -> int:
-    return max(1, int(float(cpus)))
+def thread_limit(cpus: float) -> int:
+    return max(1, int(cpus))
 
 
 def runtime_compose_definition(
