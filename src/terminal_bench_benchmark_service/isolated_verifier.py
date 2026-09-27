@@ -62,7 +62,7 @@ MAX_ARTIFACT_BYTES = 512 * 1024 * 1024
 # would let a small archive fill the verifier's disk.
 MAX_EXPANDED_ARTIFACT_BYTES = 1024 * 1024 * 1024
 MAX_ARTIFACT_MEMBERS = 200_000
-MAX_CONCURRENT_VERIFIER_CREATES = 4
+MAX_CONCURRENT_VERIFIER_CREATES = 20
 # Creating the verifier and carrying artifacts into it, before the grader runs.
 PREPARE_TIMEOUT_SECONDS = 7200.0
 # All of a task's artifacts share one budget. One task declares fourteen, and
