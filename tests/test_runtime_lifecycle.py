@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Mapping
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -9,7 +10,7 @@ from benchmark_service import ComposeSandbox, ComposeSource, ExecResult, Sandbox
 from benchmark_service.schemas import StreamResultChunk
 
 import terminal_bench_benchmark_service.benchmark_service as service_module
-from terminal_bench_benchmark_service import isolated_verifier
+from terminal_bench_benchmark_service import eval_resume, isolated_verifier
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 
 
@@ -179,8 +180,9 @@ async def _test_compose_evaluation_preserves_outer_and_tears_down(
 
 
 def test_sidecar_collect_and_artifact_use_the_declared_service(
-    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setenv(eval_resume.LOCAL_DIR_ENV, str(tmp_path))
     asyncio.run(_test_sidecar_collect_and_artifact_use_the_declared_service(benchmark, monkeypatch))
 
 
@@ -208,22 +210,18 @@ async def _test_sidecar_collect_and_artifact_use_the_declared_service(
 
     sidecar = FakeSandbox("sidecar")
     monkeypatch.setattr(service_module, "compose_service_sandbox", lambda *_args: sidecar)
-    monkeypatch.setattr(benchmark, "_check_expansion", lambda *_args: _completed())
 
-    verifier = FakeSandbox("verifier")
     artifact = isolated_verifier.parse_artifacts([{"source": "/shared/verify_snapshot.json", "service": "api"}])[0]
-    await benchmark._carry_artifact(  # pyright: ignore[reportPrivateUsage]
+    staged = await benchmark._stage_artifact(  # pyright: ignore[reportPrivateUsage]
         artifact,
         main,
-        verifier,
+        run_id="run",
+        task_id="ctr-optimization",
         outer_sandbox=outer,
         runtime_source=source,
     )
 
+    assert staged.present
     assert sidecar.commands
     assert sidecar.commands[0].startswith("if [ -e")
     assert not main.commands
-
-
-async def _completed() -> None:
-    return None

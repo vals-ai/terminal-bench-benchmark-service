@@ -30,14 +30,15 @@ from benchmark_service.schemas import (
     RetrieveTaskResponse,
     StreamChunk,
     StreamErrorChunk,
+    StreamEvalResumeStateChunk,
     StreamMessageChunk,
     StreamResultChunk,
 )
 from benchmark_service.utils import stream_command
 from benchmark_service.v1_schemas import V1Task
-from pydantic import model_validator
+from pydantic import ValidationError, model_validator
 
-from terminal_bench_benchmark_service import isolated_verifier
+from terminal_bench_benchmark_service import eval_resume, isolated_verifier
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
@@ -710,7 +711,10 @@ class TerminalBenchBenchmark(BenchmarkService):
     async def evaluate_response(self, request: EvaluateResponseRequest, dataset: str | None = None) -> Any:
         """Evaluate a text response."""
         if request.response is None:
-            raise ValueError("response is required for terminal-bench evaluate_response")
+            raise ValueError(
+                "response is required for terminal-bench evaluate_response; "
+                "eval_resume_state is only served by stream_evaluate_response"
+            )
 
         task = self.get_dataset(dataset)[request.task_id]
 
@@ -724,6 +728,62 @@ class TerminalBenchBenchmark(BenchmarkService):
             "expected": task["answer"],
             "received": response,
         }
+
+    async def stream_evaluate_response(
+        self, request: EvaluateResponseRequest, dataset: str | None = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Grade a TBench4 submission again from its persisted artifacts.
+
+        An eval-only retry arrives here with the state `evaluate_instance`
+        streamed and no agent sandbox. The verifier is recreated from the
+        request's provider and fed the archives that state names, so the
+        agent is not run again.
+        """
+        if request.eval_resume_state is None:
+            yield StreamResultChunk(type="result", data=await self.evaluate_response(request, dataset=dataset))
+            return
+
+        state = self._validated_resume_state(request, dataset)
+        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
+
+        if request.sandbox_provider is None:
+            raise ValueError("eval_resume_state grading needs the request's sandbox_provider to recreate the verifier")
+        async with request.sandbox_provider.create_provider() as provider:
+            async for chunk in self._grade_in_verifier(provider, request.task_id, dataset, state):
+                yield chunk
+
+    def _validated_resume_state(
+        self, request: EvaluateResponseRequest, dataset: str | None
+    ) -> eval_resume.EvalResumeState:
+        """Accept only state this service produced for this exact task.
+
+        The state comes back from the caller, so nothing in it is trusted
+        until it is checked against the deployed task: the artifact set must be
+        the one the task declares and the contract digest must match, and each
+        key is canonical by construction of the model.
+        """
+        try:
+            state = eval_resume.EvalResumeState.model_validate(request.eval_resume_state)
+        except ValidationError as error:
+            raise ValueError(f"eval_resume_state is not a terminal-bench resume state: {error}") from error
+        if state.task_id != request.task_id:
+            raise ValueError(f"eval_resume_state task_id mismatch: {state.task_id} != {request.task_id}")
+        if state.dataset != (dataset or "default"):
+            raise ValueError(f"eval_resume_state dataset mismatch: {state.dataset} != {dataset or 'default'}")
+        if not self._dataset_spec(dataset).grades_in_separate_sandbox:
+            raise ValueError(f"Dataset `{state.dataset}` grades in the agent's sandbox and cannot resume evaluation")
+        if request.task_id not in self.get_dataset(dataset):
+            raise ValueError(f"Unknown task '{request.task_id}' in dataset '{state.dataset}'")
+        if state.task_contract_sha256 != self._task_contract_sha256(request.task_id, dataset):
+            raise ValueError("eval_resume_state task contract does not match the deployed task")
+        declared = [artifact.source for artifact in self._gradeable_artifacts(request.task_id, dataset)]
+        if sorted(artifact.source for artifact in state.artifacts) != sorted(declared):
+            raise ValueError("eval_resume_state artifacts do not match the task's declared artifacts")
+        return state
+
+    def _task_contract_sha256(self, task_id: str, dataset: str | None) -> str:
+        task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
+        return eval_resume.task_contract_sha256(task_def, self._verifier_image(task_id, dataset))
 
     async def evaluate_instance(
         self, task_id: str, sandbox: Sandbox, dataset: str | None = None
@@ -874,21 +934,23 @@ class TerminalBenchBenchmark(BenchmarkService):
         self,
         provider: SandboxProvider,
         task_id: str,
-        agent_sandbox: Sandbox,
         dataset: str | None,
         verifier_timeout: float,
+        *,
+        run_id: str,
+        labels: Mapping[str, str],
         attempt: str,
     ) -> Sandbox:
         """Start a sandbox from the task's verifier image."""
         request = SandboxCreateRequest(
             source=ImageSource(image=self._verifier_image(task_id, dataset)),
-            name=isolated_verifier.verifier_sandbox_name(task_id, agent_sandbox.id, attempt),
+            name=isolated_verifier.verifier_sandbox_name(task_id, run_id, attempt),
             resources=self._verifier_resources(task_id, dataset),
             auto_stop_interval=isolated_verifier.auto_stop_minutes(verifier_timeout),
             create_timeout=isolated_verifier.VERIFIER_CREATE_TIMEOUT_SECONDS,
             # The run's labels, so the verifier is attributable to the same
             # benchmark and task; the age-based sweeper collects any stranded.
-            labels={**(agent_sandbox.labels or {}), "Role": "verifier"},
+            labels={**labels, "Role": "verifier"},
             env_vars={},
         )
         try:
@@ -899,23 +961,24 @@ class TerminalBenchBenchmark(BenchmarkService):
                 f"Could not start the verifier sandbox for `{task_id}`: {error}"
             ) from error
 
-    async def _carry_artifact(
+    async def _stage_artifact(
         self,
         artifact: isolated_verifier.ArtifactSpec,
         agent_sandbox: Sandbox,
-        verifier: Sandbox,
         *,
+        run_id: str,
+        task_id: str,
         outer_sandbox: Sandbox | None = None,
         runtime_source: ComposeSource | None = None,
-    ) -> str | None:
-        """Re-materialize one declared artifact in the verifier at its original path.
+    ) -> eval_resume.PersistedArtifact:
+        """Pack one declared artifact in the agent's sandbox and persist the archive.
 
-        Files and directories both travel as a tar archive, staged and checked in
-        the verifier before anything is put in place. Every bound is enforced on
-        bytes this process holds or on the verifier's own tooling, because the
-        agent is root in the sandbox the archive comes from.
+        Files and directories both travel as a tar archive. The transfer bound is
+        enforced on bytes this process holds, because the agent is root in the
+        sandbox the archive comes from; every other check waits for the
+        verifier's own tooling in `_place_artifact`.
 
-        Returns a note when the agent never produced the artifact; the grader
+        An artifact the agent never produced is recorded as absent; the grader
         still runs and decides what a missing submission is worth. Anything else
         raises, because it says nothing about the model.
         """
@@ -939,7 +1002,7 @@ class TerminalBenchBenchmark(BenchmarkService):
                 f"Could not look for artifact {artifact.source}: {present.output.strip()[-500:]}"
             )
         if present.output.strip().splitlines()[-1].strip() != isolated_verifier.PRESENT:
-            return f"Artifact not produced by the agent: {artifact.source}"
+            return eval_resume.PersistedArtifact(source=artifact.source)
 
         packed = await with_retry(
             source_sandbox,
@@ -961,6 +1024,20 @@ class TerminalBenchBenchmark(BenchmarkService):
                 content = await self._download_bounded(source_sandbox, archive, artifact.source)
             finally:
                 await source_sandbox.exec(f"rm -f {shlex.quote(archive)}")
+            return await eval_resume.persist_artifact(run_id, task_id, artifact.source, content)
+
+    async def _place_artifact(self, verifier: Sandbox, artifact: eval_resume.PersistedArtifact) -> None:
+        """Re-materialize one persisted artifact in the verifier at its original path.
+
+        The archive is staged and checked in the verifier before anything is put
+        in place: its member list was written by the agent, so the verifier's own
+        tar measures it and the unpack never extracts at the root.
+        """
+        source = artifact.source.rstrip("/") or "/"
+        archive = f"/tmp/{isolated_verifier.artifact_archive_name(source)}"
+
+        async with _ARTIFACT_TRANSFERS:
+            content = await eval_resume.load_artifact(artifact)
             await with_retry(verifier, lambda: verifier.upload_file(archive, content))
 
         await self._check_expansion(verifier, archive, artifact.source)
@@ -970,7 +1047,6 @@ class TerminalBenchBenchmark(BenchmarkService):
             raise isolated_verifier.VerifierEnvironmentError(
                 f"Could not unpack artifact {artifact.source} in the verifier: {unpacked.output.strip()[-500:]}"
             )
-        return None
 
     async def _download_bounded(self, sandbox: Sandbox, archive: str, source: str) -> bytes:
         """Read an archive through disk, refusing it as soon as it passes the transfer bound.
@@ -1084,33 +1160,81 @@ class TerminalBenchBenchmark(BenchmarkService):
         Failing to build that environment is reported as a grading
         fault rather than a zero, so a broken run is retried instead of being
         published as a model's score.
+
+        The declared artifacts are collected from the agent's sandbox and
+        persisted first, and the state naming them is streamed before the
+        verifier exists. From then on the agent's sandbox is not needed: a
+        grading fault is retried eval-only from that state, and an artifact
+        collection fault, which has nothing to resume from, is not.
         """
-        exception_info: str | None = None
-        verifier_result: dict[str, Any] | None = None
-        test_output = ""
-        verifier: Sandbox | None = None
         provider = _request_sandbox_provider()
-        attempt = uuid.uuid4().hex[:8]
+        run_id = eval_resume.run_id_from_labels(sandbox.labels, sandbox.id)
 
-        # One try/finally around everything: a consumer that disconnects while
-        # the grader is still streaming closes this generator, and the verifier
-        # sandbox has to go with it.
         try:
+            yield StreamMessageChunk(type="message", data=f"Starting isolated evaluation for task: {task_id}")
+
+            if provider is None:
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Dataset `{dataset}` grades in a separate sandbox, which needs the request's sandbox "
+                    "provider. Either create-benchmark-service predates "
+                    "benchmark_service.context, or the caller bound the provider around this "
+                    "generator's creation rather than around draining it."
+                )
+            if not eval_resume.is_configured():
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Dataset `{dataset}` grades in a separate sandbox, which persists the agent's artifacts "
+                    f"for eval-only retry. Set {eval_resume.BUCKET_ENV} (or {eval_resume.LOCAL_DIR_ENV})."
+                )
+
             try:
-                yield StreamMessageChunk(type="message", data=f"Starting isolated evaluation for task: {task_id}")
+                artifacts = self._gradeable_artifacts(task_id, dataset)
+            except ValueError as error:
+                raise isolated_verifier.VerifierEnvironmentError(str(error)) from error
 
-                if provider is None:
+            async for chunk in self._run_collect_hooks(
+                task_id,
+                dataset,
+                sandbox,
+                outer_sandbox=outer_sandbox,
+                runtime_source=runtime_source,
+                services={"main"},
+            ):
+                yield chunk
+
+            # Everything up to the grader has its own bound: only the grader
+            # itself is allowed to take the task's verifier timeout.
+            deadline = asyncio.get_running_loop().time() + isolated_verifier.PREPARE_BUDGET_SECONDS
+            main_artifacts = [artifact for artifact in artifacts if artifact.service in (None, "main")]
+            sidecar_artifacts = [artifact for artifact in artifacts if artifact.service not in (None, "main")]
+            task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
+            verifier_def = task_def.get("verifier", {})
+            collect_hooks = isolated_verifier.parse_collect_hooks(verifier_def.get("collect"))
+            sidecar_hooks = [hook for hook in collect_hooks if hook.service != "main"]
+            persisted: list[eval_resume.PersistedArtifact] = []
+            for artifact in main_artifacts:
+                async for chunk in self._stage_with_budget(
+                    artifact,
+                    sandbox,
+                    persisted,
+                    deadline=deadline,
+                    run_id=run_id,
+                    task_id=task_id,
+                    outer_sandbox=outer_sandbox,
+                    runtime_source=runtime_source,
+                ):
+                    yield chunk
+
+            if sidecar_artifacts or sidecar_hooks:
+                if outer_sandbox is None or runtime_source is None:
                     raise isolated_verifier.VerifierEnvironmentError(
-                        f"Dataset `{dataset}` grades in a separate sandbox, which needs the request's sandbox "
-                        "provider. Either create-benchmark-service predates "
-                        "benchmark_service.context, or the caller bound the provider around this "
-                        "generator's creation rather than around draining it."
+                        f"Task {task_id} declares sidecar artifacts but no compose runtime is active"
                     )
-
                 try:
-                    artifacts = self._gradeable_artifacts(task_id, dataset)
-                except ValueError as error:
-                    raise isolated_verifier.VerifierEnvironmentError(str(error)) from error
+                    await stop_compose_main(task_id, outer_sandbox)
+                except Exception as error:
+                    raise isolated_verifier.VerifierEnvironmentError(
+                        f"Could not stop main before collecting sidecar state for {task_id}: {error}"
+                    ) from error
 
                 async for chunk in self._run_collect_hooks(
                     task_id,
@@ -1118,17 +1242,110 @@ class TerminalBenchBenchmark(BenchmarkService):
                     sandbox,
                     outer_sandbox=outer_sandbox,
                     runtime_source=runtime_source,
-                    services={"main"},
+                    services={
+                        *[artifact.service for artifact in sidecar_artifacts if artifact.service is not None],
+                        *[hook.service for hook in sidecar_hooks],
+                    },
                 ):
                     yield chunk
 
+                for artifact in sidecar_artifacts:
+                    async for chunk in self._stage_with_budget(
+                        artifact,
+                        sandbox,
+                        persisted,
+                        deadline=deadline,
+                        run_id=run_id,
+                        task_id=task_id,
+                        outer_sandbox=outer_sandbox,
+                        runtime_source=runtime_source,
+                    ):
+                        yield chunk
+
+            state = eval_resume.EvalResumeState(
+                run_id=run_id,
+                task_id=task_id,
+                dataset=dataset or "default",
+                task_contract_sha256=self._task_contract_sha256(task_id, dataset),
+                labels=dict(sandbox.labels or {}),
+                artifacts=persisted,
+            )
+        except Exception as e:
+            exception_info, chunk = self._grading_fault(task_id, e)
+            yield chunk
+            yield self._trial_result(task_id, None, exception_info)
+            return
+
+        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
+        async for chunk in self._grade_in_verifier(provider, task_id, dataset, state):
+            yield chunk
+
+    async def _stage_with_budget(
+        self,
+        artifact: isolated_verifier.ArtifactSpec,
+        sandbox: Sandbox,
+        persisted: list[eval_resume.PersistedArtifact],
+        *,
+        deadline: float,
+        run_id: str,
+        task_id: str,
+        outer_sandbox: Sandbox | None,
+        runtime_source: ComposeSource | None,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Stage one artifact under the shared preparation deadline."""
+        # Announced before each transfer so the client's idle watchdog
+        # sees progress across a long series of them.
+        yield StreamMessageChunk(type="message", data=f"Persisting artifact {artifact.source}")
+        # Bounded per artifact rather than around the loop: a timeout
+        # spanning a yield would keep running while nobody is driving
+        # this generator. The shared deadline caps their sum.
+        budget = min(isolated_verifier.PREPARE_TIMEOUT_SECONDS, deadline - asyncio.get_running_loop().time())
+        try:
+            async with asyncio.timeout(budget):
+                staged = await self._stage_artifact(
+                    artifact,
+                    sandbox,
+                    run_id=run_id,
+                    task_id=task_id,
+                    outer_sandbox=outer_sandbox,
+                    runtime_source=runtime_source,
+                )
+        except TimeoutError as error:
+            raise isolated_verifier.VerifierEnvironmentError(
+                f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
+            ) from error
+        persisted.append(staged)
+
+    async def _grade_in_verifier(
+        self,
+        provider: SandboxProvider,
+        task_id: str,
+        dataset: str | None,
+        state: eval_resume.EvalResumeState,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Run the task's grader in a fresh verifier fed only the persisted artifacts."""
+        exception_info: str | None = None
+        verifier_result: dict[str, Any] | None = None
+        test_output = ""
+        verifier: Sandbox | None = None
+        attempt = uuid.uuid4().hex[:8]
+
+        # One try/finally around everything: a consumer that disconnects while
+        # the grader is still streaming closes this generator, and the verifier
+        # sandbox has to go with it.
+        try:
+            try:
                 verifier_timeout = self._get_verifier_timeout(task_id, dataset)
-                # Everything up to the grader has its own bound: only the grader
-                # itself is allowed to take the task's verifier timeout.
                 try:
                     async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
                         verifier = await self._create_verifier_sandbox(
-                            provider, task_id, sandbox, dataset, verifier_timeout, attempt
+                            provider,
+                            task_id,
+                            dataset,
+                            verifier_timeout,
+                            run_id=state.run_id,
+                            labels=state.labels,
+                            attempt=attempt,
                         )
                 except TimeoutError as error:
                     raise isolated_verifier.VerifierEnvironmentError(
@@ -1139,85 +1356,24 @@ class TerminalBenchBenchmark(BenchmarkService):
                 # Artifacts land first; the reward directory is emptied after them,
                 # so nothing an archive planted there survives to be read as a score.
                 deadline = asyncio.get_running_loop().time() + isolated_verifier.PREPARE_BUDGET_SECONDS
-                main_artifacts = [artifact for artifact in artifacts if artifact.service in (None, "main")]
-                sidecar_artifacts = [artifact for artifact in artifacts if artifact.service not in (None, "main")]
-                task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})
-                verifier_def = task_def.get("verifier", {})
-                collect_hooks = isolated_verifier.parse_collect_hooks(verifier_def.get("collect"))
-                sidecar_hooks = [hook for hook in collect_hooks if hook.service != "main"]
-                for artifact in main_artifacts:
-                    # Announced before each transfer so the client's idle watchdog
-                    # sees progress across a long series of them.
-                    yield StreamMessageChunk(type="message", data=f"Carrying artifact {artifact.source}")
-                    # Bounded per artifact rather than around the loop: a timeout
-                    # spanning a yield would keep running while nobody is driving
-                    # this generator. The shared deadline caps their sum.
+                for artifact in state.artifacts:
+                    if not artifact.present:
+                        yield StreamMessageChunk(
+                            type="message", data=f"Artifact not produced by the agent: {artifact.source}"
+                        )
+                        continue
+                    yield StreamMessageChunk(type="message", data=f"Restoring artifact {artifact.source}")
                     budget = min(
                         isolated_verifier.PREPARE_TIMEOUT_SECONDS,
                         deadline - asyncio.get_running_loop().time(),
                     )
                     try:
                         async with asyncio.timeout(budget):
-                            note = await self._carry_artifact(
-                                artifact,
-                                sandbox,
-                                verifier,
-                                outer_sandbox=outer_sandbox,
-                                runtime_source=runtime_source,
-                            )
+                            await self._place_artifact(verifier, artifact)
                     except TimeoutError as error:
                         raise isolated_verifier.VerifierEnvironmentError(
                             f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
                         ) from error
-                    if note:
-                        yield StreamMessageChunk(type="message", data=note)
-
-                if sidecar_artifacts or sidecar_hooks:
-                    if outer_sandbox is None or runtime_source is None:
-                        raise isolated_verifier.VerifierEnvironmentError(
-                            f"Task {task_id} declares sidecar artifacts but no compose runtime is active"
-                        )
-                    try:
-                        await stop_compose_main(task_id, outer_sandbox)
-                    except Exception as error:
-                        raise isolated_verifier.VerifierEnvironmentError(
-                            f"Could not stop main before collecting sidecar state for {task_id}: {error}"
-                        ) from error
-
-                    async for chunk in self._run_collect_hooks(
-                        task_id,
-                        dataset,
-                        sandbox,
-                        outer_sandbox=outer_sandbox,
-                        runtime_source=runtime_source,
-                        services={
-                            *[artifact.service for artifact in sidecar_artifacts if artifact.service is not None],
-                            *[hook.service for hook in sidecar_hooks],
-                        },
-                    ):
-                        yield chunk
-
-                    for artifact in sidecar_artifacts:
-                        yield StreamMessageChunk(type="message", data=f"Carrying artifact {artifact.source}")
-                        budget = min(
-                            isolated_verifier.PREPARE_TIMEOUT_SECONDS,
-                            deadline - asyncio.get_running_loop().time(),
-                        )
-                        try:
-                            async with asyncio.timeout(budget):
-                                note = await self._carry_artifact(
-                                    artifact,
-                                    sandbox,
-                                    verifier,
-                                    outer_sandbox=outer_sandbox,
-                                    runtime_source=runtime_source,
-                                )
-                        except TimeoutError as error:
-                            raise isolated_verifier.VerifierEnvironmentError(
-                                f"Artifact {artifact.source} did not transfer within {max(budget, 0):.0f}s"
-                            ) from error
-                        if note:
-                            yield StreamMessageChunk(type="message", data=note)
 
                 # /tests is the image's: uploading ours over it would delete data
                 # generated at build time and undo its permission hardening.
@@ -1259,31 +1415,41 @@ class TerminalBenchBenchmark(BenchmarkService):
                 yield StreamMessageChunk(type="message", data=f"✓ Isolated tests finished with rewards: {rewards}")
                 verifier_result = {"rewards": rewards, "output": test_output}
 
-            except TimeoutError as e:
-                exception_info = f"VerifierTimeoutError: {e}"
-                yield StreamMessageChunk(type="message", data=f"✗ Isolated tests timed out: {e}")
-            except isolated_verifier.VerifierEnvironmentError as e:
-                exception_info = f"VerifierEnvironmentError: {e}"
-                yield StreamErrorChunk(type="error", data=exception_info)
             except Exception as e:
-                exception_info = f"{type(e).__name__}: {e}"
-                yield StreamErrorChunk(type="error", data=f"Evaluation error for {task_id}: {exception_info}")
+                exception_info, chunk = self._grading_fault(task_id, e)
+                yield chunk
 
             # The verdict reaches the consumer before the sandbox is deleted:
             # the generator only resumes into the finally on the next chunk
             # request, so a slow delete cannot hold the result back.
-            yield StreamResultChunk(
-                type="result",
-                data={
-                    "task_name": task_id,
-                    "trial_name": f"{task_id}-evaluation",
-                    "verifier_result": verifier_result,
-                    "exception_info": exception_info,
-                },
-            )
+            yield self._trial_result(task_id, verifier_result, exception_info)
         finally:
-            if verifier is not None and provider is not None:
+            if verifier is not None:
                 await self._delete_verifier_sandbox(provider, verifier.id)
+
+    @staticmethod
+    def _grading_fault(task_id: str, error: Exception) -> tuple[str, StreamChunk]:
+        """Describe a fault that stopped grading, and the chunk that reports it."""
+        if isinstance(error, TimeoutError):
+            exception_info = f"VerifierTimeoutError: {error}"
+            return exception_info, StreamMessageChunk(type="message", data=f"✗ Isolated tests timed out: {error}")
+        if isinstance(error, isolated_verifier.VerifierEnvironmentError):
+            exception_info = f"VerifierEnvironmentError: {error}"
+            return exception_info, StreamErrorChunk(type="error", data=exception_info)
+        exception_info = f"{type(error).__name__}: {error}"
+        return exception_info, StreamErrorChunk(type="error", data=f"Evaluation error for {task_id}: {exception_info}")
+
+    @staticmethod
+    def _trial_result(task_id: str, verifier_result: dict[str, Any] | None, exception_info: str | None) -> StreamChunk:
+        return StreamResultChunk(
+            type="result",
+            data={
+                "task_name": task_id,
+                "trial_name": f"{task_id}-evaluation",
+                "verifier_result": verifier_result,
+                "exception_info": exception_info,
+            },
+        )
 
     async def _delete_verifier_sandbox(self, provider: SandboxProvider, sandbox_id: str) -> None:
         """Delete the verifier sandbox, surviving cancellation.

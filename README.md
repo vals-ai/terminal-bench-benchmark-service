@@ -51,6 +51,14 @@ phase, and artifact `exclude` patterns are applied while packaging the original
 source path for the isolated verifier. The task Dockerfile's working directory
 is preserved.
 
+Each packed artifact is written to S3 before the verifier is created, and the
+state naming those objects is streamed as `eval_resume_state`. A grading
+fault is then retried eval-only: `/ws/evaluate-response` recreates the
+verifier from the request's `sandbox_provider` and restores the artifacts from
+S3 instead of rerunning the agent. `TERMINAL_BENCH_EVAL_STATE_BUCKET` must be
+set for TBench4 grading; `TERMINAL_BENCH_EVAL_STATE_LOCAL_DIR` substitutes a
+local directory for tests and `make dev`.
+
 ## Development
 
 ```bash
