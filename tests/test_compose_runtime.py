@@ -122,6 +122,86 @@ def test_runtime_overlay_passes_allocated_gpu_into_nested_task() -> None:
     assert runtime["services"]["main"]["privileged"] is True
 
 
+def test_runtime_overlay_mounts_gpu_driver_userspace_read_only() -> None:
+    runtime = runtime_compose_definition(
+        "example/main@sha256:" + "a" * 64,
+        {},
+        {"cpus": 2, "memory_mb": 4096, "gpus": 1},
+        ["/usr/bin/nvidia-smi", "/usr/lib/x86_64-linux-gnu/libcuda.so.1"],
+    )
+
+    assert runtime["services"]["main"]["volumes"] == [
+        "/bundle:/bundle",
+        "/usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro",
+        "/usr/lib/x86_64-linux-gnu/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro",
+    ]
+
+
+class GpuStagingSandbox(StagingSandbox):
+    """Outer sandbox whose provider injected the NVIDIA driver userspace."""
+
+    async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+        self.commands.append(command)
+        if command.startswith("find "):
+            return ExecResult(
+                exit_code=0,
+                output="/usr/lib/x86_64-linux-gnu/libcuda.so.1\n/usr/bin/nvidia-smi\n",
+            )
+        return ExecResult(exit_code=0, output="")
+
+
+def test_staging_discovers_gpu_driver_files_only_for_gpu_tasks(tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import _stage_files
+
+    gpu_sandbox = GpuStagingSandbox()
+    asyncio.run(
+        _stage_files(
+            tmp_path / "environment",
+            "example/main@sha256:" + "a" * 64,
+            {},
+            {"cpus": 8, "memory_mb": 16384, "gpus": 1, "gpu_types": ["H100"]},
+            gpu_sandbox,  # type: ignore[arg-type]
+        )
+    )
+    runtime = json.loads(gpu_sandbox.uploads["/terminal-bench/runtime.json"])
+    assert runtime["services"]["main"]["volumes"] == [
+        "/bundle:/bundle",
+        "/usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro",
+        "/usr/lib/x86_64-linux-gnu/libcuda.so.1:/usr/lib/x86_64-linux-gnu/libcuda.so.1:ro",
+    ]
+
+    cpu_sandbox = GpuStagingSandbox()
+    asyncio.run(
+        _stage_files(
+            tmp_path / "environment",
+            "example/main@sha256:" + "a" * 64,
+            {},
+            {"cpus": 1, "memory_mb": 1024},
+            cpu_sandbox,  # type: ignore[arg-type]
+        )
+    )
+    assert not any(command.startswith("find ") for command in cpu_sandbox.commands)
+    runtime = json.loads(cpu_sandbox.uploads["/terminal-bench/runtime.json"])
+    assert runtime["services"]["main"]["volumes"] == ["/bundle:/bundle"]
+
+
+def test_staging_fails_when_gpu_task_sandbox_has_no_driver_files(tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import _stage_files
+
+    sandbox = StagingSandbox()
+    with pytest.raises(RuntimeError, match="no NVIDIA driver userspace"):
+        asyncio.run(
+            _stage_files(
+                tmp_path / "environment",
+                "example/main@sha256:" + "a" * 64,
+                {},
+                {"cpus": 8, "memory_mb": 16384, "gpus": 1},
+                sandbox,  # type: ignore[arg-type]
+            )
+        )
+    assert "/terminal-bench/runtime.json" not in sandbox.uploads
+
+
 def test_staging_uses_minimal_compose_for_tasks_without_sidecars(tmp_path: Path) -> None:
     from terminal_bench_benchmark_service.compose_runtime import _stage_files
 
