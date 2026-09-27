@@ -22,6 +22,10 @@ _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf
 _DOCKER_READY_ATTEMPTS = 30
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
+_FIND_GPU_DRIVER_FILES = (
+    "find /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/bin -maxdepth 1 "
+    "\\( -name 'libcuda*' -o -name 'libnvidia*' -o -name 'nvidia-*' \\)"
+)
 _EMPTY_COMPOSE_FILE = b'{"services":{"main":{}}}\n'
 _REOWNED_TASK_IMAGE = "terminal-bench/main:reowned"
 _UNMAPPED_OWNER_ERROR = "failed to Lchown"
@@ -236,8 +240,11 @@ async def _stage_files(
     sandbox: Sandbox,
 ) -> None:
     await _run(sandbox, f"mkdir -p {shlex.quote(_ENVIRONMENT_ROOT)}", timeout=30)
+    driver_files = await _gpu_driver_files(sandbox) if _gpu_count(resources) else ()
     image_env = await _image_env(sandbox, task_image)
-    runtime = runtime_compose_definition(task_image, sidecar_images, resources, thread_limit_env(resources, image_env))
+    runtime = runtime_compose_definition(
+        task_image, sidecar_images, resources, driver_files, thread_limit_env(resources, image_env)
+    )
     compose_file = environment_dir / "docker-compose.yaml"
     compose_content = compose_file.read_bytes() if compose_file.is_file() else _EMPTY_COMPOSE_FILE
     await sandbox.upload_file(_COMPOSE_FILE, compose_content)
@@ -264,10 +271,29 @@ def thread_limit(cpus: float) -> int:
     return max(1, int(cpus))
 
 
+async def _gpu_driver_files(sandbox: Sandbox) -> list[str]:
+    """List the NVIDIA driver userspace files the provider injected into the outer sandbox."""
+    # ``find`` exits non-zero when one of the searched directories is missing,
+    # so success is judged by what it lists rather than its exit code.
+    result = await sandbox.exec(_FIND_GPU_DRIVER_FILES, timeout=30)
+    files = sorted(line for line in result.output.splitlines() if line.startswith("/"))
+    if not files:
+        raise RuntimeError(
+            "GPU task sandbox has no NVIDIA driver userspace (libcuda/libnvidia-*) to pass to the task\n"
+            f"{result.output[-1000:]}"
+        )
+    return files
+
+
+def _gpu_count(resources: Mapping[str, Any]) -> int:
+    return int(resources.get("gpu", resources.get("gpus", 0)) or 0)
+
+
 def runtime_compose_definition(
     task_image: str,
     sidecar_images: Mapping[str, str],
     resources: Mapping[str, Any],
+    gpu_driver_files: Sequence[str] = (),
     environment: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Return the JSON Compose overlay used to run one pinned task."""
@@ -275,7 +301,7 @@ def runtime_compose_definition(
         "image": task_image,
         "pull_policy": "never",
         "command": ["sh", "-c", "sleep infinity"],
-        "volumes": [f"{_BUNDLE_DIR}:{_BUNDLE_DIR}"],
+        "volumes": [f"{_BUNDLE_DIR}:{_BUNDLE_DIR}", *(f"{path}:{path}:ro" for path in gpu_driver_files)],
         "deploy": {
             "resources": {
                 "limits": {
@@ -285,12 +311,14 @@ def runtime_compose_definition(
             }
         },
     }
-    gpu_count = int(resources.get("gpu", resources.get("gpus", 0)) or 0)
-    if gpu_count:
+    if _gpu_count(resources):
         # The Daytona GPU allocation belongs to the outer sandbox. The pinned
         # DIND image has no NVIDIA runtime, so a nested --gpus/device
         # reservation would fail before the task starts. Privileged mode passes
-        # the outer device namespace through to the task container.
+        # the outer device namespace through to the task container; the driver
+        # userspace (libcuda, libnvidia-*, nvidia-smi) only exists on the outer
+        # filesystem, so it is bind-mounted in the way nvidia-container-toolkit
+        # would.
         main["privileged"] = True
     if environment:
         main["environment"] = dict(environment)
