@@ -891,13 +891,20 @@ class TerminalBenchBenchmark(BenchmarkService):
             labels={**(agent_sandbox.labels or {}), "Role": "verifier"},
             env_vars={},
         )
-        try:
-            async with _VERIFIER_CREATES:
-                return await provider.create_sandbox(request)
-        except SandboxError as error:
-            raise isolated_verifier.VerifierEnvironmentError(
-                f"Could not start the verifier sandbox for `{task_id}`: {error}"
-            ) from error
+        # Bounded from the moment a create slot is held, not from joining its queue.
+        async with _VERIFIER_CREATES:
+            try:
+                async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
+                    return await provider.create_sandbox(request)
+            except TimeoutError as error:
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Verifier sandbox for `{task_id}` was not ready within "
+                    f"{isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
+                ) from error
+            except SandboxError as error:
+                raise isolated_verifier.VerifierEnvironmentError(
+                    f"Could not start the verifier sandbox for `{task_id}`: {error}"
+                ) from error
 
     async def _carry_artifact(
         self,
@@ -1125,16 +1132,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                 verifier_timeout = self._get_verifier_timeout(task_id, dataset)
                 # Everything up to the grader has its own bound: only the grader
                 # itself is allowed to take the task's verifier timeout.
-                try:
-                    async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                        verifier = await self._create_verifier_sandbox(
-                            provider, task_id, sandbox, dataset, verifier_timeout, attempt
-                        )
-                except TimeoutError as error:
-                    raise isolated_verifier.VerifierEnvironmentError(
-                        f"Verifier sandbox for `{task_id}` was not ready within "
-                        f"{isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
-                    ) from error
+                verifier = await self._create_verifier_sandbox(
+                    provider, task_id, sandbox, dataset, verifier_timeout, attempt
+                )
 
                 # Artifacts land first; the reward directory is emptied after them,
                 # so nothing an archive planted there survives to be read as a score.
