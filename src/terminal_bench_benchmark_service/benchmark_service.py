@@ -744,10 +744,10 @@ class TerminalBenchBenchmark(BenchmarkService):
             return
 
         state = self._validated_resume_state(request, dataset)
-        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
-
         if request.sandbox_provider is None:
             raise ValueError("eval_resume_state grading needs the request's sandbox_provider to recreate the verifier")
+
+        yield StreamEvalResumeStateChunk(type="eval_resume_state", data=state.model_dump(mode="json"))
         async with request.sandbox_provider.create_provider() as provider:
             async for chunk in self._grade_in_verifier(provider, request.task_id, dataset, state):
                 yield chunk
