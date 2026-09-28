@@ -61,9 +61,6 @@ MAX_DAYTONA_VCPU = 20
 
 # Process-wide: the bound is the container's memory, not one instance's.
 _ARTIFACT_TRANSFERS = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_TRANSFERS)
-# Verifier sandboxes are created by this service, so the runner's own
-# creation cap does not see them.
-_VERIFIER_CREATES = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_VERIFIER_CREATES)
 
 
 def _request_sandbox_provider() -> SandboxProvider | None:
@@ -892,8 +889,12 @@ class TerminalBenchBenchmark(BenchmarkService):
             env_vars={},
         )
         try:
-            async with _VERIFIER_CREATES:
+            async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
                 return await provider.create_sandbox(request)
+        except TimeoutError as error:
+            raise isolated_verifier.VerifierEnvironmentError(
+                f"Verifier sandbox for `{task_id}` was not ready within {isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
+            ) from error
         except SandboxError as error:
             raise isolated_verifier.VerifierEnvironmentError(
                 f"Could not start the verifier sandbox for `{task_id}`: {error}"
@@ -1125,16 +1126,9 @@ class TerminalBenchBenchmark(BenchmarkService):
                 verifier_timeout = self._get_verifier_timeout(task_id, dataset)
                 # Everything up to the grader has its own bound: only the grader
                 # itself is allowed to take the task's verifier timeout.
-                try:
-                    async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                        verifier = await self._create_verifier_sandbox(
-                            provider, task_id, sandbox, dataset, verifier_timeout, attempt
-                        )
-                except TimeoutError as error:
-                    raise isolated_verifier.VerifierEnvironmentError(
-                        f"Verifier sandbox for `{task_id}` was not ready within "
-                        f"{isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
-                    ) from error
+                verifier = await self._create_verifier_sandbox(
+                    provider, task_id, sandbox, dataset, verifier_timeout, attempt
+                )
 
                 # Artifacts land first; the reward directory is emptied after them,
                 # so nothing an archive planted there survives to be read as a score.
