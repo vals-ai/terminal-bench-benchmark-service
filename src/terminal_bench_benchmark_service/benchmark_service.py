@@ -61,9 +61,6 @@ MAX_DAYTONA_VCPU = 20
 
 # Process-wide: the bound is the container's memory, not one instance's.
 _ARTIFACT_TRANSFERS = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_TRANSFERS)
-# Verifier sandboxes are created by this service, so the runner's own
-# creation cap does not see them.
-_VERIFIER_CREATES = asyncio.Semaphore(isolated_verifier.MAX_CONCURRENT_VERIFIER_CREATES)
 
 
 def _request_sandbox_provider() -> SandboxProvider | None:
@@ -891,20 +888,17 @@ class TerminalBenchBenchmark(BenchmarkService):
             labels={**(agent_sandbox.labels or {}), "Role": "verifier"},
             env_vars={},
         )
-        # Bounded from the moment a create slot is held, not from joining its queue.
-        async with _VERIFIER_CREATES:
-            try:
-                async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                    return await provider.create_sandbox(request)
-            except TimeoutError as error:
-                raise isolated_verifier.VerifierEnvironmentError(
-                    f"Verifier sandbox for `{task_id}` was not ready within "
-                    f"{isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
-                ) from error
-            except SandboxError as error:
-                raise isolated_verifier.VerifierEnvironmentError(
-                    f"Could not start the verifier sandbox for `{task_id}`: {error}"
-                ) from error
+        try:
+            async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
+                return await provider.create_sandbox(request)
+        except TimeoutError as error:
+            raise isolated_verifier.VerifierEnvironmentError(
+                f"Verifier sandbox for `{task_id}` was not ready within {isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
+            ) from error
+        except SandboxError as error:
+            raise isolated_verifier.VerifierEnvironmentError(
+                f"Could not start the verifier sandbox for `{task_id}`: {error}"
+            ) from error
 
     async def _carry_artifact(
         self,
