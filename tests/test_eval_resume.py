@@ -2,12 +2,14 @@
 
 import asyncio
 import hashlib
+import io
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
 import pytest
 from benchmark_service.context import sandbox_provider_scope
+from botocore.exceptions import ClientError
 from benchmark_service.sandbox import (
     ExecResult,
     Sandbox,
@@ -190,6 +192,43 @@ def test_load_artifact_checks_length_and_digest(local_store: Path) -> None:
 
     with pytest.raises(ValueError, match="not persisted"):
         asyncio.run(eval_resume.load_artifact(eval_resume.PersistedArtifact(source="/app/x")))
+
+
+class FakeS3:
+    """The two S3 calls the store makes, over an in-memory bucket."""
+
+    def __init__(self) -> None:
+        self.objects: dict[tuple[str, str], bytes] = {}
+        self.puts: list[dict[str, Any]] = []
+
+    def put_object(self, **kwargs: Any) -> dict[str, Any]:
+        self.puts.append(kwargs)
+        self.objects[(kwargs["Bucket"], kwargs["Key"])] = kwargs["Body"]
+        return {}
+
+    def get_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
+        if (Bucket, Key) not in self.objects:
+            raise ClientError({"Error": {"Code": "NoSuchKey", "Message": Key}}, "GetObject")
+        body = self.objects[(Bucket, Key)]
+        return {"Body": io.BytesIO(body), "ContentLength": len(body)}
+
+
+def test_s3_store_round_trips_and_reports_missing_objects(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(eval_resume.LOCAL_DIR_ENV, raising=False)
+    monkeypatch.setenv(eval_resume.BUCKET_ENV, "tb-bucket")
+    s3 = FakeS3()
+    monkeypatch.setattr(eval_resume, "_s3_client", lambda: s3)
+
+    persisted = asyncio.run(eval_resume.persist_artifact("run-1", TASK, "/app/x", ARCHIVE))
+    assert persisted.s3_key == eval_resume.artifact_key("run-1", TASK, ARCHIVE_SHA)
+    assert s3.puts == [
+        {"Bucket": "tb-bucket", "Key": persisted.s3_key, "Body": ARCHIVE, "ContentType": "application/gzip"}
+    ]
+    assert asyncio.run(eval_resume.load_artifact(persisted)) == ARCHIVE
+
+    s3.objects.clear()
+    with pytest.raises(RuntimeError, match="Failed to load"):
+        asyncio.run(eval_resume.load_artifact(persisted))
 
 
 # --- first evaluation ------------------------------------------------------

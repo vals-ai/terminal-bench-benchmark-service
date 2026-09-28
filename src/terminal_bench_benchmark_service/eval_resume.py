@@ -234,14 +234,13 @@ async def _put_object(key: str, content: bytes) -> None:
         await asyncio.to_thread(write)
         return
 
+    bucket = _bucket()
+
+    def put() -> None:
+        _s3_client().put_object(Bucket=bucket, Key=key, Body=content, ContentType="application/gzip")
+
     try:
-        await asyncio.to_thread(
-            _s3_client().put_object,
-            Bucket=_bucket(),
-            Key=key,
-            Body=content,
-            ContentType="application/gzip",
-        )
+        await asyncio.to_thread(put)
     except (BotoCoreError, ClientError) as exc:
         raise RuntimeError(f"Failed to persist terminal-bench artifact at {key}") from exc
 
@@ -256,18 +255,23 @@ async def _get_object(key: str, expected_size: int) -> bytes:
 
         return await asyncio.to_thread(read_bounded)
 
-    try:
-        response = await asyncio.to_thread(_s3_client().get_object, Bucket=_bucket(), Key=key)
+    bucket = _bucket()
+
+    def get() -> bytes:
+        response = _s3_client().get_object(Bucket=bucket, Key=key)
         body = response["Body"]
         try:
             content_length = response.get("ContentLength")
             if content_length is not None and content_length > expected_size:
                 raise ValueError("Persisted terminal-bench artifact exceeds its declared byte length")
-            content = await asyncio.to_thread(body.read, expected_size + 1)
+            return body.read(expected_size + 1)
         finally:
-            await asyncio.to_thread(body.close)
-        if len(content) > expected_size:
-            raise ValueError("Persisted terminal-bench artifact exceeds its declared byte length")
-        return content
+            body.close()
+
+    try:
+        content = await asyncio.to_thread(get)
     except (BotoCoreError, ClientError) as exc:
         raise RuntimeError(f"Failed to load terminal-bench artifact at {key}") from exc
+    if len(content) > expected_size:
+        raise ValueError("Persisted terminal-bench artifact exceeds its declared byte length")
+    return content
