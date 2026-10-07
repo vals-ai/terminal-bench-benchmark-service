@@ -155,6 +155,9 @@ class DatasetSpec:
     # Grade in a separate sandbox rather than the agent's own,
     # for datasets whose tasks declare verifier.environment_mode = "separate".
     grades_in_separate_sandbox: bool = False
+    # Grade the sandbox even when the agent exits nonzero, as Harbor does
+    # after NonZeroAgentExitCodeError.
+    evaluate_on_agent_failure: bool = False
 
 
 class TerminalBenchBenchmark(BenchmarkService):
@@ -171,6 +174,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             Path("datasets/terminal-bench-4/tasks"),
             image_manifest=Path("datasets/images/terminal-bench-4.json"),
             grades_in_separate_sandbox=True,
+            evaluate_on_agent_failure=True,
         ),
         "terminal-bench-2.0": DatasetSpec(Path("datasets/terminal-bench-2")),
         "terminal-bench-2.1": DatasetSpec(Path("datasets/terminal-bench-2.1/tasks")),
@@ -178,6 +182,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             Path("datasets/terminal-bench-4/tasks"),
             image_manifest=Path("datasets/images/terminal-bench-4.json"),
             grades_in_separate_sandbox=True,
+            evaluate_on_agent_failure=True,
         ),
     }
 
@@ -627,6 +632,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             problem_path="/tmp/problem_statement.md",
             cwd=self._task_cwd(task_id, dataset),
             agent_timeout=agent_timeout,
+            evaluate_on_agent_failure=self._dataset_spec(dataset).evaluate_on_agent_failure,
             resources=resources,
         )
 
