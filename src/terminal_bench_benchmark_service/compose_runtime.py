@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 import shlex
+import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -19,7 +20,9 @@ _COMPOSE_FILE = f"{_COMPOSE_ROOT}/task.json"
 _RUNTIME_FILE = f"{_COMPOSE_ROOT}/runtime.json"
 _BUNDLE_DIR = "/bundle"
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
-_DOCKER_READY_ATTEMPTS = 30
+_DOCKERD_LOG = "/var/log/dockerd.log"
+_DOCKERD_RESTARTS = 1
+_DOCKER_READY_TIMEOUT_SECONDS = 300.0
 _DOCKER_READY_INTERVAL_SECONDS = 1.0
 _DEFAULT_READINESS_TIMEOUT_SECONDS = 60.0
 _FIND_GPU_DRIVER_FILES = (
@@ -124,7 +127,7 @@ async def start_compose_runtime(
     rebuilding the source-level ``build`` entries that remain in the task file.
     """
 
-    await _run(sandbox, "dockerd-entrypoint.sh dockerd > /var/log/dockerd.log 2>&1 &", timeout=10)
+    await _start_dockerd(sandbox)
     await _wait_for_docker(sandbox)
     timeout = _build_timeout(resources)
     main_image = await _pull_task_image(sandbox, task_image, timeout)
@@ -354,14 +357,35 @@ def _readiness_timeout(resources: Mapping[str, Any]) -> float:
     )
 
 
+async def _start_dockerd(sandbox: Sandbox) -> None:
+    await _run(sandbox, f"dockerd-entrypoint.sh dockerd >> {_DOCKERD_LOG} 2>&1 &", timeout=10)
+
+
 async def _wait_for_docker(sandbox: Sandbox) -> None:
-    for attempt in range(_DOCKER_READY_ATTEMPTS):
-        result = await sandbox.exec("docker info", timeout=10)
-        if result.exit_code == 0:
+    """Poll until dockerd answers, restarting it once if it exits.
+
+    Startup time depends on the Daytona node, not the image: an idle node is
+    ready in ~1s while a starved one takes minutes, so wait on a deadline
+    rather than a fixed attempt count and keep the daemon log for the error.
+    """
+    deadline = time.monotonic() + _DOCKER_READY_TIMEOUT_SECONDS
+    restarts = 0
+    while True:
+        probe = await sandbox.exec("docker info", timeout=10)
+        if probe.exit_code == 0:
             return
-        if attempt < _DOCKER_READY_ATTEMPTS - 1:
-            await asyncio.sleep(_DOCKER_READY_INTERVAL_SECONDS)
-    raise RuntimeError("Docker daemon did not become ready inside the compose sandbox")
+        alive = (await sandbox.exec("pgrep -x dockerd", timeout=10)).exit_code == 0
+        if not alive and restarts < _DOCKERD_RESTARTS:
+            restarts += 1
+            await _start_dockerd(sandbox)
+        elif not alive or time.monotonic() >= deadline:
+            reason = "exited" if not alive else f"was not ready after {_DOCKER_READY_TIMEOUT_SECONDS:.0f}s"
+            log = await sandbox.exec(f"tail -n 40 {_DOCKERD_LOG}", timeout=10)
+            raise RuntimeError(
+                "Docker daemon did not become ready inside the compose sandbox "
+                f"(dockerd {reason}, {restarts} restart(s))\n{probe.output[-500:]}\n{log.output}"
+            )
+        await asyncio.sleep(_DOCKER_READY_INTERVAL_SECONDS)
 
 
 async def _run(sandbox: Sandbox, command: str, *, timeout: float) -> ExecResult:
