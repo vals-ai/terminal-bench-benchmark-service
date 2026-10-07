@@ -371,7 +371,7 @@ async def _wait_for_docker(sandbox: Sandbox) -> None:
     deadline = time.monotonic() + _DOCKER_READY_TIMEOUT_SECONDS
     restarts = 0
     while True:
-        probe = await sandbox.exec("docker info", timeout=10)
+        probe = await sandbox.exec("docker info --format {{.ServerVersion}}", timeout=10)
         if probe.exit_code == 0:
             return
         alive = (await sandbox.exec("pgrep -x dockerd", timeout=10)).exit_code == 0
@@ -383,7 +383,7 @@ async def _wait_for_docker(sandbox: Sandbox) -> None:
             log = await sandbox.exec(f"tail -n 40 {_DOCKERD_LOG}", timeout=10)
             raise RuntimeError(
                 "Docker daemon did not become ready inside the compose sandbox "
-                f"(dockerd {reason}, {restarts} restart(s))\n{probe.output[-500:]}\n{log.output}"
+                f"(dockerd {reason}, {restarts} restart(s)): {probe.output.strip()}\n{log.output}"
             )
         await asyncio.sleep(_DOCKER_READY_INTERVAL_SECONDS)
 

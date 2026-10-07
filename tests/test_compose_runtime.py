@@ -440,7 +440,7 @@ class DockerdSandbox:
 
     async def exec(self, command: str, **_kwargs: object) -> ExecResult:
         self.commands.append(command)
-        if command == "docker info":
+        if command.startswith("docker info"):
             return ExecResult(exit_code=next(self._probes), output="Cannot connect to the Docker daemon")
         if command.startswith("pgrep "):
             return ExecResult(exit_code=0 if next(self._alive) else 1, output="")
