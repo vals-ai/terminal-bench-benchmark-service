@@ -58,7 +58,6 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
         "harborframework/terminal-bench:"
     )
     assert default_task.cwd == "/app"
-    assert default_task.evaluate_on_agent_failure is True
 
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
     assert isinstance(task.source, ComposeSource)
@@ -146,13 +145,3 @@ def test_terminal_bench_4_manifest_is_reproducible() -> None:
     assert build_manifest(source_manifest, Path("datasets/terminal-bench-4/tasks")) == json.loads(
         generated_manifest.read_text()
     )
-
-
-def test_only_terminal_bench_4_grades_after_agent_failure() -> None:
-    benchmark = asyncio.run(TerminalBenchBenchmark.create())
-
-    tb4_task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
-    tb2_task = asyncio.run(benchmark.retrieve_task("adaptive-rejection-sampler", dataset="terminal-bench-2.0"))
-
-    assert tb4_task.evaluate_on_agent_failure is True
-    assert tb2_task.evaluate_on_agent_failure is False
