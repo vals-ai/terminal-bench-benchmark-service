@@ -58,6 +58,9 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
         "harborframework/terminal-bench:"
     )
     assert default_task.cwd == "/app"
+    assert "registry-1.docker.io" in default_task.egress.setup_task
+    assert "model-gateway.vals.ai" in default_task.egress.run
+    assert default_task.egress.evaluation == []
 
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
     assert isinstance(task.source, ComposeSource)
@@ -145,3 +148,16 @@ def test_terminal_bench_4_manifest_is_reproducible() -> None:
     assert build_manifest(source_manifest, Path("datasets/terminal-bench-4/tasks")) == json.loads(
         generated_manifest.read_text()
     )
+
+
+@pytest.mark.parametrize("dataset", ["terminal-bench-2.0", "terminal-bench-2.1"])
+def test_legacy_task_policies_preserve_download_requirements(dataset: str) -> None:
+    benchmark = asyncio.run(TerminalBenchBenchmark.create())
+    package_task = asyncio.run(benchmark.retrieve_task("pytorch-model-cli", dataset=dataset))
+    archive_task = asyncio.run(benchmark.retrieve_task("build-pov-ray", dataset=dataset))
+    assert package_task.egress.setup_task == []
+    assert "*" not in package_task.egress.run
+    assert "download.pytorch.org" in package_task.egress.evaluation
+    assert "www.povray.org" in archive_task.egress.run
+    assert "*" not in archive_task.egress.run
+    assert "astral.sh" in archive_task.egress.evaluation

@@ -39,6 +39,7 @@ from benchmark_service.v1_schemas import V1Task
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
+from terminal_bench_benchmark_service.egress import task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
@@ -628,6 +629,7 @@ class TerminalBenchBenchmark(BenchmarkService):
             cwd=self._task_cwd(task_id, dataset),
             agent_timeout=agent_timeout,
             resources=resources,
+            egress=task_egress(task_id, separate_verifier=self._dataset_spec(dataset).grades_in_separate_sandbox),
         )
 
     async def setup_task(
