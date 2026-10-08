@@ -52,7 +52,6 @@ def build_vals_format_metadata(
 
 
 def _score(value: float) -> dict[str, Any]:
-    # stderr is measured across a model's runs at export time.
     return {"value": value, "stderr": None, "extra": {}}
 
 

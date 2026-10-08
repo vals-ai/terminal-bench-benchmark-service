@@ -1499,7 +1499,7 @@ class TerminalBenchBenchmark(BenchmarkService):
         mean_score = sum(task_scores.values()) / total_count
 
         metadata = {
-            # Legacy counts, still read for Terminal-Bench 2.
+            # Legacy counts.
             "total_tasks": total_count,
             "resolved_tasks": resolved,
             "unresolved_tasks": total_count - resolved,

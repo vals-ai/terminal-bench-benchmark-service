@@ -8,7 +8,7 @@ import pytest
 
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 
-# Fields a vals_format.v1 task row may carry; any other makes the reader drop the run.
+# Fields a vals_format.v1 task row may carry.
 TASK_ROW_FIELDS = {
     "task_id",
     "category",
@@ -47,7 +47,6 @@ def test_the_score_is_the_mean_reward_with_errored_tasks_as_zero() -> None:
 
 
 def test_the_legacy_view_still_gets_its_counts() -> None:
-    """Terminal-Bench 2 still reads these."""
     metadata = score({"a": reward(1.0), "b": reward(0.25), "c": None}).metadata
     assert metadata["total_tasks"] == 3
     assert metadata["resolved_tasks"] == 1
