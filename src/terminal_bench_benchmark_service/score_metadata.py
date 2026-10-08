@@ -1,4 +1,4 @@
-"""Vals-format score metadata for Terminal-Bench final scoring."""
+"""Vals-format score metadata for Terminal-Bench final scores."""
 
 import re
 from collections.abc import Mapping
@@ -10,17 +10,14 @@ SCORE_TYPES = {
         "description": "Mean per-task reward across submitted tasks; an errored task counts as 0.",
     },
 }
-# The agent calls the model directly and runs its commands in the sandbox, so there is
-# no model-proxy tool telemetry to count.
+# The agent calls the model directly, so there is no tool telemetry to count.
 USAGE_COMPONENTS = [{"component": "generation.model"}]
 
-# Status labels, in the order a population lists them.
 RESOLVED = "resolved"
 UNRESOLVED = "unresolved"
-# The verifier ran but produced no reward: it timed out, its environment failed, or it wrote nothing.
+# The verifier ran but produced no reward.
 EVALUATION_ERROR = "evaluation_error"
-# The task never produced an evaluation result, so the service sees only `None`; the run-level
-# `task_errors` message, which the post-run hook attaches to the row, says why.
+# The task produced no evaluation result; the run-level `task_errors` message says why.
 ERROR = "error"
 STATUSES = (RESOLVED, UNRESOLVED, EVALUATION_ERROR, ERROR)
 
@@ -33,11 +30,7 @@ NO_REWARD_EXCEPTION = "RewardFileNotFoundError"
 def build_vals_format_metadata(
     results: Mapping[str, dict[str, Any] | None], scores: Mapping[str, float]
 ) -> dict[str, Any]:
-    """Describe a run the way the vals-format post-run hook reads it.
-
-    `scores` holds each task's reward as `calculate_final_score` computed it, so the rows
-    cannot disagree with the published score.
-    """
+    """`scores` is each task's reward as `calculate_final_score` computed it."""
     rows = [_task_row(task_id, results[task_id], score) for task_id, score in scores.items()]
     by_status = {status: count for status in STATUSES if (count := sum(row["status"] == status for row in rows))}
     mean_score = sum(scores.values()) / len(scores)
@@ -59,7 +52,7 @@ def build_vals_format_metadata(
 
 
 def _score(value: float) -> dict[str, Any]:
-    """Uncertainty is left to the export, which measures it across a model's runs."""
+    # stderr is measured across a model's runs at export time.
     return {"value": value, "stderr": None, "extra": {}}
 
 

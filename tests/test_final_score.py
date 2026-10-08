@@ -8,7 +8,7 @@ import pytest
 
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 
-# Fields of a vals_format.v1 task row; the schema forbids any other, and the hook drops a run that has one.
+# Fields a vals_format.v1 task row may carry; any other makes the reader drop the run.
 TASK_ROW_FIELDS = {
     "task_id",
     "category",
@@ -47,7 +47,7 @@ def test_the_score_is_the_mean_reward_with_errored_tasks_as_zero() -> None:
 
 
 def test_the_legacy_view_still_gets_its_counts() -> None:
-    """Terminal-Bench 2 still runs under the final-view hook, which reads these."""
+    """Terminal-Bench 2 still reads these."""
     metadata = score({"a": reward(1.0), "b": reward(0.25), "c": None}).metadata
     assert metadata["total_tasks"] == 3
     assert metadata["resolved_tasks"] == 1
@@ -115,7 +115,6 @@ def test_task_rows_carry_no_field_the_schema_rejects() -> None:
 
 
 def test_a_task_that_never_produced_a_result_is_an_error_row_left_for_the_hook_to_explain() -> None:
-    """Valkyrie hands the service `None` for it, and attaches the run's task_errors message to the row."""
     for missing in (None, {}):
         row = rows({"a": missing})["a"]
         assert row["status"] == "error"
@@ -155,7 +154,7 @@ def test_a_verifier_that_reported_no_reward_is_an_evaluation_error() -> None:
 
 
 def test_a_reward_outranks_an_exception_the_service_recovered_from() -> None:
-    """The score already prefers the verifier result, so the row must too."""
+    """The score prefers the verifier result, so the row does too."""
     recovered = {**reward(1.0), "exception_info": "RuntimeError: stream dropped"}
     row = rows({"a": recovered})["a"]
     assert row["status"] == "resolved"

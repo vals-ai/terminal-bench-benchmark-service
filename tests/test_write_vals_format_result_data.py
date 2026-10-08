@@ -1,4 +1,4 @@
-"""The script that writes a finished run's score declaration, against a stubbed S3."""
+"""The script that writes a finished run's score declaration."""
 
 import io
 import json
@@ -16,7 +16,7 @@ DECLARATION_KEY = f"benchmarks/{RUN_ID}/vals_format_result_data.json"
 
 
 class StubS3:
-    """Holds objects in memory and records every put."""
+    """In-memory S3 that records puts."""
 
     def __init__(self, objects: dict[str, bytes]) -> None:
         self.objects = objects
@@ -33,7 +33,6 @@ class StubS3:
 
 
 def graded(reward: float) -> dict[str, Any]:
-    """A stored result: what the service returned, plus the keys Valkyrie adds after scoring."""
     return {
         "task_name": "t",
         "trial_name": "t-evaluation",
@@ -45,7 +44,7 @@ def graded(reward: float) -> dict[str, Any]:
 
 
 def run_document(final_score: float = 100 / 3, total: int = 3) -> dict[str, Any]:
-    """Two graded tasks and one Valkyrie errored, so it has no stored result."""
+    """Two graded tasks and one errored task with no stored result."""
     return {
         "benchmark_id": RUN_ID,
         "status": "FINISHED",
@@ -65,7 +64,7 @@ def s3_with(document: dict[str, Any], **objects: bytes) -> StubS3:
 
 
 def run(s3: StubS3, tmp_path: Path, *flags: str, dataset: tuple[str, ...] = ("a", "b", "c")) -> int:
-    """Run the script against a throwaway dataset directory: its tasks, and a stray file the loader skips."""
+    """Run against a temporary dataset directory that also holds a non-task file."""
     tasks = tmp_path / "dataset"
     tasks.mkdir(exist_ok=True)
     for task_id in dataset:
@@ -108,7 +107,6 @@ def test_a_task_valkyrie_errored_is_filled_in_as_an_error_row(tmp_path: Path) ->
 
 
 def test_a_task_valkyrie_force_stopped_is_filled_in_from_the_dataset(tmp_path: Path) -> None:
-    """A force-stopped task is scored `None` but appears in neither `evaluation_results` nor `task_errors`."""
     document = run_document(final_score=25.0, total=4)
 
     assert run(s3_with(document), tmp_path, dataset=("a", "b", "c", "d")) == 0
@@ -182,3 +180,15 @@ def test_an_identical_declaration_is_left_alone(tmp_path: Path) -> None:
     assert run(s3, tmp_path, "--upload") == 0
 
     assert s3.puts == [DECLARATION_KEY]
+
+
+def test_an_existing_null_declaration_is_not_replaced_without_force(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    s3 = s3_with(run_document(), **{"vals_format_result_data.json": b"null"})
+
+    assert run(s3, tmp_path, "--upload") == 1
+
+    assert "--force" in capsys.readouterr().err
+    assert s3.puts == []
+    assert s3.objects[DECLARATION_KEY] == b"null"
