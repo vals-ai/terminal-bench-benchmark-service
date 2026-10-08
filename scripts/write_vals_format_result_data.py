@@ -3,8 +3,6 @@
 
 Downloads the run's stored result document, reruns `calculate_final_score` on it, checks the score matches the
 stored `final_score`, and writes a copy whose `final_evaluation.properties` is the returned metadata.
-Nothing is written to S3 unless `--upload` is given, and a different existing object is replaced only with
-`--force`.
 """
 
 from __future__ import annotations
@@ -24,7 +22,7 @@ from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenc
 
 RESULT_FILE = "terminal-bench.json"
 DECLARATION_FILE = "vals_format_result_data.json"
-# The keys of a stored result that calculate_final_score receives; Valkyrie adds the rest afterwards.
+# The keys of a stored result that calculate_final_score receives.
 RESULT_KEYS = ("task_name", "trial_name", "verifier_result", "exception_info")
 SCORE_TOLERANCE = 1e-9
 DATASET_TASKS = Path(__file__).resolve().parents[1] / "datasets" / "terminal-bench-4" / "tasks"
@@ -49,16 +47,16 @@ def score_inputs(document: dict[str, Any], tasks_dir: Path = DATASET_TASKS) -> d
         task_id: {key: value for key, value in result.items() if key in RESULT_KEYS}
         for task_id, result in results.items()
     }
-    errored: dict[str, str] = document.get("task_errors") or {}
-    for task_id in errored:
+    for task_id in document.get("task_errors") or {}:
         inputs.setdefault(task_id, None)
 
     total = document["final_evaluation"]["properties"].get("total_tasks")
-    if total is not None and len(inputs) < total:
-        for task_id in dataset_task_ids(tasks_dir):
-            inputs.setdefault(task_id, None)
-    if total is not None and total != len(inputs):
-        raise DeclarationError(f"the run scored {total} tasks, but its document accounts for {len(inputs)}")
+    if total is not None:
+        if len(inputs) < total:
+            for task_id in dataset_task_ids(tasks_dir):
+                inputs.setdefault(task_id, None)
+        if total != len(inputs):
+            raise DeclarationError(f"the run scored {total} tasks, but its document accounts for {len(inputs)}")
     return inputs
 
 

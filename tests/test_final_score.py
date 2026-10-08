@@ -1,4 +1,4 @@
-"""The final score and the vals-format metadata both post-run hooks read from it."""
+"""The final score and its vals-format metadata."""
 
 import asyncio
 import json
@@ -59,7 +59,7 @@ def test_an_empty_run_is_refused() -> None:
         score({})
 
 
-def test_the_metadata_declares_what_the_hook_needs() -> None:
+def test_the_metadata_declares_the_vals_format_fields() -> None:
     metadata = score({"a": reward(1.0)}).metadata
     assert set(metadata) >= {"score_types", "results", "primary_population", "tasks", "usage_components"}
     assert metadata["score_types"]["score"]["unit"] == "percent"
@@ -114,7 +114,7 @@ def test_task_rows_carry_no_field_the_schema_rejects() -> None:
         assert set(task) <= TASK_ROW_FIELDS
 
 
-def test_a_task_that_never_produced_a_result_is_an_error_row_left_for_the_hook_to_explain() -> None:
+def test_a_task_that_never_produced_a_result_is_an_error_row() -> None:
     for missing in (None, {}):
         row = rows({"a": missing})["a"]
         assert row["status"] == "error"
