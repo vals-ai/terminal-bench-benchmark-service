@@ -430,6 +430,61 @@ def test_startup_installs_terminal_tools_as_root_before_the_agent_user_runs(tmp_
     )
 
 
+class DockerdSandbox:
+    """Scripted nested dockerd: `docker info` exit codes come from `probes`, `pgrep` from `alive`."""
+
+    def __init__(self, probes: list[int], alive: list[bool]) -> None:
+        self.commands: list[str] = []
+        self._probes = iter(probes)
+        self._alive = iter(alive)
+
+    async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+        self.commands.append(command)
+        if command.startswith("docker info"):
+            return ExecResult(exit_code=next(self._probes), output="Cannot connect to the Docker daemon")
+        if command.startswith("pgrep "):
+            return ExecResult(exit_code=0 if next(self._alive) else 1, output="")
+        if command.startswith("tail "):
+            return ExecResult(exit_code=0, output="failed to start daemon: boom")
+        return ExecResult(exit_code=0, output="")
+
+
+def _start_commands(sandbox: DockerdSandbox) -> list[str]:
+    return [command for command in sandbox.commands if command.startswith("dockerd-entrypoint.sh")]
+
+
+def test_docker_wait_restarts_dockerd_once_when_it_exits(monkeypatch: pytest.MonkeyPatch) -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_INTERVAL_SECONDS", 0)
+    sandbox = DockerdSandbox(probes=[1, 0], alive=[False])
+    asyncio.run(compose_runtime._wait_for_docker(sandbox))  # type: ignore[arg-type]
+
+    assert _start_commands(sandbox) == ["dockerd-entrypoint.sh dockerd >> /var/log/dockerd.log 2>&1 &"]
+
+
+def test_docker_wait_reports_the_daemon_log_when_dockerd_exits_again() -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    sandbox = DockerdSandbox(probes=[1, 1], alive=[False, False])
+    with pytest.raises(RuntimeError, match=r"did not become ready.*dockerd exited, 1 restart") as excinfo:
+        asyncio.run(compose_runtime._wait_for_docker(sandbox))  # type: ignore[arg-type]
+
+    assert "failed to start daemon: boom" in str(excinfo.value)
+    assert len(_start_commands(sandbox)) == 1
+
+
+def test_docker_wait_gives_up_at_the_deadline_while_dockerd_is_alive(monkeypatch: pytest.MonkeyPatch) -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_TIMEOUT_SECONDS", 0)
+    sandbox = DockerdSandbox(probes=[1], alive=[True])
+    with pytest.raises(RuntimeError, match=r"dockerd was not ready after 0s, 0 restart"):
+        asyncio.run(compose_runtime._wait_for_docker(sandbox))  # type: ignore[arg-type]
+
+    assert _start_commands(sandbox) == []
+
+
 def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
     from terminal_bench_benchmark_service.compose_runtime import stop_compose_runtime
 
