@@ -4,6 +4,9 @@ from benchmark_service.schemas import BenchmarkEgressPlan
 
 # Temporary migration coverage for historical agent transports.
 MODEL_HOSTS = [
+    "*.cursor.sh",
+    "*.cursorapi.com",
+    "downloads.cursor.com",
     "api.anthropic.com",
     "api.cohere.ai",
     "api.deepseek.com",

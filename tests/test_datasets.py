@@ -60,6 +60,7 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     assert default_task.cwd == "/app"
     assert "registry-1.docker.io" in default_task.egress.setup_task
     assert "model-gateway.vals.ai" in default_task.egress.run
+    assert {"*.cursor.sh", "*.cursorapi.com", "downloads.cursor.com"} <= set(default_task.egress.run)
     assert default_task.egress.evaluation == []
 
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
@@ -157,6 +158,7 @@ def test_legacy_task_policies_preserve_download_requirements(dataset: str) -> No
     archive_task = asyncio.run(benchmark.retrieve_task("build-pov-ray", dataset=dataset))
     assert package_task.egress.setup_task == []
     assert "*" not in package_task.egress.run
+    assert {"*.cursor.sh", "*.cursorapi.com", "downloads.cursor.com"} <= set(package_task.egress.run)
     assert "download.pytorch.org" in package_task.egress.evaluation
     assert "www.povray.org" in archive_task.egress.run
     assert "*" not in archive_task.egress.run
