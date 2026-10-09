@@ -59,6 +59,22 @@ S3 instead of rerunning the agent. `TERMINAL_BENCH_EVAL_STATE_BUCKET` must be
 set for TBench4 grading; `TERMINAL_BENCH_EVAL_STATE_LOCAL_DIR` substitutes a
 local directory for tests and `make dev`.
 
+### Score declaration for a finished run
+
+`calculate_final_score` declares each run's vals-format scores and task rows. A run that finished before it did
+has no `benchmarks/<RUN_ID>/vals_format_result_data.json`, and this writes one from the run's stored
+`terminal-bench.json`:
+
+```bash
+python scripts/write_vals_format_result_data.py <RUN_ID> --bucket <BUCKET> --out-dir out  # read-only download, local copy
+python scripts/write_vals_format_result_data.py <RUN_ID> --bucket <BUCKET> --upload       # also puts it in S3
+```
+
+The script reruns the service's own scoring on the stored results and stops unless it reproduces the stored
+`final_score`. A task Valkyrie force-stopped is recorded nowhere in the document, so the dataset's task list fills
+it in. `--upload` refuses to replace a different object unless `--force` is given. `--profile` selects an AWS
+profile; otherwise the standard credential chain applies.
+
 ## Development
 
 ```bash

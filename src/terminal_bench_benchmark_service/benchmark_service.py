@@ -48,6 +48,7 @@ from terminal_bench_benchmark_service.compose_runtime import (
     stop_compose_runtime,
     thread_limit,
 )
+from terminal_bench_benchmark_service.score_metadata import build_vals_format_metadata
 from terminal_bench_benchmark_service.utils import with_retry
 
 logger = logging.getLogger(__name__)
@@ -1498,9 +1499,11 @@ class TerminalBenchBenchmark(BenchmarkService):
         mean_score = sum(task_scores.values()) / total_count
 
         metadata = {
+            # Legacy counts.
             "total_tasks": total_count,
             "resolved_tasks": resolved,
             "unresolved_tasks": total_count - resolved,
+            **build_vals_format_metadata(evaluation_results, task_scores),
         }
 
         return FinalScoreResult(score=mean_score * 100, metadata=metadata)
