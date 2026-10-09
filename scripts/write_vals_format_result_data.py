@@ -47,7 +47,8 @@ def score_inputs(document: dict[str, Any], tasks_dir: Path = DATASET_TASKS) -> d
         task_id: {key: value for key, value in result.items() if key in RESULT_KEYS}
         for task_id, result in results.items()
     }
-    for task_id in document.get("task_errors") or {}:
+    errored: dict[str, str] = document.get("task_errors") or {}
+    for task_id in errored:
         inputs.setdefault(task_id, None)
 
     total = document["final_evaluation"]["properties"].get("total_tasks")
