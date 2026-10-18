@@ -1,6 +1,7 @@
 """Dataset discovery preserves hosted tenant authorization without loading tasks."""
 
 from typing import cast
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
@@ -16,6 +17,8 @@ def test_dataset_discovery_requires_auth_and_filters_names(monkeypatch: pytest.M
     service = object.__new__(TerminalBenchBenchmark)
     service.datasets = {"allowed": {}, "blocked": {}}
     service.dataset_versions = {}
+    monkeypatch.setattr(service, "list_tasks", AsyncMock(side_effect=AssertionError("Discovery must not load tasks")))
+    monkeypatch.setattr(service, "get_dataset", Mock(side_effect=AssertionError("Discovery must not load datasets")))
 
     async def create(cls: type[TerminalBenchBenchmark]) -> TerminalBenchBenchmark:
         return service
