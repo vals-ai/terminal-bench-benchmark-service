@@ -12,7 +12,7 @@ from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from typing import Any, ClassVar, cast
 
-from benchmark_service import BenchmarkService, ComposeSandbox, ComposeSource
+from benchmark_service import ComposeSandbox, ComposeSource
 from benchmark_service.context import current_sandbox_provider
 from benchmark_service.sandbox import (
     ExecResult,
@@ -36,10 +36,10 @@ from benchmark_service.schemas import (
 )
 from benchmark_service.utils import stream_command
 from benchmark_service.v1_schemas import V1Task
+from benchmark_service.vals import ValsBenchmarkService as BenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
-from terminal_bench_benchmark_service.egress import task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
@@ -49,6 +49,7 @@ from terminal_bench_benchmark_service.compose_runtime import (
     stop_compose_runtime,
     thread_limit,
 )
+from terminal_bench_benchmark_service.egress import task_egress
 from terminal_bench_benchmark_service.score_metadata import build_vals_format_metadata
 from terminal_bench_benchmark_service.utils import with_retry
 
