@@ -51,6 +51,9 @@ phase, and artifact `exclude` patterns are applied while packaging the original
 source path for the isolated verifier. The task Dockerfile's working directory
 is preserved.
 
+Compose task setup permits Docker Hub's `index.docker.io` registry endpoint for the
+`crane config` and `crane export` fallback when a pinned image has unmappable owners.
+
 Each packed artifact is written to S3 before the verifier is created, and the
 state naming those objects is streamed as `eval_resume_state`. A grading
 fault is then retried eval-only: `/ws/evaluate-response` recreates the
