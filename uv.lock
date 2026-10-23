@@ -397,8 +397,8 @@ wheels = [
 
 [[package]]
 name = "create-benchmark-service"
-version = "0.56.2.dev2+gef53f8487"
-source = { git = "https://github.com/vals-ai/create-benchmark-service.git?rev=ef53f8487ecf60be7aa6c0f003b1288fa545d277#ef53f8487ecf60be7aa6c0f003b1288fa545d277" }
+version = "0.57.0"
+source = { git = "https://github.com/vals-ai/create-benchmark-service.git?rev=bd0d7d075eb8f53fa9624641a853a48906bc1479#bd0d7d075eb8f53fa9624641a853a48906bc1479" }
 dependencies = [
     { name = "aiodocker" },
     { name = "certifi" },
@@ -1830,7 +1830,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.34" },
-    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?rev=ef53f8487ecf60be7aa6c0f003b1288fa545d277" },
+    { name = "create-benchmark-service", git = "https://github.com/vals-ai/create-benchmark-service.git?rev=bd0d7d075eb8f53fa9624641a853a48906bc1479" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
