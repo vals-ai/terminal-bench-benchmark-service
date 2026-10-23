@@ -59,6 +59,7 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     )
     assert default_task.cwd == "/app"
     assert "registry-1.docker.io" in default_task.egress.setup_task
+    assert "index.docker.io" in default_task.egress.setup_task
     assert "model-gateway.vals.ai" in default_task.egress.run
     assert {"*.cursor.sh", "*.cursorapi.com", "downloads.cursor.com"} <= set(default_task.egress.run)
     assert default_task.egress.evaluation == []

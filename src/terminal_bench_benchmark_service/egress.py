@@ -42,6 +42,7 @@ GITHUB_HOSTS = [
 ]
 COMPOSE_HOSTS = [
     "auth.docker.io",
+    "index.docker.io",
     "registry-1.docker.io",
     "production.cloudfront.docker.com",
     "dl-cdn.alpinelinux.org",
