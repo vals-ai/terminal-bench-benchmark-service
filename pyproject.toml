@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", rev = "71d975316d5e1769697a557d05f306d33ed73777" }
+create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", rev = "ef53f8487ecf60be7aa6c0f003b1288fa545d277" }
 
 [dependency-groups]
 dev = [
