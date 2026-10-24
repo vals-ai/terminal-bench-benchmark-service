@@ -12,7 +12,7 @@ from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from typing import Any, ClassVar, cast
 
-from benchmark_service import BenchmarkService, ComposeSandbox, ComposeSource
+from benchmark_service import ComposeSandbox, ComposeSource
 from benchmark_service.context import current_sandbox_provider
 from benchmark_service.sandbox import (
     ExecResult,
@@ -36,6 +36,7 @@ from benchmark_service.schemas import (
 )
 from benchmark_service.utils import stream_command
 from benchmark_service.v1_schemas import V1Task
+from benchmark_service.vals import ValsBenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
@@ -159,7 +160,7 @@ class DatasetSpec:
     grades_in_separate_sandbox: bool = False
 
 
-class TerminalBenchBenchmark(BenchmarkService):
+class TerminalBenchBenchmark(ValsBenchmarkService):
     """TODO: Replace this example with your benchmark implementation.
 
     This example shows a simple text-based Q&A benchmark.
