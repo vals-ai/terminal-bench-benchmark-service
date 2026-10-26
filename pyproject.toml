@@ -10,6 +10,11 @@ dependencies = [
     "tenacity>=9.1.4",
 ]
 
+[tool.uv]
+required-version = ">=0.13.5"
+exclude-newer = "7 days"
+exclude-newer-package = { certifi = false }
+
 [tool.uv.sources]
 create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", rev = "bd0d7d075eb8f53fa9624641a853a48906bc1479" }
 
