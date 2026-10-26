@@ -4,7 +4,9 @@ import asyncio
 import json
 import shlex
 import subprocess
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from benchmark_service import ComposeSource, ImageSource
@@ -65,6 +67,9 @@ services:
   api:
     build:
       context: ./api
+    environment:
+      - SCREEN_WIDTH=1515
+      - BROWSER_URL=http://workspace:18073
 """.strip()
         + "\n"
     )
@@ -102,6 +107,10 @@ services:
 
     assert config["services"]["main"]["image"] == "example/main@sha256:" + "a" * 64
     assert config["services"]["api"]["image"] == "example/api@sha256:" + "b" * 64
+    assert config["services"]["api"]["environment"]["SCREEN_WIDTH"] == "1515"
+    assert config["services"]["api"]["environment"]["BROWSER_URL"] == "http://workspace:18073"
+    assert config["services"]["api"]["environment"]["NPM_CONFIG_UPDATE_NOTIFIER"] == "false"
+    assert config["services"]["api"]["environment"]["NPM_CONFIG_BEFORE"]
     # Compose retains the source build metadata during merge, but the runtime
     # starts with --no-build so these pinned images are what actually run.
     assert config["services"]["main"]["build"]["context"] == str(tmp_path)
@@ -111,6 +120,28 @@ services:
         for volume in config["services"]["main"]["volumes"]
     )
     assert "privileged" not in config["services"]["main"]
+
+
+def test_runtime_overlay_sets_npm_release_age_once_for_each_sidecar() -> None:
+    now = datetime(2026, 10, 26, 12, 0, 0, tzinfo=UTC)
+    with patch("terminal_bench_benchmark_service.compose_runtime.datetime") as mocked_datetime:
+        mocked_datetime.now.return_value = now
+        runtime = runtime_compose_definition(
+            "example/main@sha256:" + "a" * 64,
+            {
+                "api": "example/api@sha256:" + "b" * 64,
+                "workspace": "example/workspace@sha256:" + "c" * 64,
+            },
+            {"cpus": 2, "memory_mb": 4096},
+        )
+
+    mocked_datetime.now.assert_called_once_with(UTC)
+    expected_environment = {
+        "NPM_CONFIG_BEFORE": (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "NPM_CONFIG_UPDATE_NOTIFIER": "false",
+    }
+    assert runtime["services"]["api"]["environment"] == expected_environment
+    assert runtime["services"]["workspace"]["environment"] == expected_environment
 
 
 def test_runtime_overlay_passes_allocated_gpu_into_nested_task() -> None:
