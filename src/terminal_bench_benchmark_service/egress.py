@@ -54,8 +54,9 @@ def task_egress(task_id: str, *, separate_verifier: bool) -> BenchmarkEgressPlan
     run_hosts = MODEL_HOSTS + package_hosts
     if separate_verifier:
         cuda_hosts = ["developer.download.nvidia.com"] if task_id in {"fp8-rmsnorm-gemm", "jax-speedrun-gpu"} else []
+        npm_hosts = ["registry.npmjs.org"] if task_id == "medical-claims-processing" else []
         return BenchmarkEgressPlan(
-            setup_task=COMPOSE_HOSTS + APT_HOSTS + cuda_hosts,
+            setup_task=COMPOSE_HOSTS + APT_HOSTS + cuda_hosts + npm_hosts,
             run=sorted(set(run_hosts + ["registry.npmjs.org"] + cuda_hosts)),
             # This covers artifact collection in the original sandbox, not the child verifier.
             evaluation=[],

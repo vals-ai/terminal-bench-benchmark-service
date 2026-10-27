@@ -8,6 +8,7 @@ import re
 import shlex
 import time
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -19,6 +20,7 @@ _ENVIRONMENT_ROOT = f"{_COMPOSE_ROOT}/environment"
 _COMPOSE_FILE = f"{_COMPOSE_ROOT}/task.json"
 _RUNTIME_FILE = f"{_COMPOSE_ROOT}/runtime.json"
 _BUNDLE_DIR = "/bundle"
+_NPM_MIN_RELEASE_AGE = timedelta(days=7)
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
 _DOCKERD_LOG = "/var/log/dockerd.log"
 _DOCKERD_RESTARTS = 1
@@ -326,10 +328,23 @@ def runtime_compose_definition(
     if environment:
         main["environment"] = dict(environment)
 
+    npm_before = (datetime.now(UTC) - _NPM_MIN_RELEASE_AGE).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sidecars = {
+        service: {
+            "image": image,
+            "pull_policy": "always",
+            "environment": {
+                "NPM_CONFIG_BEFORE": npm_before,
+                "NPM_CONFIG_UPDATE_NOTIFIER": "false",
+            },
+        }
+        for service, image in sorted(sidecar_images.items())
+    }
+
     return {
         "services": {
             "main": main,
-            **{service: {"image": image, "pull_policy": "always"} for service, image in sorted(sidecar_images.items())},
+            **sidecars,
         }
     }
 
