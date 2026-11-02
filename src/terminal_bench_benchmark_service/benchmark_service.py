@@ -13,7 +13,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Any, ClassVar, cast
 
 from benchmark_service import ComposeSandbox, ComposeSource
-from benchmark_service.context import current_sandbox_provider
+from benchmark_service.context import current_sandbox_provider, current_tool_context
 from benchmark_service.sandbox import (
     ExecResult,
     ImageSource,
@@ -626,6 +626,7 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
         agent_timeout: float = agent_timeout_value
 
         return RetrieveTaskResponse(
+            tool_context=current_tool_context(),
             source=runtime_source or ImageSource(image=formatted_docker_image),
             problem_path="/tmp/problem_statement.md",
             cwd=self._task_cwd(task_id, dataset),
