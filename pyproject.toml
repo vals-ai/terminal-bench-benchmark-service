@@ -16,7 +16,7 @@ exclude-newer = "7 days"
 exclude-newer-package = { certifi = false }
 
 [tool.uv.sources]
-create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", rev = "5885dda396e3944a70e40ae2239cd66fceaf2447" }
+create-benchmark-service = { git = "https://github.com/vals-ai/create-benchmark-service.git", rev = "ecd92f74856ff33645efc3e7b88c58e2aba5c1f7" }
 
 [dependency-groups]
 dev = [

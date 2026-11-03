@@ -14,6 +14,7 @@ from benchmark_service.sandbox import (
     ExecResult,
     Sandbox,
     SandboxCreateRequest,
+    SandboxError,
     SandboxProvider,
     SandboxQuery,
 )
@@ -26,7 +27,8 @@ from benchmark_service.schemas import (
 )
 from pydantic import ValidationError
 
-from terminal_bench_benchmark_service import eval_resume
+from terminal_bench_benchmark_service import eval_resume, isolated_verifier
+from terminal_bench_benchmark_service.egress import APT_HOSTS, GITHUB_HOSTS, PYTHON_HOSTS
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 from tests.test_runtime_lifecycle import FakeSandbox
 
@@ -42,6 +44,10 @@ class VerifierSandbox(FakeSandbox):
     def __init__(self, sandbox_id: str, log: list[str]) -> None:
         super().__init__(sandbox_id)
         self.log = log
+        self.egress: list[list[str]] = []
+
+    async def modify_egress_rules(self, allowed_addresses: list[str]) -> None:
+        self.egress.append(allowed_addresses)
 
     async def exec(self, command: str, *, cwd: str | None = None, timeout: float | None = None) -> ExecResult:
         self.commands.append(command)
@@ -97,6 +103,53 @@ class LoggingAgentSandbox(FakeSandbox):
 @pytest.fixture
 def benchmark() -> TerminalBenchBenchmark:
     return asyncio.run(TerminalBenchBenchmark.create())
+
+
+@pytest.mark.parametrize(
+    ("task_id", "hosts"),
+    [
+        ("html-js-filter", []),
+        ("ontology-kg-querying", PYTHON_HOSTS + GITHUB_HOSTS),
+        ("nextjs-performance", ["registry.npmjs.org"] + GITHUB_HOSTS),
+        ("cumulative-layout-shift", ["registry.npmjs.org"] + GITHUB_HOSTS),
+        ("vba-userform-port", PYTHON_HOSTS + ["registry.npmjs.org"] + GITHUB_HOSTS),
+        ("live-database-cutover", PYTHON_HOSTS + GITHUB_HOSTS),
+        ("cargo-flight-dispatch", APT_HOSTS + PYTHON_HOSTS + GITHUB_HOSTS),
+        ("payments-pipeline-fix", PYTHON_HOSTS + GITHUB_HOSTS),
+    ],
+)
+def test_verifier_starts_blocked_then_opens_only_package_hosts(
+    benchmark: TerminalBenchBenchmark, task_id: str, hosts: list[str]
+) -> None:
+    provider = FakeProvider([])
+    sandbox = asyncio.run(
+        benchmark._create_verifier_sandbox(  # pyright: ignore[reportPrivateUsage]
+            provider, task_id, DATASET, 1800, run_id="run-123", labels={}, attempt="test"
+        )
+    )
+
+    assert provider.created[0].network_block_all is True
+    assert provider.created[0].env_vars == {}
+    assert isinstance(sandbox, VerifierSandbox)
+    assert sandbox.egress == ([sorted(set(hosts))] if hosts else [])
+    assert sandbox.commands == []
+
+
+def test_verifier_network_policy_failure_deletes_the_child(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def refuse_policy(_sandbox: VerifierSandbox, _hosts: list[str]) -> None:
+        raise SandboxError("policy refused")
+
+    monkeypatch.setattr(VerifierSandbox, "modify_egress_rules", refuse_policy)
+    provider = FakeProvider([])
+    with pytest.raises(isolated_verifier.VerifierEnvironmentError, match="policy refused"):
+        asyncio.run(
+            benchmark._create_verifier_sandbox(  # pyright: ignore[reportPrivateUsage]
+                provider, "ontology-kg-querying", DATASET, 1800, run_id="run-123", labels={}, attempt="test"
+            )
+        )
+    assert provider.deleted == ["verifier-1"]
 
 
 @pytest.fixture

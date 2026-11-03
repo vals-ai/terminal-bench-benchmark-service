@@ -40,6 +40,15 @@ GITHUB_HOSTS = [
     "objects.githubusercontent.com",
     "codeload.github.com",
 ]
+VERIFIER_EGRESS = {
+    "ontology-kg-querying": PYTHON_HOSTS + GITHUB_HOSTS,
+    "nextjs-performance": ["registry.npmjs.org"] + GITHUB_HOSTS,
+    "cumulative-layout-shift": ["registry.npmjs.org"] + GITHUB_HOSTS,
+    "vba-userform-port": PYTHON_HOSTS + ["registry.npmjs.org"] + GITHUB_HOSTS,
+    "live-database-cutover": PYTHON_HOSTS + GITHUB_HOSTS,
+    "cargo-flight-dispatch": APT_HOSTS + PYTHON_HOSTS + GITHUB_HOSTS,
+    "payments-pipeline-fix": PYTHON_HOSTS + GITHUB_HOSTS,
+}
 COMPOSE_HOSTS = [
     "auth.docker.io",
     "index.docker.io",

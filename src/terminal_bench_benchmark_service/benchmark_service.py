@@ -40,7 +40,7 @@ from benchmark_service.vals import ValsBenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
-from terminal_bench_benchmark_service.egress import task_egress
+from terminal_bench_benchmark_service.egress import VERIFIER_EGRESS, task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
@@ -954,10 +954,19 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             # benchmark and task; the age-based sweeper collects any stranded.
             labels={**labels, "Role": "verifier"},
             env_vars={},
+            network_block_all=True,
         )
         try:
             async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                return await provider.create_sandbox(request)
+                sandbox = await provider.create_sandbox(request)
+                try:
+                    hosts = sorted(set(VERIFIER_EGRESS.get(task_id, [])))
+                    if hosts:
+                        await sandbox.modify_egress_rules(hosts)
+                    return sandbox
+                except BaseException:
+                    await provider.delete_sandbox(sandbox.id)
+                    raise
         except TimeoutError as error:
             raise isolated_verifier.VerifierEnvironmentError(
                 f"Verifier sandbox for `{task_id}` was not ready within {isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
