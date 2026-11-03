@@ -40,6 +40,7 @@ from benchmark_service.vals import ValsBenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
+from terminal_bench_benchmark_service.codex_mcp import configure_codex_mcp_servers
 from terminal_bench_benchmark_service.egress import task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
@@ -665,6 +666,12 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                     sandbox,
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
+
+            mcp_servers = task.get("task_definition", {}).get("environment", {}).get("mcp_servers", [])
+            if await configure_codex_mcp_servers(sandbox, mcp_servers):
+                yield StreamMessageChunk(
+                    type="message", data=f"Registered task MCP servers with Codex: {[s['name'] for s in mcp_servers]}"
+                )
 
             # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
             # TBench4 images may run as non-root, so only update system files when writable and
