@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, cast
 
 from benchmark_service import ComposeSandbox, ComposeSource, ImageSource, Sandbox
+from benchmark_service.context import current_sandbox_provider
+from benchmark_service.sandbox.modal import ModalSandboxProvider
 from benchmark_service.sandbox.types import ExecResult
 
 _COMPOSE_ROOT = "/terminal-bench"
@@ -129,7 +131,8 @@ async def start_compose_runtime(
     rebuilding the source-level ``build`` entries that remain in the task file.
     """
 
-    await _start_dockerd(sandbox)
+    if not isinstance(current_sandbox_provider(), ModalSandboxProvider):
+        await _start_dockerd(sandbox)
     await _wait_for_docker(sandbox)
     timeout = _build_timeout(resources)
     main_image = await _pull_task_image(sandbox, task_image, timeout)
@@ -377,12 +380,14 @@ async def _start_dockerd(sandbox: Sandbox) -> None:
 
 
 async def _wait_for_docker(sandbox: Sandbox) -> None:
-    """Poll until dockerd answers, restarting it once if it exits.
+    """Poll until dockerd answers, restarting a manually started daemon once if it exits.
 
     Startup time depends on the Daytona node, not the image: an idle node is
     ready in ~1s while a starved one takes minutes, so wait on a deadline
     rather than a fixed attempt count and keep the daemon log for the error.
     """
+    # Modal owns image entrypoint startup. Its wrapper can still be preparing before dockerd appears.
+    native_entrypoint = isinstance(current_sandbox_provider(), ModalSandboxProvider)
     deadline = time.monotonic() + _DOCKER_READY_TIMEOUT_SECONDS
     restarts = 0
     while True:
@@ -390,10 +395,10 @@ async def _wait_for_docker(sandbox: Sandbox) -> None:
         if probe.exit_code == 0:
             return
         alive = (await sandbox.exec("pgrep -x dockerd", timeout=10)).exit_code == 0
-        if not alive and restarts < _DOCKERD_RESTARTS:
+        if not native_entrypoint and not alive and restarts < _DOCKERD_RESTARTS:
             restarts += 1
             await _start_dockerd(sandbox)
-        elif not alive or time.monotonic() >= deadline:
+        elif (not native_entrypoint and not alive) or time.monotonic() >= deadline:
             reason = "exited" if not alive else f"was not ready after {_DOCKER_READY_TIMEOUT_SECONDS:.0f}s"
             log = await sandbox.exec(f"tail -n 40 {_DOCKERD_LOG}", timeout=10)
             raise RuntimeError(

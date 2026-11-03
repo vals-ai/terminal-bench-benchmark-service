@@ -6,10 +6,12 @@ import shlex
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from benchmark_service import ComposeSource, ImageSource
+from benchmark_service.context import sandbox_provider_scope
+from benchmark_service.sandbox.modal import ModalProviderConfig
 from benchmark_service.sandbox.types import ExecResult
 
 from terminal_bench_benchmark_service.compose_runtime import (
@@ -482,6 +484,40 @@ class DockerdSandbox:
 
 def _start_commands(sandbox: DockerdSandbox) -> list[str]:
     return [command for command in sandbox.commands if command.startswith("dockerd-entrypoint.sh")]
+
+
+@pytest.mark.parametrize(("probes", "alive"), [([0], []), ([1, 1, 0], [False, False])])
+def test_modal_native_docker_starts_once_even_before_the_daemon_appears(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, probes: list[int], alive: list[bool]
+) -> None:
+    from terminal_bench_benchmark_service import compose_runtime
+
+    class NativeSandbox(DockerdSandbox):
+        async def exec(self, command: str, **kwargs: object) -> ExecResult:
+            if command.endswith("config --services"):
+                self.commands.append(command)
+                return ExecResult(exit_code=0, output="main\n")
+            return await super().exec(command, **kwargs)
+
+    monkeypatch.setattr(compose_runtime, "_DOCKER_READY_INTERVAL_SECONDS", 0)
+    monkeypatch.setattr(compose_runtime, "_pull_task_image", AsyncMock(return_value="example/main"))
+    monkeypatch.setattr(compose_runtime, "_stage_files", AsyncMock())
+    sandbox = NativeSandbox(probes, alive)
+    provider = ModalProviderConfig(MODAL_TOKEN_ID="test", MODAL_TOKEN_SECRET="test", runtime="vm").create_provider()
+
+    async def start() -> None:
+        with sandbox_provider_scope(provider):
+            await compose_runtime.start_compose_runtime(
+                tmp_path,
+                "html-js-filter",
+                "example/main",
+                {},
+                {"cpus": 2},
+                sandbox,  # type: ignore[arg-type]
+            )
+
+    asyncio.run(start())
+    assert _start_commands(sandbox) == []
 
 
 def test_docker_wait_restarts_dockerd_once_when_it_exits(monkeypatch: pytest.MonkeyPatch) -> None:

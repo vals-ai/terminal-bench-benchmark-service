@@ -13,7 +13,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Any, ClassVar, cast
 
 from benchmark_service import ComposeSandbox, ComposeSource
-from benchmark_service.context import current_sandbox_provider
+from benchmark_service.context import current_sandbox_provider, current_tool_context
 from benchmark_service.sandbox import (
     ExecResult,
     ImageSource,
@@ -40,7 +40,7 @@ from benchmark_service.vals import ValsBenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
-from terminal_bench_benchmark_service.egress import task_egress
+from terminal_bench_benchmark_service.egress import VERIFIER_EGRESS, task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
     compose_runtime_source,
@@ -626,6 +626,7 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
         agent_timeout: float = agent_timeout_value
 
         return RetrieveTaskResponse(
+            tool_context=current_tool_context(),
             source=runtime_source or ImageSource(image=formatted_docker_image),
             problem_path="/tmp/problem_statement.md",
             cwd=self._task_cwd(task_id, dataset),
@@ -665,6 +666,14 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                     sandbox,
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
+
+            if task_id == "medical-claims-processing" and current_tool_context().mode == "mcp":
+                result = await sandbox.exec(
+                    'mkdir -p "$HOME/.codex" && '
+                    "printf '\\n[mcp_servers.playwright]\\nurl = \"http://playwright-mcp:3080/mcp\"\\nrequired = true\\n' "
+                    '>> "$HOME/.codex/config.toml"'
+                )
+                assert result.exit_code == 0, result.output
 
             # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
             # TBench4 images may run as non-root, so only update system files when writable and
@@ -953,10 +962,19 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             # benchmark and task; the age-based sweeper collects any stranded.
             labels={**labels, "Role": "verifier"},
             env_vars={},
+            network_block_all=True,
         )
         try:
             async with asyncio.timeout(isolated_verifier.PREPARE_TIMEOUT_SECONDS):
-                return await provider.create_sandbox(request)
+                sandbox = await provider.create_sandbox(request)
+                try:
+                    hosts = sorted(set(VERIFIER_EGRESS.get(task_id, [])))
+                    if hosts:
+                        await sandbox.modify_egress_rules(hosts)
+                    return sandbox
+                except BaseException:
+                    await provider.delete_sandbox(sandbox.id)
+                    raise
         except TimeoutError as error:
             raise isolated_verifier.VerifierEnvironmentError(
                 f"Verifier sandbox for `{task_id}` was not ready within {isolated_verifier.PREPARE_TIMEOUT_SECONDS:g}s"
