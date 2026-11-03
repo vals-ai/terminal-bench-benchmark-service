@@ -55,6 +55,11 @@ def test_toml_for_stdio_server_with_env() -> None:
     assert tomllib.loads(text)["mcp_servers"]["fs"] == {"command": "npx", "args": ["-y", "srv"], "env": {"TOKEN": "x"}}
 
 
+def test_toml_keeps_non_ascii_and_quoted_keys_parseable() -> None:
+    servers = [{"name": "docs 🚀", "transport": "sse", "url": "http://mcp:1/sse?q=\"ünï\\🚀\""}]
+    assert tomllib.loads(codex_mcp_servers_toml(servers)) == {"mcp_servers": {"docs 🚀": {"url": servers[0]["url"]}}}
+
+
 def test_merge_keeps_existing_config() -> None:
     merged = merge_codex_config(EXISTING_CONFIG, PLAYWRIGHT)
     assert merged.startswith(EXISTING_CONFIG)

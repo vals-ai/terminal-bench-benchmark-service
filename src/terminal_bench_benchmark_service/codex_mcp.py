@@ -24,12 +24,12 @@ _BARE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def _toml_key(name: str) -> str:
-    return name if _BARE_KEY.match(name) else json.dumps(name)
+    return name if _BARE_KEY.match(name) else json.dumps(name, ensure_ascii=False)
 
 
 def _toml_value(value: Any) -> str:
     if isinstance(value, str):
-        return json.dumps(value)
+        return json.dumps(value, ensure_ascii=False)
     if isinstance(value, list):
         return "[" + ", ".join(_toml_value(item) for item in value) + "]"  # pyright: ignore[reportUnknownVariableType]
     raise TypeError(f"Unsupported MCP server value: {value!r}")
