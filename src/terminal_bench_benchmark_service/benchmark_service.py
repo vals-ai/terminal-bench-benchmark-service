@@ -667,6 +667,14 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
 
+            if task_id == "medical-claims-processing" and current_tool_context().mode == "mcp":
+                result = await sandbox.exec(
+                    'mkdir -p "$HOME/.codex" && '
+                    "printf '\\n[mcp_servers.playwright]\\nurl = \"http://playwright-mcp:3080/mcp\"\\nrequired = true\\n' "
+                    '>> "$HOME/.codex/config.toml"'
+                )
+                assert result.exit_code == 0, result.output
+
             # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
             # TBench4 images may run as non-root, so only update system files when writable and
             # otherwise persist the setting in the agent user's shell profile.
