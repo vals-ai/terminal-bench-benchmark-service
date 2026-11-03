@@ -21,6 +21,7 @@ from terminal_bench_benchmark_service.utils import with_retry
 CODEX_AGENT_PREFIX = "codex"
 CODEX_CONFIG_PATH = '"$HOME/.codex/config.toml"'
 _BARE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
+_SSE_PATH = re.compile(r"/sse(\?.*)?$")
 
 
 def _toml_key(name: str) -> str:
@@ -35,6 +36,20 @@ def _toml_value(value: Any) -> str:
     raise TypeError(f"Unsupported MCP server value: {value!r}")
 
 
+def codex_http_url(server: dict[str, Any]) -> str:
+    """Return the URL Codex should use for a non-stdio server.
+
+    Codex (0.163) only speaks streamable HTTP: a `url` entry is POSTed to as a
+    streamable-HTTP endpoint, and a legacy SSE endpoint answers "Missing
+    sessionId". Servers that still expose SSE serve the streamable endpoint
+    next to it as `/mcp` (e.g. `@playwright/mcp --port`), so point Codex there.
+    """
+    url: str = server["url"]
+    if server["transport"] == "sse" and _SSE_PATH.search(url):
+        return _SSE_PATH.sub(r"/mcp\1", url)
+    return url
+
+
 def codex_mcp_servers_toml(mcp_servers: list[dict[str, Any]]) -> str:
     """Render the `[mcp_servers.<name>]` tables Harbor's Codex adapter writes for a task."""
     text = ""
@@ -43,7 +58,7 @@ def codex_mcp_servers_toml(mcp_servers: list[dict[str, Any]]) -> str:
         entry: dict[str, Any] = (
             {"command": server["command"], "args": list(server.get("args", []))}
             if server["transport"] == "stdio"
-            else {"url": server["url"]}
+            else {"url": codex_http_url(server)}
         )
         text += f"[mcp_servers.{_toml_key(name)}]\n"
         text += "".join(f"{key} = {_toml_value(value)}\n" for key, value in entry.items())

@@ -8,12 +8,14 @@ from benchmark_service.sandbox import ExecResult
 from terminal_bench_benchmark_service import benchmark_service as service_module
 from terminal_bench_benchmark_service.benchmark_service import TerminalBenchBenchmark
 from terminal_bench_benchmark_service.codex_mcp import (
+    codex_http_url,
     codex_mcp_servers_toml,
     configure_codex_mcp_servers,
     merge_codex_config,
 )
 
 PLAYWRIGHT = [{"name": "playwright", "transport": "sse", "url": "http://playwright-mcp:3080/sse"}]
+PLAYWRIGHT_HTTP_URL = "http://playwright-mcp:3080/mcp"
 EXISTING_CONFIG = "[feedback]\nenabled = true\n"
 
 
@@ -44,8 +46,22 @@ class ConfigSandbox:
         return writes[0].split(" printf %s ", 1)[1].rsplit(" > ", 1)[0].strip("'")
 
 
-def test_toml_for_sse_server_matches_harbor_shape() -> None:
-    assert codex_mcp_servers_toml(PLAYWRIGHT) == '[mcp_servers.playwright]\nurl = "http://playwright-mcp:3080/sse"\n'
+def test_sse_server_points_codex_at_streamable_http_endpoint() -> None:
+    assert codex_mcp_servers_toml(PLAYWRIGHT) == f'[mcp_servers.playwright]\nurl = "{PLAYWRIGHT_HTTP_URL}"\n'
+
+
+@pytest.mark.parametrize(
+    ("server", "expected"),
+    [
+        ({"transport": "sse", "url": "http://h:1/sse"}, "http://h:1/mcp"),
+        ({"transport": "sse", "url": "http://h:1/sse?token=a"}, "http://h:1/mcp?token=a"),
+        ({"transport": "sse", "url": "http://h:1/events"}, "http://h:1/events"),
+        ({"transport": "streamable_http", "url": "http://h:1/sse"}, "http://h:1/sse"),
+        ({"transport": "http", "url": "http://h:1/mcp"}, "http://h:1/mcp"),
+    ],
+)
+def test_codex_http_url(server: dict[str, Any], expected: str) -> None:
+    assert codex_http_url(server) == expected
 
 
 def test_toml_for_stdio_server_with_env() -> None:
@@ -56,7 +72,7 @@ def test_toml_for_stdio_server_with_env() -> None:
 
 
 def test_toml_keeps_non_ascii_and_quoted_keys_parseable() -> None:
-    servers = [{"name": "docs 🚀", "transport": "sse", "url": "http://mcp:1/sse?q=\"ünï\\🚀\""}]
+    servers = [{"name": "docs 🚀", "transport": "streamable_http", "url": "http://mcp:1/mcp?q=\"ünï\\🚀\""}]
     assert tomllib.loads(codex_mcp_servers_toml(servers)) == {"mcp_servers": {"docs 🚀": {"url": servers[0]["url"]}}}
 
 
@@ -65,7 +81,7 @@ def test_merge_keeps_existing_config() -> None:
     assert merged.startswith(EXISTING_CONFIG)
     assert tomllib.loads(merged) == {
         "feedback": {"enabled": True},
-        "mcp_servers": {"playwright": {"url": "http://playwright-mcp:3080/sse"}},
+        "mcp_servers": {"playwright": {"url": PLAYWRIGHT_HTTP_URL}},
     }
 
 
@@ -131,7 +147,8 @@ def test_setup_task_registers_declared_servers_for_codex(
     assert len(writes) == 1
     assert "docker compose" in writes[0] and "main" in writes[0]
     assert "[mcp_servers.playwright]" in writes[0]
-    assert "http://playwright-mcp:3080/sse" in writes[0]
+    assert PLAYWRIGHT_HTTP_URL in writes[0]
+    assert "playwright-mcp:3080/sse" not in writes[0]
     assert "[feedback]" in writes[0]
 
 
