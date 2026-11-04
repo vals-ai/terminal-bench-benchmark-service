@@ -524,3 +524,101 @@ def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
         asyncio.run(stop_compose_runtime("task/one", sandbox))  # type: ignore[arg-type]
 
     assert sandbox.commands[-1] == "pkill -TERM dockerd || true"
+
+
+class DockerHubSandbox(StagingSandbox):
+    """Nested dockerd that records Docker Hub login state at each command."""
+
+    def __init__(self, login_exit_code: int = 0, pull_exit_code: int = 0) -> None:
+        super().__init__()
+        self.login_exit_code = login_exit_code
+        self.pull_exit_code = pull_exit_code
+
+    async def exec(self, command: str, **_kwargs: object) -> ExecResult:
+        self.commands.append(command)
+        if command.startswith("docker login "):
+            return ExecResult(exit_code=self.login_exit_code, output="" if self.login_exit_code == 0 else "denied")
+        if command.startswith("docker pull "):
+            return ExecResult(exit_code=self.pull_exit_code, output="manifest unknown")
+        if command.startswith("docker image inspect "):
+            return ExecResult(exit_code=0, output="null")
+        if command.endswith("config --services"):
+            return ExecResult(exit_code=0, output="main\n")
+        return ExecResult(exit_code=0, output="")
+
+
+def _start(sandbox: DockerHubSandbox, tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import start_compose_runtime
+
+    asyncio.run(
+        start_compose_runtime(
+            tmp_path,
+            "task",
+            "example/main@sha256:" + "a" * 64,
+            {"redis": "redis:7-alpine@sha256:" + "b" * 64},
+            {"cpus": 1, "memory_mb": 1024},
+            sandbox,  # type: ignore[arg-type]
+        )
+    )
+
+
+def _index(commands: list[str], predicate: str) -> int:
+    return next(i for i, command in enumerate(commands) if predicate in command)
+
+
+def test_image_pulls_are_authenticated_and_logged_out_before_the_agent_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DOCKERHUB_USERNAME", "valsai")
+    monkeypatch.setenv("DOCKERHUB_TOKEN", "dckr_oat_secret")
+    sandbox = DockerHubSandbox()
+    _start(sandbox, tmp_path)
+
+    commands = sandbox.commands
+    assert not any("dckr_oat_secret" in command for command in commands)
+    assert sandbox.uploads["/tmp/dockerhub-token"] == b"dckr_oat_secret"
+    login = _index(commands, "docker login --username valsai --password-stdin < /tmp/dockerhub-token")
+    assert "rm -f /tmp/dockerhub-token" in commands[login]
+    logout = commands.index("docker logout")
+    assert (
+        login
+        < _index(commands, "docker pull ")
+        < _index(commands, "runtime.json pull")
+        < _index(commands, "runtime.json up -d")
+        < logout
+    )
+    assert logout < _index(commands, "exec -T -u 0 main")
+
+
+def test_image_pulls_stay_anonymous_without_docker_hub_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DOCKERHUB_USERNAME", raising=False)
+    monkeypatch.delenv("DOCKERHUB_TOKEN", raising=False)
+    sandbox = DockerHubSandbox()
+    _start(sandbox, tmp_path)
+
+    assert not any(command.startswith(("docker login", "docker logout")) for command in sandbox.commands)
+    assert "/tmp/dockerhub-token" not in sandbox.uploads
+
+
+def test_failed_docker_hub_login_falls_back_to_anonymous_pulls(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DOCKERHUB_USERNAME", "valsai")
+    monkeypatch.setenv("DOCKERHUB_TOKEN", "expired")
+    sandbox = DockerHubSandbox(login_exit_code=1)
+    _start(sandbox, tmp_path)
+
+    assert any(command.startswith("docker pull ") for command in sandbox.commands)
+    assert "docker logout" not in sandbox.commands
+
+
+def test_docker_hub_logout_runs_when_an_authenticated_pull_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DOCKERHUB_USERNAME", "valsai")
+    monkeypatch.setenv("DOCKERHUB_TOKEN", "dckr_oat_secret")
+    sandbox = DockerHubSandbox(pull_exit_code=1)
+    with pytest.raises(RuntimeError, match="manifest unknown"):
+        _start(sandbox, tmp_path)
+
+    assert sandbox.commands[-1] == "docker logout"

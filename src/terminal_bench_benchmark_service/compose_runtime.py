@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import os
 import re
 import shlex
 import time
@@ -21,6 +23,7 @@ _COMPOSE_FILE = f"{_COMPOSE_ROOT}/task.json"
 _RUNTIME_FILE = f"{_COMPOSE_ROOT}/runtime.json"
 _BUNDLE_DIR = "/bundle"
 _NPM_MIN_RELEASE_AGE = timedelta(days=7)
+_DOCKERHUB_TOKEN_FILE = "/tmp/dockerhub-token"
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
 _DOCKERD_LOG = "/var/log/dockerd.log"
 _DOCKERD_RESTARTS = 1
@@ -77,6 +80,8 @@ INSTALL_TERMINAL_TOOLS = (
 # unless the task image chose its own value.
 THREAD_LIMIT_VARIABLE = "OMP_NUM_THREADS"
 
+logger = logging.getLogger(__name__)
+
 
 def compose_runtime_source(task_id: str, task_image: str, sidecar_images: Mapping[str, str]) -> ComposeSource:
     """Build the source describing a Terminal-Bench compose runtime.
@@ -132,16 +137,22 @@ async def start_compose_runtime(
     await _start_dockerd(sandbox)
     await _wait_for_docker(sandbox)
     timeout = _build_timeout(resources)
-    main_image = await _pull_task_image(sandbox, task_image, timeout)
-    await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
-
     compose = compose_runtime_source(task_id, task_image, sidecar_images).compose_command
-    services = await _run(sandbox, f"{compose} config --services", timeout=60)
-    if "main" not in services.output.splitlines():
-        raise RuntimeError("Terminal-Bench compose runtime requires a `main` service")
+    logged_in = await _docker_hub_login(sandbox)
+    try:
+        main_image = await _pull_task_image(sandbox, task_image, timeout)
+        await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
 
-    await _run(sandbox, f"{compose} pull", timeout=timeout)
-    await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
+        services = await _run(sandbox, f"{compose} config --services", timeout=60)
+        if "main" not in services.output.splitlines():
+            raise RuntimeError("Terminal-Bench compose runtime requires a `main` service")
+
+        await _run(sandbox, f"{compose} pull", timeout=timeout)
+        # Sidecars use `pull_policy: always`, so `up` pulls again and must stay authenticated.
+        await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
+    finally:
+        if logged_in:
+            await sandbox.exec("docker logout", timeout=30)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(INSTALL_TERMINAL_TOOLS)}", timeout=timeout)
@@ -181,6 +192,30 @@ async def stop_compose_main(task_id: str, sandbox: Sandbox) -> None:
     )
     if result.exit_code != 0:
         raise RuntimeError(f"Could not stop Terminal-Bench main service: {result.output[-1000:]}")
+
+
+async def _docker_hub_login(sandbox: Sandbox) -> bool:
+    """Authenticate the nested daemon so image pulls avoid Docker Hub's per-IP anonymous limit.
+
+    The token is read from a file the login command removes, keeping it off the
+    command line; :func:`start_compose_runtime` logs out once the images are up.
+    Without credentials, or when login fails, pulls stay anonymous.
+    """
+    username = os.environ.get("DOCKERHUB_USERNAME")
+    token = os.environ.get("DOCKERHUB_TOKEN")
+    if not username or not token:
+        return False
+    await sandbox.upload_file(_DOCKERHUB_TOKEN_FILE, token.encode())
+    token_file = shlex.quote(_DOCKERHUB_TOKEN_FILE)
+    login = await sandbox.exec(
+        f"docker login --username {shlex.quote(username)} --password-stdin < {token_file}; "
+        f"status=$?; rm -f {token_file}; exit $status",
+        timeout=60,
+    )
+    if login.exit_code != 0:
+        logger.warning("Docker Hub login failed; pulling anonymously: %s", login.output[-500:])
+        return False
+    return True
 
 
 async def _pull_task_image(sandbox: Sandbox, task_image: str, timeout: float) -> str:

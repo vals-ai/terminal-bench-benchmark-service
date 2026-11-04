@@ -54,6 +54,11 @@ is preserved.
 Compose task setup permits Docker Hub's `index.docker.io` registry endpoint for the
 `crane config` and `crane export` fallback when a pinned image has unmappable owners.
 
+When `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are set, the nested daemon logs in
+to Docker Hub before pulling task and sidecar images and logs out once the
+services are up, so pulls avoid the anonymous per-IP rate limit. Without them,
+pulls stay anonymous.
+
 Each packed artifact is written to S3 before the verifier is created, and the
 state naming those objects is streamed as `eval_resume_state`. A grading
 fault is then retried eval-only: `/ws/evaluate-response` recreates the
