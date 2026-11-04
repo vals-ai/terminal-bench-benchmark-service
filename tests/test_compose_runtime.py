@@ -529,10 +529,11 @@ def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
 class DockerHubSandbox(StagingSandbox):
     """Nested dockerd that records Docker Hub login state at each command."""
 
-    def __init__(self, login_exit_code: int = 0, pull_exit_code: int = 0) -> None:
+    def __init__(self, login_exit_code: int = 0, pull_exit_code: int = 0, logout_exit_code: int = 0) -> None:
         super().__init__()
         self.login_exit_code = login_exit_code
         self.pull_exit_code = pull_exit_code
+        self.logout_exit_code = logout_exit_code
 
     async def exec(self, command: str, **_kwargs: object) -> ExecResult:
         self.commands.append(command)
@@ -540,6 +541,8 @@ class DockerHubSandbox(StagingSandbox):
             return ExecResult(exit_code=self.login_exit_code, output="" if self.login_exit_code == 0 else "denied")
         if command.startswith("docker pull "):
             return ExecResult(exit_code=self.pull_exit_code, output="manifest unknown")
+        if command == "docker logout":
+            return ExecResult(exit_code=self.logout_exit_code, output="")
         if command.startswith("docker image inspect "):
             return ExecResult(exit_code=0, output="null")
         if command.endswith("config --services"):
@@ -577,8 +580,8 @@ def test_image_pulls_are_authenticated_and_logged_out_before_the_agent_runs(
     commands = sandbox.commands
     assert not any("dckr_oat_secret" in command for command in commands)
     assert sandbox.uploads["/tmp/dockerhub-token"] == b"dckr_oat_secret"
-    login = _index(commands, "docker login --username valsai --password-stdin < /tmp/dockerhub-token")
-    assert "rm -f /tmp/dockerhub-token" in commands[login]
+    login = commands.index("docker login --username valsai --password-stdin < /tmp/dockerhub-token")
+    assert commands[login + 1] == "rm -f /tmp/dockerhub-token"
     logout = commands.index("docker logout")
     assert (
         login
@@ -622,3 +625,15 @@ def test_docker_hub_logout_runs_when_an_authenticated_pull_fails(
         _start(sandbox, tmp_path)
 
     assert sandbox.commands[-1] == "docker logout"
+
+
+def test_failed_docker_hub_logout_fails_setup_before_the_agent_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DOCKERHUB_USERNAME", "valsai")
+    monkeypatch.setenv("DOCKERHUB_TOKEN", "dckr_oat_secret")
+    sandbox = DockerHubSandbox(logout_exit_code=1)
+    with pytest.raises(RuntimeError, match="docker logout"):
+        _start(sandbox, tmp_path)
+
+    assert not any("exec -T -u 0 main" in command for command in sandbox.commands)

@@ -150,9 +150,12 @@ async def start_compose_runtime(
         await _run(sandbox, f"{compose} pull", timeout=timeout)
         # Sidecars use `pull_policy: always`, so `up` pulls again and must stay authenticated.
         await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
-    finally:
+    except BaseException:
         if logged_in:
             await sandbox.exec("docker logout", timeout=30)
+        raise
+    if logged_in:
+        await _run(sandbox, "docker logout", timeout=30)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(INSTALL_TERMINAL_TOOLS)}", timeout=timeout)
@@ -197,21 +200,23 @@ async def stop_compose_main(task_id: str, sandbox: Sandbox) -> None:
 async def _docker_hub_login(sandbox: Sandbox) -> bool:
     """Authenticate the nested daemon so image pulls avoid Docker Hub's per-IP anonymous limit.
 
-    The token is read from a file the login command removes, keeping it off the
-    command line; :func:`start_compose_runtime` logs out once the images are up.
+    The token is read from a file removed after login, keeping it off the
+    command line; :func:`start_compose_runtime` logs out once the images are up
+    and fails setup if logout fails, so the agent never runs with credentials.
     Without credentials, or when login fails, pulls stay anonymous.
     """
     username = os.environ.get("DOCKERHUB_USERNAME")
     token = os.environ.get("DOCKERHUB_TOKEN")
     if not username or not token:
         return False
-    await sandbox.upload_file(_DOCKERHUB_TOKEN_FILE, token.encode())
     token_file = shlex.quote(_DOCKERHUB_TOKEN_FILE)
-    login = await sandbox.exec(
-        f"docker login --username {shlex.quote(username)} --password-stdin < {token_file}; "
-        f"status=$?; rm -f {token_file}; exit $status",
-        timeout=60,
-    )
+    await sandbox.upload_file(_DOCKERHUB_TOKEN_FILE, token.encode())
+    try:
+        login = await sandbox.exec(
+            f"docker login --username {shlex.quote(username)} --password-stdin < {token_file}", timeout=60
+        )
+    finally:
+        await sandbox.exec(f"rm -f {token_file}", timeout=30)
     if login.exit_code != 0:
         logger.warning("Docker Hub login failed; pulling anonymously: %s", login.output[-500:])
         return False
