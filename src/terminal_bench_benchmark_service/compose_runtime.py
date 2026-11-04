@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import os
 import re
 import shlex
 import time
@@ -25,6 +24,8 @@ _RUNTIME_FILE = f"{_COMPOSE_ROOT}/runtime.json"
 _BUNDLE_DIR = "/bundle"
 _NPM_MIN_RELEASE_AGE = timedelta(days=7)
 _ECR_PASSWORD_FILE = "/tmp/ecr-password"
+# The region egress.py allows ECR hosts in.
+_ECR_REGION = "us-east-1"
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
 _DOCKERD_LOG = "/var/log/dockerd.log"
 _DOCKERD_RESTARTS = 1
@@ -200,7 +201,7 @@ def _ecr_credentials() -> tuple[str, str]:
     Manifest images name a repository in that registry. A session per call, since creating clients from the
     shared default session is not thread-safe.
     """
-    ecr = cast(Any, Session(region_name=os.environ.get("AWS_REGION")).client("ecr"))  # pyright: ignore[reportUnknownMemberType]
+    ecr = cast(Any, Session(region_name=_ECR_REGION).client("ecr"))  # pyright: ignore[reportUnknownMemberType]
     authorization = ecr.get_authorization_token()["authorizationData"][0]
     password = base64.b64decode(authorization["authorizationToken"]).decode().removeprefix("AWS:")
     return cast(str, authorization["proxyEndpoint"]).removeprefix("https://"), password

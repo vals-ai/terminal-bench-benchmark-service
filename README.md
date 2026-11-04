@@ -45,7 +45,7 @@ python -m scripts.import_tbench4_release \
 ```
 
 The manifest points task and sidecar images at digest-identical copies in the
-`benchmark-services/terminal-bench` ECR repository of the account the service runs in, made by
+`benchmark-services/terminal-bench` ECR repository, in `us-east-1` of the account the service runs in, made by
 `scripts/mirror_tb4_images.py`, so the nested daemon never pulls from Docker Hub. The sandbox provider pulls the verifier images and the
 `docker:28.3.3-dind` outer image itself, so those stay on Docker Hub.
 

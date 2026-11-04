@@ -30,7 +30,12 @@ def main() -> int:
     }
     images |= {image for services in PINNED_COMPOSE_IMAGES.values() for image in services.values()}
 
-    token = subprocess.run(["aws", "ecr", "get-authorization-token"], stdout=subprocess.PIPE, text=True, check=True)
+    token = subprocess.run(
+        ["aws", "ecr", "get-authorization-token", "--region", "us-east-1"],
+        stdout=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
     authorization = json.loads(token.stdout)["authorizationData"][0]
     registry = authorization["proxyEndpoint"].removeprefix("https://")
     password = base64.b64decode(authorization["authorizationToken"]).decode().removeprefix("AWS:")

@@ -600,6 +600,5 @@ def test_ecr_credentials_are_this_accounts_registry_and_token(monkeypatch: pytes
             assert service == "ecr"
             return Ecr()
 
-    monkeypatch.setenv("AWS_REGION", "us-east-1")
     monkeypatch.setattr(compose_runtime, "Session", Session)
     assert ecr_credentials() == ("123456789012.dkr.ecr.us-east-1.amazonaws.com", "secret")
