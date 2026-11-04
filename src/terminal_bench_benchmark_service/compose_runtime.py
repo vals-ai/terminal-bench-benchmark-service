@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
+import os
 import re
 import shlex
 import time
@@ -12,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
+from boto3.session import Session
 from benchmark_service import ComposeSandbox, ComposeSource, ImageSource, Sandbox
 from benchmark_service.sandbox.types import ExecResult
 
@@ -21,6 +24,7 @@ _COMPOSE_FILE = f"{_COMPOSE_ROOT}/task.json"
 _RUNTIME_FILE = f"{_COMPOSE_ROOT}/runtime.json"
 _BUNDLE_DIR = "/bundle"
 _NPM_MIN_RELEASE_AGE = timedelta(days=7)
+_ECR_PASSWORD_FILE = "/tmp/ecr-password"
 _DIND_IMAGE = "docker:28.3.3-dind@sha256:a56b3bdde89315ed2cc0e4906e582b5033d93bf20d9cb9510c2cdd4e7f7690b1"
 _DOCKERD_LOG = "/var/log/dockerd.log"
 _DOCKERD_RESTARTS = 1
@@ -132,6 +136,10 @@ async def start_compose_runtime(
     await _start_dockerd(sandbox)
     await _wait_for_docker(sandbox)
     timeout = _build_timeout(resources)
+    registry, password = await asyncio.to_thread(_ecr_credentials)
+    task_image = f"{registry}/{task_image}"
+    sidecar_images = {service: f"{registry}/{image}" for service, image in sidecar_images.items()}
+    await _docker_login(sandbox, registry, password)
     main_image = await _pull_task_image(sandbox, task_image, timeout)
     await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
 
@@ -142,6 +150,9 @@ async def start_compose_runtime(
 
     await _run(sandbox, f"{compose} pull", timeout=timeout)
     await _run(sandbox, f"{compose} up -d --no-build", timeout=timeout)
+    # Log out only once `up` has pulled the `pull_policy: always` sidecars. The agent must never run with
+    # registry credentials, so a failed logout fails setup.
+    await _run(sandbox, f"docker logout {registry}", timeout=30)
     prepare_main = "mkdir -p /bundle /logs/agent /logs/verifier /logs/terminus2 && chmod -R a+rwX /bundle /logs"
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(prepare_main)}", timeout=60)
     await _run(sandbox, f"{compose} exec -T -u 0 main sh -lc {shlex.quote(INSTALL_TERMINAL_TOOLS)}", timeout=timeout)
@@ -181,6 +192,29 @@ async def stop_compose_main(task_id: str, sandbox: Sandbox) -> None:
     )
     if result.exit_code != 0:
         raise RuntimeError(f"Could not stop Terminal-Bench main service: {result.output[-1000:]}")
+
+
+def _ecr_credentials() -> tuple[str, str]:
+    """This account's ECR registry and a short-lived password for it, from the service's IAM role.
+
+    Manifest images name a repository in that registry. A session per call, since creating clients from the
+    shared default session is not thread-safe.
+    """
+    ecr = cast(Any, Session(region_name=os.environ.get("AWS_REGION")).client("ecr"))  # pyright: ignore[reportUnknownMemberType]
+    authorization = ecr.get_authorization_token()["authorizationData"][0]
+    password = base64.b64decode(authorization["authorizationToken"]).decode().removeprefix("AWS:")
+    return cast(str, authorization["proxyEndpoint"]).removeprefix("https://"), password
+
+
+async def _docker_login(sandbox: Sandbox, registry: str, password: str) -> None:
+    """``docker login`` with the password passed through a file removed straight after, never the command line."""
+    try:
+        await sandbox.upload_file(_ECR_PASSWORD_FILE, password.encode())
+        await _run(
+            sandbox, f"docker login --username AWS --password-stdin {registry} < {_ECR_PASSWORD_FILE}", timeout=60
+        )
+    finally:
+        await sandbox.exec(f"rm -f {_ECR_PASSWORD_FILE}", timeout=30)
 
 
 async def _pull_task_image(sandbox: Sandbox, task_image: str, timeout: float) -> str:

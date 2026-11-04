@@ -1,6 +1,7 @@
 """Local Docker Compose contract tests for TBench4 runtime overlays."""
 
 import asyncio
+import base64
 import json
 import shlex
 import subprocess
@@ -12,6 +13,8 @@ import pytest
 from benchmark_service import ComposeSource, ImageSource
 from benchmark_service.sandbox.types import ExecResult
 
+from terminal_bench_benchmark_service import compose_runtime
+from terminal_bench_benchmark_service.compose_runtime import _ecr_credentials as ecr_credentials  # pyright: ignore[reportPrivateUsage]
 from terminal_bench_benchmark_service.compose_runtime import (
     compose_runtime_source,
     runtime_compose_definition,
@@ -309,7 +312,7 @@ class UnmappableOwnerSandbox(StagingSandbox):
         return ExecResult(exit_code=0, output="")
 
 
-def test_unmappable_image_owners_are_rewritten_and_imported_locally(tmp_path: Path) -> None:
+def test_unmappable_image_owners_are_rewritten_and_imported_locally(tmp_path: Path, ecr_registry: str) -> None:
     from terminal_bench_benchmark_service.compose_runtime import start_compose_runtime
 
     sandbox = UnmappableOwnerSandbox()
@@ -325,7 +328,7 @@ def test_unmappable_image_owners_are_rewritten_and_imported_locally(tmp_path: Pa
     )
 
     (import_command,) = [command for command in sandbox.commands if "docker import" in command]
-    assert "crane export example/main@sha256:" in import_command
+    assert f"crane export {ecr_registry}/example/main@sha256:" in import_command
     assert "-c 'ENV PATH=\"/x\"' -c 'WORKDIR \"/app\"'" in import_command
     runtime = json.loads(sandbox.uploads["/terminal-bench/runtime.json"])
     assert runtime["services"]["main"]["image"] == "terminal-bench/main:reowned"
@@ -524,3 +527,79 @@ def test_cleanup_stops_dockerd_when_compose_down_fails() -> None:
         asyncio.run(stop_compose_runtime("task/one", sandbox))  # type: ignore[arg-type]
 
     assert sandbox.commands[-1] == "pkill -TERM dockerd || true"
+
+
+TASK_IMAGE = "benchmark-services/terminal-bench:task-environment@sha256:" + "a" * 64
+REDIS_IMAGE = "benchmark-services/terminal-bench:redis-7-alpine@sha256:" + "b" * 64
+
+
+class EcrSandbox(StagingSandbox):
+    def __init__(self, failing: str = "") -> None:
+        super().__init__()
+        self.failing = failing
+
+    async def exec(self, command: str, **kwargs: object) -> ExecResult:
+        if self.failing and command.startswith(self.failing):
+            self.commands.append(command)
+            return ExecResult(exit_code=1, output="failed")
+        if command.endswith("config --services"):
+            self.commands.append(command)
+            return ExecResult(exit_code=0, output="main\n")
+        return await super().exec(command, **kwargs)
+
+
+def _start_ecr(sandbox: EcrSandbox, tmp_path: Path) -> None:
+    from terminal_bench_benchmark_service.compose_runtime import start_compose_runtime
+
+    resources = {"cpus": 1, "memory_mb": 1024}
+    asyncio.run(start_compose_runtime(tmp_path, "task", TASK_IMAGE, {"redis": REDIS_IMAGE}, resources, sandbox))  # type: ignore[arg-type]
+
+
+def test_images_come_from_the_accounts_ecr_and_the_agent_runs_logged_out(tmp_path: Path, ecr_registry: str) -> None:
+    sandbox = EcrSandbox()
+    _start_ecr(sandbox, tmp_path)
+
+    assert sandbox.uploads["/tmp/ecr-password"] == b"s3cret"
+    assert not any("s3cret" in command for command in sandbox.commands)
+    steps = [
+        f"docker login --username AWS --password-stdin {ecr_registry} < /tmp/ecr-password",
+        "rm -f /tmp/ecr-password",
+        f"docker pull {ecr_registry}/{TASK_IMAGE}",
+        " up -d ",
+        f"docker logout {ecr_registry}",
+        "exec -T -u 0 main",
+    ]
+    positions = [next(i for i, command in enumerate(sandbox.commands) if step in command) for step in steps]
+    assert positions == sorted(positions)
+    overlay = json.loads(sandbox.uploads["/terminal-bench/runtime.json"])
+    assert overlay["services"]["redis"]["image"] == f"{ecr_registry}/{REDIS_IMAGE}"
+
+
+@pytest.mark.parametrize("failing", ["docker login", "docker pull", "docker logout"])
+def test_registry_failures_fail_setup_before_the_agent_runs(tmp_path: Path, failing: str) -> None:
+    sandbox = EcrSandbox(failing)
+    with pytest.raises(RuntimeError, match=failing):
+        _start_ecr(sandbox, tmp_path)
+
+    assert "rm -f /tmp/ecr-password" in sandbox.commands
+    assert not any("exec -T -u 0 main" in command for command in sandbox.commands)
+
+
+def test_ecr_credentials_are_this_accounts_registry_and_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Ecr:
+        def get_authorization_token(self) -> dict[str, object]:
+            token = base64.b64encode(b"AWS:secret").decode()
+            endpoint = "https://123456789012.dkr.ecr.us-east-1.amazonaws.com"
+            return {"authorizationData": [{"authorizationToken": token, "proxyEndpoint": endpoint}]}
+
+    class Session:
+        def __init__(self, region_name: str | None) -> None:
+            assert region_name == "us-east-1"
+
+        def client(self, service: str) -> Ecr:
+            assert service == "ecr"
+            return Ecr()
+
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    monkeypatch.setattr(compose_runtime, "Session", Session)
+    assert ecr_credentials() == ("123456789012.dkr.ecr.us-east-1.amazonaws.com", "secret")
