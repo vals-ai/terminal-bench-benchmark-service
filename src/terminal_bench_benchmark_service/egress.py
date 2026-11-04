@@ -41,10 +41,9 @@ GITHUB_HOSTS = [
     "codeload.github.com",
 ]
 COMPOSE_HOSTS = [
-    "auth.docker.io",
-    "index.docker.io",
-    "registry-1.docker.io",
-    "production.cloudfront.docker.com",
+    # Task and sidecar images come from ECR: its registries, and the bucket it redirects layer downloads to.
+    "*.dkr.ecr.us-east-1.amazonaws.com",
+    "prod-us-east-1-starport-layer-bucket.s3.us-east-1.amazonaws.com",
     "dl-cdn.alpinelinux.org",
 ]
 

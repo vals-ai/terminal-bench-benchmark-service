@@ -34,14 +34,20 @@ for callers that need the published 2.x datasets.
 
 `terminal-bench-4.0` is pinned to the upstream `v4.0.0` source tag and Harbor's
 published prebuilt-image release. The release asset is kept as
-`datasets/images/terminal-bench-4-prebuilt.json`; the checked-in service
-manifest is generated from it with:
+`datasets/images/terminal-bench-4-prebuilt.json`; its images are mirrored and the
+checked-in service manifest is generated from it with:
 
 ```bash
-python scripts/import_tbench4_release.py \
+python -m scripts.mirror_tb4_images
+python -m scripts.import_tbench4_release \
   --source-manifest datasets/images/terminal-bench-4-prebuilt.json \
   --output datasets/images/terminal-bench-4.json
 ```
+
+The manifest points task and sidecar images at digest-identical copies in the
+`benchmark-services/terminal-bench` ECR repository, in `us-east-1` of the account the service runs in, made by
+`scripts/mirror_tb4_images.py`, so the nested daemon never pulls from Docker Hub. The sandbox provider pulls the verifier images and the
+`docker:28.3.3-dind` outer image itself, so those stay on Docker Hub.
 
 The service supports all 66 v4 CPU/GPU tasks. Plain tasks use their digest-pinned
 environment and verifier images. Compose tasks use the digest-pinned
@@ -51,8 +57,10 @@ phase, and artifact `exclude` patterns are applied while packaging the original
 source path for the isolated verifier. The task Dockerfile's working directory
 is preserved.
 
-Compose task setup permits Docker Hub's `index.docker.io` registry endpoint for the
-`crane config` and `crane export` fallback when a pinned image has unmappable owners.
+Before pulling, the nested daemon logs in to that registry with a short-lived token from the
+service's AWS credentials. They need `ecr:GetAuthorizationToken`, plus `ecr:BatchGetImage` and
+`ecr:GetDownloadUrlForLayer` on the repository, so local TB4 runs need such credentials too.
+It logs out once the services are up, before the agent runs.
 
 Each packed artifact is written to S3 before the verifier is created, and the
 state naming those objects is streamed as `eval_resume_state`. A grading

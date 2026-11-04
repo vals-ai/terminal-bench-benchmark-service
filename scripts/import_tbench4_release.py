@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, cast
 
-_PINNED_COMPOSE_IMAGES: dict[str, dict[str, str]] = {
+PINNED_COMPOSE_IMAGES: dict[str, dict[str, str]] = {
     # These services use upstream images rather than Harbor-built release
     # sidecars. Keep their exact task-provided versions, but pin the resolved
     # multi-platform image so Compose cannot silently move them between runs.
@@ -28,6 +28,11 @@ _PINNED_COMPOSE_IMAGES: dict[str, dict[str, str]] = {
         "kafka": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
     },
 }
+
+# Task and sidecar images are pulled from digest-identical copies in this ECR repository, in the
+# account the service runs in (scripts/mirror_tb4_images.py makes them). Verifier images stay on
+# Docker Hub: the sandbox provider pulls them, and it has no ECR credentials.
+ECR_REPOSITORY = "benchmark-services/terminal-bench"
 
 _DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
 _WORKDIR_RE = re.compile(r"^WORKDIR\s+(\S+)\s*$", re.IGNORECASE)
@@ -44,6 +49,18 @@ def _workdir(task_dir: Path) -> str:
     if not workdirs:
         raise ValueError(f"{dockerfile} has no WORKDIR")
     return workdirs[-1]
+
+
+def ecr_image(image: str) -> str:
+    """The ECR copy of a digest-pinned Docker Hub image, at the same digest, without the registry host.
+
+    Release images keep their tag; the others (redis, kafka) prefix it with their repository.
+    """
+    name, digest = image.split("@")
+    repository, tag = name.rsplit(":", 1)
+    if repository != "harborframework/terminal-bench":
+        tag = f"{repository.replace('/', '-')}-{tag}"
+    return f"{ECR_REPOSITORY}:{tag}@{digest}"
 
 
 def _image(images: list[dict[str, Any]], kind: str, task_id: str) -> dict[str, Any]:
@@ -90,7 +107,7 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
         verifier = _image(images, "verifier", task_id)
         sidecars = [image for image in images if image.get("kind") == "sidecar"]
         entry: dict[str, Any] = {
-            "image": environment["pinned_ref"],
+            "image": ecr_image(environment["pinned_ref"]),
             "verifier_image": verifier["pinned_ref"],
             "workdir": _workdir(tasks_root / task_id),
         }
@@ -108,9 +125,12 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
                     service_entry = cast(dict[str, Any], service_value)
                     if not isinstance(service_entry.get("service"), str):
                         raise ValueError(f"{task_id} has an invalid sidecar service")
-                    sidecar_entries.append({"service": cast(str, service_entry["service"]), "image": pinned_ref})
+                    sidecar_entries.append(
+                        {"service": cast(str, service_entry["service"]), "image": ecr_image(pinned_ref)}
+                    )
         sidecar_entries.extend(
-            {"service": service, "image": image} for service, image in _PINNED_COMPOSE_IMAGES.get(task_id, {}).items()
+            {"service": service, "image": ecr_image(image)}
+            for service, image in PINNED_COMPOSE_IMAGES.get(task_id, {}).items()
         )
         if sidecar_entries:
             entry["sidecars"] = sorted(sidecar_entries, key=lambda value: value["service"])

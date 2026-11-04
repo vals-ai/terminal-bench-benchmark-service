@@ -8,7 +8,7 @@ import pytest
 from benchmark_service import ComposeSource
 from benchmark_service.v1_schemas import V1Task
 
-from scripts.import_tbench4_release import build_manifest
+from scripts.import_tbench4_release import ECR_REPOSITORY, build_manifest
 import terminal_bench_benchmark_service.benchmark_service as service_module
 from terminal_bench_benchmark_service.benchmark_service import (
     TerminalBenchBenchmark,
@@ -55,11 +55,11 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     default_task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr"))
     assert isinstance(default_task.source, ComposeSource)
     assert benchmark._task_image("atrx-vep-crispr", "terminal-bench-4.0").startswith(  # type: ignore[reportPrivateUsage]
-        "harborframework/terminal-bench:"
+        f"{ECR_REPOSITORY}:"
     )
     assert default_task.cwd == "/app"
-    assert "registry-1.docker.io" in default_task.egress.setup_task
-    assert "index.docker.io" in default_task.egress.setup_task
+    assert "*.dkr.ecr.us-east-1.amazonaws.com" in default_task.egress.setup_task
+    assert not any("docker.io" in host for host in default_task.egress.setup_task)
     assert "model-gateway.vals.ai" in default_task.egress.run
     assert {"*.cursor.sh", "*.cursorapi.com", "downloads.cursor.com"} <= set(default_task.egress.run)
     assert default_task.egress.evaluation == []
@@ -67,7 +67,7 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     task = asyncio.run(benchmark.retrieve_task("atrx-vep-crispr", dataset="terminal-bench-4.0"))
     assert isinstance(task.source, ComposeSource)
     task_image = benchmark._task_image("atrx-vep-crispr", "terminal-bench-4.0")  # type: ignore[reportPrivateUsage]
-    assert task_image.startswith("harborframework/terminal-bench:")
+    assert task_image.startswith(f"{ECR_REPOSITORY}:")
     assert "@sha256:" in task_image
     assert task.cwd == "/app"
     assert task.resources.gpu == 0
@@ -80,10 +80,15 @@ def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     assert manifest["release_tag"] == "v4.0.0"
     assert len(manifest["tasks"]) == 66
     assert manifest["unsupported_tasks"] == []
-    assert all("@sha256:" in entry["image"] for entry in manifest["tasks"].values())
-    assert all("@sha256:" in entry["verifier_image"] for entry in manifest["tasks"].values())
+    pulled = [
+        image
+        for entry in manifest["tasks"].values()
+        for image in (entry["image"], *(sidecar["image"] for sidecar in entry.get("sidecars", [])))
+    ]
+    assert all(image.startswith(f"{ECR_REPOSITORY}:") and "@sha256:" in image for image in pulled)
     assert all(
-        "@sha256:" in sidecar["image"] for entry in manifest["tasks"].values() for sidecar in entry.get("sidecars", [])
+        entry["verifier_image"].startswith("harborframework/terminal-bench:") and "@sha256:" in entry["verifier_image"]
+        for entry in manifest["tasks"].values()
     )
 
 
