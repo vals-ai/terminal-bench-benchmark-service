@@ -159,6 +159,8 @@ class DatasetSpec:
     # Grade in a separate sandbox rather than the agent's own,
     # for datasets whose tasks declare verifier.environment_mode = "separate".
     grades_in_separate_sandbox: bool = False
+    # A dataset whose resume state this one grades again with its own verifiers.
+    regrades_from: str | None = None
 
 
 class TerminalBenchBenchmark(ValsBenchmarkService):
@@ -182,6 +184,12 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             Path("datasets/terminal-bench-4/tasks"),
             image_manifest=Path("datasets/images/terminal-bench-4.json"),
             grades_in_separate_sandbox=True,
+        ),
+        "terminal-bench-4.1": DatasetSpec(
+            Path("datasets/terminal-bench-4.1/tasks"),
+            image_manifest=Path("datasets/images/terminal-bench-4.1.json"),
+            grades_in_separate_sandbox=True,
+            regrades_from="terminal-bench-4.0",
         ),
     }
 

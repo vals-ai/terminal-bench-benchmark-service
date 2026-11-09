@@ -1,0 +1,475 @@
+{
+  "dataset": "terminal-bench-4.1",
+  "dataset_package": "terminal-bench/terminal-bench",
+  "image_count": 157,
+  "image_repository": "harborframework/terminal-bench",
+  "release_tag": "v4.1.0",
+  "schema_version": 1,
+  "source_manifest_sha256": "49a2b9ce70dbbb957f3eaf74c737ccb8c6d68b3167d4ccfb5c58762a9726b289",
+  "source_repository": "https://github.com/harbor-framework/terminal-bench",
+  "source_sha": "4070d6cef56a7d20cb5dc98d5e10ada88a6b9440",
+  "task_count": 66,
+  "tasks": {
+    "atrx-vep-crispr": {
+      "image": "benchmark-services/terminal-bench:atrx-vep-crispr-environment-6a602331b8609cd7@sha256:14292ae6460bef9f75029977f7963864999011a7b405bb635317013f07c37ce2",
+      "verifier_image": "harborframework/terminal-bench:atrx-vep-crispr-verifier-ae624e0654867cc8@sha256:ac47d0daf3b31dc8584881848ca7777fc331829808cbf5906a3fcea1c49dc66a",
+      "workdir": "/app"
+    },
+    "batched-eval-parity": {
+      "image": "benchmark-services/terminal-bench:batched-eval-parity-environment-6bc3dbb355c127cd@sha256:f00c28880710dbdac7aad68507784627015429a5dcc68ff7c3ba991affad9e98",
+      "verifier_image": "harborframework/terminal-bench:batched-eval-parity-verifier-7edd2e50cb11f316@sha256:6b04e77601123a97056a3163716fa768811364ed70a1b18877eb30b8c6ec8bd4",
+      "workdir": "/app"
+    },
+    "biped-contact-dynamics": {
+      "image": "benchmark-services/terminal-bench:biped-contact-dynamics-environment-7b16d8ff653bea3c@sha256:c5c1646a4994b6fe7fd2d02978a4eac6c934f60071467258cfadc2abb7bd4e85",
+      "verifier_image": "harborframework/terminal-bench:biped-contact-dynamics-verifier-a45e3dfe20916296@sha256:6c135e272e9c8d0498a6481e8aed7e732d7413447faeff3a9000d116efef2ce2",
+      "workdir": "/app"
+    },
+    "bun-sourcemap-leak": {
+      "image": "benchmark-services/terminal-bench:bun-sourcemap-leak-environment-b58770c777735c84@sha256:63828c6572d3b81b4310783094d4ede8d413bf809d271acb5a64b2a4bca752e1",
+      "verifier_image": "harborframework/terminal-bench:bun-sourcemap-leak-verifier-7e0df08f4b10ed8e@sha256:634c789ac2fcf3c939e487609a84fb2828d90190346cef935add730a2a045895",
+      "workdir": "/app"
+    },
+    "cad-model": {
+      "image": "benchmark-services/terminal-bench:cad-model-environment-3a85c78dec077993@sha256:f1616e5e593fb1448d9d4a20df066bbdc0359e7fc9efe319443bb0ce4470ce50",
+      "verifier_image": "harborframework/terminal-bench:cad-model-verifier-56676c773ed59100@sha256:c5d045b28777eb673d5eb550348af21ef7363654334b5fa8f1e69f4f7d7f674c",
+      "workdir": "/app"
+    },
+    "cargo-flight-dispatch": {
+      "image": "benchmark-services/terminal-bench:cargo-flight-dispatch-environment-d56b93286a34dcf7@sha256:1f78d169d5540528f327d437df1c595e478ad658760f9540d0aad3e83a136532",
+      "verifier_image": "harborframework/terminal-bench:cargo-flight-dispatch-verifier-acb392c4f5a72ea3@sha256:a9fbfd45edb180294b8a2f17b9c2bb04017e150df6999f9a92a5152c4cc4cfdf",
+      "workdir": "/app"
+    },
+    "coq-block-bound": {
+      "image": "benchmark-services/terminal-bench:coq-block-bound-environment-664afc43a37b3ca5@sha256:fa25a3a53d8f0a6d94010604d1657cb52a5f4ee3ad72cb5312186faa5608c079",
+      "verifier_image": "harborframework/terminal-bench:coq-block-bound-verifier-b9f42650a0fcce54@sha256:1e5f9f7cba6a8b5f5956addaabd0b357e013649a590532a4257f43ff2349f252",
+      "workdir": "/app"
+    },
+    "ctr-optimization": {
+      "image": "benchmark-services/terminal-bench:ctr-optimization-environment-f01c924ae9895272@sha256:f0239084a3b8524775e328042ce7225fe2753acf08901d274a0be73fa6ab14d3",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:ctr-optimization-sidecar-api-eaba6b66623efa0c@sha256:1812b7b1d88ce5be70f0c764a90ee6297600a0ec11e2bcd302fd5c053ecb8fd2",
+          "service": "api"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:ctr-optimization-verifier-be0f2e8ead514099@sha256:2d67182f5a1ebf0632738175a4f847988f219937b554a0e3c47c854f24130b71",
+      "workdir": "/app"
+    },
+    "cumulative-layout-shift": {
+      "image": "benchmark-services/terminal-bench:cumulative-layout-shift-environment-323f6e6a8c510ae6@sha256:87f72cb79084bc1fcd41e887b43c73b5cd2d8a2129fae3fba623b5177aea162c",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:cumulative-layout-shift-sidecar-barber-shop-data-backend-40f7efc275ea9fa7@sha256:86e6f265f203a07bec66611ea19aad71c394e45f50a2640a67ea433832d84455",
+          "service": "barber-shop-data-backend"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:cumulative-layout-shift-verifier-233a2643a4c87dc8@sha256:42cc205ae28a1aef26f4d2bf67e896179316ad7bc8397bfd28e1d84073c78be4",
+      "workdir": "/app"
+    },
+    "data-anonymization": {
+      "image": "benchmark-services/terminal-bench:data-anonymization-environment-136da81c5a13e8f0@sha256:f4d058a0f9eb816bd0b49890761ac0d7b015d42fb8aa0888542e55cca3f7204e",
+      "verifier_image": "harborframework/terminal-bench:data-anonymization-verifier-cb742be16557ad1a@sha256:ad9be4098e0f1874b9e8e80f484d86966f82046a712d7182992d20bdef28ac59",
+      "workdir": "/app"
+    },
+    "distributed-dedup": {
+      "image": "benchmark-services/terminal-bench:distributed-dedup-environment-69fc9b5ed844b1ea@sha256:ca54e9096fef00f0c910932f05d9deb8c460fea42ceec818d5426c0e707698a4",
+      "verifier_image": "harborframework/terminal-bench:distributed-dedup-verifier-aa29d4b8dc289f42@sha256:bb645a78b55645e59f58383464f779ba467291e0b98a88927c3f9b0ba1628b68",
+      "workdir": "/app"
+    },
+    "embedding-drift-monitor": {
+      "image": "benchmark-services/terminal-bench:embedding-drift-monitor-environment-7339aae3b37d2558@sha256:bc3a95a7cd0961898852814c7bf348bb879c6e27964991a4d9c19dbd6458d4b1",
+      "verifier_image": "harborframework/terminal-bench:embedding-drift-monitor-verifier-950d39bc13022abd@sha256:7fad91f14fc0840e32616158ef1e7cdfcb60669f4e61d89e23012208cd112dea",
+      "workdir": "/app"
+    },
+    "fin-saccr-rwa": {
+      "image": "benchmark-services/terminal-bench:fin-saccr-rwa-environment-2b3426a115c87bef@sha256:99da0ead996b32412b132ecc59fee12d065d61c7d54738e1613cbd0b63f7e066",
+      "verifier_image": "harborframework/terminal-bench:fin-saccr-rwa-verifier-a716a60312503fbd@sha256:57ef298bc312a6b0e2f8aaf31b27fee1b73912c3c04f9eaaa856088ffd0b75ec",
+      "workdir": "/app"
+    },
+    "foodstuff-beta-activity": {
+      "image": "benchmark-services/terminal-bench:foodstuff-beta-activity-environment-1cf8aa2b3a6ed85d@sha256:8eea06306850fbd76eb1b0d4d273d068c2a8f1bf0ec3be9b9a66df177098b7f9",
+      "verifier_image": "harborframework/terminal-bench:foodstuff-beta-activity-verifier-4e3b10f95eacf260@sha256:4e2960b3431fc38b521f7f3565e50d979e1a541292e2477422586bc4f7f389f5",
+      "workdir": "/app"
+    },
+    "formal-crypto": {
+      "image": "benchmark-services/terminal-bench:formal-crypto-environment-edc8cb902b25e16f@sha256:173d4ada2cfe1fefb2b037d96cbceb42811c70748a3f76ed36834bcdfdedae36",
+      "verifier_image": "harborframework/terminal-bench:formal-crypto-verifier-253ee8cf37e6501b@sha256:4696ec497bfcaca34cddc6aaa40717a6688793092157f624a5c2dd5b16d3e09d",
+      "workdir": "/app"
+    },
+    "fp8-rmsnorm-gemm": {
+      "image": "benchmark-services/terminal-bench:fp8-rmsnorm-gemm-environment-e1b1f781357aac32@sha256:75cfbd6c6bdf749c6b56f70c7aadc150be68a68a8410f6626363fd92a2124b88",
+      "verifier_image": "harborframework/terminal-bench:fp8-rmsnorm-gemm-verifier-397dbed5dd676a21@sha256:326dfd68c7d830bbcbe159fdcdc20d763159a166bea4a28104985ebd682e0b75",
+      "workdir": "/app"
+    },
+    "freecad-impeller": {
+      "image": "benchmark-services/terminal-bench:freecad-impeller-environment-aa978c016147fd9b@sha256:c5d6eb0a4fedc066552f0ba3e6a941138c58cd9be89a15cab3111a8b1a89acc5",
+      "verifier_image": "harborframework/terminal-bench:freecad-impeller-verifier-5ad8dbf1bd3429d6@sha256:703f22afc4d188d421a5fcb533754f54e1cee489c7c39ca1e4648bc814f0271f",
+      "workdir": "/app"
+    },
+    "freecad-platform-drawing": {
+      "image": "benchmark-services/terminal-bench:freecad-platform-drawing-environment-38b63ef58ad9d8e0@sha256:d4a635532c8b6a5056a78241b4600572aded111e1f0841f44c3949ad632d0917",
+      "verifier_image": "harborframework/terminal-bench:freecad-platform-drawing-verifier-dadb15f21f45db75@sha256:85299124ed6f65f185bf3b39bfebe94bf0be935f92eef8223073e3bc0739d97c",
+      "workdir": "/app"
+    },
+    "freecad-spring-clip": {
+      "image": "benchmark-services/terminal-bench:freecad-spring-clip-environment-aa978c016147fd9b@sha256:a67106437e780babe174ee13dba7b0868fd8b9841beb6de87fa3b876375262dd",
+      "verifier_image": "harborframework/terminal-bench:freecad-spring-clip-verifier-efc2d2469f154547@sha256:a0a4349c70621be0273887890f1eac23328b936817e91d033bfe30190fca3e2f",
+      "workdir": "/app"
+    },
+    "freight-dispatch-shift": {
+      "image": "benchmark-services/terminal-bench:freight-dispatch-shift-environment-b3850906fb566773@sha256:5c5a14a6412227a6111be00b0dc933cf0ea8540d9592980ee3c733fea245b5c3",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:freight-dispatch-shift-sidecar-event-feed-ec3b2b49db8203c5@sha256:f413d8757ac835a7dd5fbbe2594da5a8bee75604ea46853966cd737980fb97d4",
+          "service": "event-feed"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:freight-dispatch-shift-verifier-17219a2f76aa0a8e@sha256:3c3df0511a8c6633c482d65efcc638ba2dc312e5ed093dd071d91b80a5e8e7f4",
+      "workdir": "/workspace"
+    },
+    "glycan-ms2-elucidation": {
+      "image": "benchmark-services/terminal-bench:glycan-ms2-elucidation-environment-713f4c3b2544a05d@sha256:37572d8cfc90c37151286195fd94e17de073c427d7ab3862433c9894481e15f9",
+      "verifier_image": "harborframework/terminal-bench:glycan-ms2-elucidation-verifier-6751aab7a07bebae@sha256:a9541b366274062f824a72939449684b682a749b49009acd5d66f616d6517a78",
+      "workdir": "/app"
+    },
+    "gsea-proteomics": {
+      "image": "benchmark-services/terminal-bench:gsea-proteomics-environment-7a4fe4d83a65de6a@sha256:e400f648619756dc7a25d7e47027e191ac5e3c83d46b0329cd3e4fb0f892e4da",
+      "verifier_image": "harborframework/terminal-bench:gsea-proteomics-verifier-6456628be60114b7@sha256:43e108555adb2bc0a74a2a8c02b069829d5b06bf4149ea652dd967939709259a",
+      "workdir": "/app"
+    },
+    "heat-pump-warranty": {
+      "image": "benchmark-services/terminal-bench:heat-pump-warranty-environment-8c9c480426647f85@sha256:bdd906d0a11ed681373d2c37a14114ca996bbd7eef593d62f91c1f92d0acf641",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-asset-ledger-299357b1d109820e@sha256:f6ce1fd9b3d24332bdfcb0c5da46827f0ada80437b08bcca5abd3ef82af682ae",
+          "service": "asset-ledger"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-compliance-ledger-70c3f5e92112b1ff@sha256:f5dda15b1cfabd351aaba5d2dea56883f5243d9a0071e55d772e8b3089447c4a",
+          "service": "compliance-ledger"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-document-vault-c16a695d6f22ae05@sha256:f2cd14d5bdf2a6836bb3da4ba1e99a51a554efea94cdbb0845847a8b76a5a49c",
+          "service": "document-vault"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-returns-ledger-0a88eaf506620b9f@sha256:95bfc76c7aad4c1e683f25b7d5559c042bfb4d68a0a1420f962cd5fded1a0f82",
+          "service": "returns-ledger"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-warranty-inbox-b28880ceb8be43c4@sha256:91af336621427380e4e3f8a87dbade4c2697bd9d539bd06f041986275342f4ff",
+          "service": "warranty-inbox"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:heat-pump-warranty-sidecar-warranty-portal-bb4fae55ffbcf3e0@sha256:95655e2000a1b5e9eeadb1a4479cb56828efe3892408f7779fec7f3485521bf8",
+          "service": "warranty-portal"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:heat-pump-warranty-verifier-36d2f1aa1f930d30@sha256:c2f699d5c664fcccc3704971031b84aeb62daca91fa78235487cfe4f2c50278d",
+      "workdir": "/workspace"
+    },
+    "hof-topology-interpenetration": {
+      "image": "benchmark-services/terminal-bench:hof-topology-interpenetration-environment-7f2225f69353e548@sha256:a758f32e5d39c06c65819d54622e0212c65f7a00191e32176612377cc3b97c1d",
+      "verifier_image": "harborframework/terminal-bench:hof-topology-interpenetration-verifier-19ef14306303fb31@sha256:cc54700dda4c50c330cc714b49143a8ee0e2f58999e5c24348f74f6582bf1b65",
+      "workdir": "/app"
+    },
+    "html-js-filter": {
+      "image": "benchmark-services/terminal-bench:html-js-filter-environment-9e23de30e7c28c98@sha256:bf86299e82b5233433eaa7778a79b9b2a5d248a77a45c7847fd66df6de5a6593",
+      "verifier_image": "harborframework/terminal-bench:html-js-filter-verifier-3de1e1127abade0f@sha256:143e56c1c64ebff7799cd02a586526ec1acf5484fbacc028224794ef2bd2eacc",
+      "workdir": "/app"
+    },
+    "interleaved-vigenere": {
+      "image": "benchmark-services/terminal-bench:interleaved-vigenere-environment-632ab356c1f5f304@sha256:f1fa69d4114586bda5dad69fc6b5cc2fa02a8d00077717c2ae666c013b12aec6",
+      "verifier_image": "harborframework/terminal-bench:interleaved-vigenere-verifier-4cbe13612f116581@sha256:2d6db4bb37f3ee1936d0c5c8ba8f518f6d36658b4e409ad8a2cfe60024cdb402",
+      "workdir": "/app"
+    },
+    "intrastat-meldung": {
+      "image": "benchmark-services/terminal-bench:intrastat-meldung-environment-80faab87e9a84c4f@sha256:0ef26577dd27df990cde3f83d33033c1ffa607aec89f41be909c9985c257b4ab",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:intrastat-meldung-sidecar-compliance-hub-bbc95711c88b2424@sha256:fb6f61acbea6ed48acf44bf26abcbedc8b27c019799616715baa737f569bc52c",
+          "service": "compliance-hub"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:intrastat-meldung-sidecar-dms-bbc95711c88b2424@sha256:674b1c210cde72c01d918fbf61a11b4de5605b6e213a04e9f4604eea5bb0de7a",
+          "service": "dms"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:intrastat-meldung-sidecar-idev-bbc95711c88b2424@sha256:a9c9453922abd29a39ad978f88b3fe568e3b6c19287343d1f7904776ed1fcc06",
+          "service": "idev"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:intrastat-meldung-sidecar-odoo-bbc95711c88b2424@sha256:c773c2deb02a3bc33d6c965108e14a0dd5afac316359b90a69dd545ae213608d",
+          "service": "odoo"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:intrastat-meldung-sidecar-services-bbc95711c88b2424@sha256:7c8ee657c3108f6eb6cdf6afde08be460572f70ce3065986c7361999e8c4e616",
+          "service": "services"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:intrastat-meldung-verifier-340cad5abf936943@sha256:187fda96a3f43ce6f81e307be31f34c226a96f29f67d1996df81eaa11e9b11c5",
+      "workdir": "/workspace"
+    },
+    "jax-speedrun-gpu": {
+      "image": "benchmark-services/terminal-bench:jax-speedrun-gpu-environment-9b4c4daa2d37cdda@sha256:58b40361fb49e496c14cf29863cb7c016199338db6d60dee0e89f84143f82c97",
+      "verifier_image": "harborframework/terminal-bench:jax-speedrun-gpu-verifier-269fbc07133cc43f@sha256:ae8b973a97223351c6a0832323374406f587611f309d725cfd0e4b10094dbcc0",
+      "workdir": "/app"
+    },
+    "ks-solver-cpp": {
+      "image": "benchmark-services/terminal-bench:ks-solver-cpp-environment-df7c74289a7b34bc@sha256:2d75cb189a75dd0794301ecd133df73a9c725e63b7a32d4f952e659efa3fe6d1",
+      "verifier_image": "harborframework/terminal-bench:ks-solver-cpp-verifier-41d40531ad4c6381@sha256:6689cc4bf8defe89fd8b8a379dd8de238bb6f2bc59dc2ef79c118dc2c5702876",
+      "workdir": "/app"
+    },
+    "kv-live-surgery": {
+      "image": "benchmark-services/terminal-bench:kv-live-surgery-environment-a47cd6102049c513@sha256:2b80dd569053f193b0116d3bcc9f7597f3ce197c43faf21e17c3fee095fdbd13",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:kv-live-surgery-sidecar-loadgen-6a5172c1b51f2354@sha256:01185d4cedd05fadc6652f8498e3439f4316973917a01d6879ab1e3c6d14c1e3",
+          "service": "loadgen"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:kv-live-surgery-verifier-fb29cdb882336981@sha256:83177f7fd7f5e69028681e8385ae2cf3b0273f53ab2c48d57f8d200efd6794e7",
+      "workdir": "/app"
+    },
+    "lake-temp-glm": {
+      "image": "benchmark-services/terminal-bench:lake-temp-glm-environment-436200176fce4cae@sha256:8f1f182ad639a1d3a4dd445f3a0b254f2b242c4f81b32d7d24cf46f4e1b7d79b",
+      "verifier_image": "harborframework/terminal-bench:lake-temp-glm-verifier-c6d51e4e676e0651@sha256:496fb5526ea1e26019b9d92d0a7d06427a5067216e4431619005d24f42a1353f",
+      "workdir": "/app"
+    },
+    "layout-config-recreation": {
+      "image": "benchmark-services/terminal-bench:layout-config-recreation-environment-c086ee1a856b8442@sha256:a4da00b667b681ac72122397686b3a4618bc93a3e524b77394aea8328089d6ef",
+      "verifier_image": "harborframework/terminal-bench:layout-config-recreation-verifier-f7d176a0fb801890@sha256:b5ce220f55d9c28f8901c781bcfcecb04785448b14646f7128ba06c87e98f2c4",
+      "workdir": "/app"
+    },
+    "layout-config-recreation2": {
+      "image": "benchmark-services/terminal-bench:layout-config-recreation2-environment-5f219f790c169771@sha256:94bae8fb705be000efe1ed75ac910dbbcc664f398bd7f0474e3cbe3a07b41f21",
+      "verifier_image": "harborframework/terminal-bench:layout-config-recreation2-verifier-2cedbb93db67d003@sha256:af5a68e3c6b2e55aee08761211a3b6519618050a670d140a8282e3e36dd95350",
+      "workdir": "/app"
+    },
+    "legacy-utility-triage": {
+      "image": "benchmark-services/terminal-bench:legacy-utility-triage-environment-88ace14756ab2904@sha256:2d6f8231ab4e90e6872b668d330a1c6e5245064529ebb603eeffad4e03f679bb",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:legacy-utility-triage-sidecar-legacy-app-0633f17a82c08cef@sha256:df9a6d0b6d3142ad01e0fd51223f3b7944f5b25b4ab50d93d8f339f9f9e1bc1e",
+          "service": "legacy-app"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:legacy-utility-triage-sidecar-legacy-workstation-64e8bdcf08d2d392@sha256:0f76b494acd26d3f1a966b2459ef3cd18de4050c13bb628bf65d1bd4b56cc579",
+          "service": "legacy-workstation"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:legacy-utility-triage-verifier-d83e9fc9932f7a68@sha256:3df5e1cf123816100a49d1de65ccb0332985e077725f0acd49a78544332aeca0",
+      "workdir": "/workspace"
+    },
+    "live-database-cutover": {
+      "image": "benchmark-services/terminal-bench:live-database-cutover-environment-76748fd51bb2c584@sha256:1db3c6cab440bffb7ee037eb414123d106867468484a742d88ef2a92c207dc45",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:live-database-cutover-sidecar-customer-ad6960cd64ffdc2b@sha256:b0446c478283767a694a69fce180ba67deb8cfa605b4b8a0e5a4867458676381",
+          "service": "customer"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:live-database-cutover-sidecar-mysql-db-be68999baa9561d5@sha256:7fd6f9100a1542f0d3441bf9ef187d52c3896504db80f742c622f94b30da0374",
+          "service": "mysql-db"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:live-database-cutover-sidecar-postgres-db-08f3ae5426a0d760@sha256:119be9516ebe43bad6f7f4f59178ec3bf922c28dfdb13f6bd862145b29d8b2b3",
+          "service": "postgres-db"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:redis-7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+          "service": "redis"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:live-database-cutover-verifier-0e82761c184f3c48@sha256:3aea4ef1c4fe992ed5d097a74b6c4a0987ff1676a9f802a3ce34c504fd2a0405",
+      "workdir": "/app"
+    },
+    "math-eval-grader": {
+      "image": "benchmark-services/terminal-bench:math-eval-grader-environment-59963c67c7a9d248@sha256:05f27afdee34768ab9bb2bc559d14272c9c3951728225c10acb33f5c78ca0c2b",
+      "verifier_image": "harborframework/terminal-bench:math-eval-grader-verifier-bcd975be64d1e70b@sha256:a7d89250429bb16fca1252209d8886428945a9b7960e2daea2b3ea10def90de1",
+      "workdir": "/app"
+    },
+    "medical-claims-processing": {
+      "image": "benchmark-services/terminal-bench:medical-claims-processing-environment-735cd69ce013d003@sha256:26b7ddd43a4f94cd26969cd3be0ecec08b08fab71e21907e8ca97f0e5eed70f9",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:medical-claims-processing-sidecar-playwright-mcp-a15553deda20402c@sha256:36b4a6bb6308c033af71983a57a7fb6cbb6faae0d10eeedfcdfca202aaa36963",
+          "service": "playwright-mcp"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:medical-claims-processing-sidecar-workspace-6abf6661b8a3ed40@sha256:5152be6308b504b2b2248ff4ddfac56998d314ab7e52e2fa33151f7bfac1dbc5",
+          "service": "workspace"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:medical-claims-processing-verifier-fbac5253699e33fa@sha256:7b6b28fe00c497cb82a963e8f8012ee0ea01ea619f9bf3d1a56bfdb25f4c79b8",
+      "workdir": "/app"
+    },
+    "mp-checkpoint-consolidation": {
+      "image": "benchmark-services/terminal-bench:mp-checkpoint-consolidation-environment-f415e4d5b80aff0c@sha256:c4dba0641ec18f4bcc5fc5ce415e851e69494422c397a4991fd54a4abeda4df8",
+      "verifier_image": "harborframework/terminal-bench:mp-checkpoint-consolidation-verifier-13f8e11c7930bbc9@sha256:b07eed52851325e3140de2355cf00f4a65287e04f70031ab147da17b041a530c",
+      "workdir": "/app"
+    },
+    "music-harmony": {
+      "image": "benchmark-services/terminal-bench:music-harmony-environment-2b88669317e4ec7d@sha256:5ec316b098f4eef4c05e7916314f980dcc27e6be64a096f78bb799705439648f",
+      "verifier_image": "harborframework/terminal-bench:music-harmony-verifier-99db9bf49f74d6b1@sha256:6eae62059d17981976779c8d2a2e26a545399339d4f973cfd4cca1d74fd9af05",
+      "workdir": "/app"
+    },
+    "mvcc-lsm-compaction": {
+      "image": "benchmark-services/terminal-bench:mvcc-lsm-compaction-environment-1cd29d7b9ff9712f@sha256:f066b9356ea898e4588f5e5ed3863926988ca09bd37cc8e3b674f02b5ba3e9f8",
+      "verifier_image": "harborframework/terminal-bench:mvcc-lsm-compaction-verifier-d3073c52362bbafc@sha256:7a9162429bed62abb205a5c1e3fa1da7c1171865969ad7b5e0d9d9d3efa0ffdf",
+      "workdir": "/app"
+    },
+    "nextjs-performance": {
+      "image": "benchmark-services/terminal-bench:nextjs-performance-environment-5ec14e96b24e80c4@sha256:65cab2c625db47f84ec3093a9def0282c1696def411242d74f08f593c1f9ee23",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:nextjs-performance-sidecar-warehouse-api-ea1a05c6e01f9e53@sha256:b5ef852ec9fe8b04b1adf1c1385acdc3394b41d2f48dfdb9b50c9c4e2720f08c",
+          "service": "warehouse-api"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:nextjs-performance-verifier-c2aca22b01a7164e@sha256:65c6249e51209a2b3ab993636e635d6b27cb61bc191c87ac6fe5269e00af4db1",
+      "workdir": "/app"
+    },
+    "ontology-kg-querying": {
+      "image": "benchmark-services/terminal-bench:ontology-kg-querying-environment-ed44b996db8c5fc6@sha256:71f3185aec8caca90a082e0a172634d1aac44b3562d6e4f46be958374afaf5d1",
+      "verifier_image": "harborframework/terminal-bench:ontology-kg-querying-verifier-4c042980b6bc0711@sha256:49d24520c6c588c3318c811c2b439ed23bdef78b04d469f22f51f28f52481a27",
+      "workdir": "/app"
+    },
+    "payments-pipeline-fix": {
+      "image": "benchmark-services/terminal-bench:payments-pipeline-fix-environment-e6015b1b444b90c5@sha256:97e42331c4f0e6d8de2c1c2ba0452d14646dc55ec16c2bfb54478afc71a0426e",
+      "sidecars": [
+        {
+          "image": "benchmark-services/terminal-bench:payments-pipeline-fix-sidecar-customer-343bc75e202cfe51@sha256:97ad7d3737dad45860ece261b9a971aa4c97a63f28a64a73941c2021906282f0",
+          "service": "customer"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:apache-kafka-native-4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+          "service": "kafka"
+        },
+        {
+          "image": "benchmark-services/terminal-bench:payments-pipeline-fix-sidecar-seeder-976c84e8d906e9c3@sha256:f67370bc949fb4382fd594b7d7d50578c5a54868dd0b3fe5c432b37b8cdda733",
+          "service": "seeder"
+        }
+      ],
+      "verifier_image": "harborframework/terminal-bench:payments-pipeline-fix-verifier-609decfe506ba4c5@sha256:6e900ecbb2040e0b0e87df2d7990701dd464b112713ff26913590c2c88ccee75",
+      "workdir": "/app"
+    },
+    "photonic-waveguide-routing": {
+      "image": "benchmark-services/terminal-bench:photonic-waveguide-routing-environment-343472a410e36518@sha256:386b814bc176ab28fc34475db94c323338d74cf81358aaac56ce9b38bae35816",
+      "verifier_image": "harborframework/terminal-bench:photonic-waveguide-routing-verifier-8c9aaf815704b45a@sha256:87b47707feea8c23a70b08d351abce34d012405c7f5431161c6d60c5d2721f13",
+      "workdir": "/app"
+    },
+    "pretrain-shard-corruption": {
+      "image": "benchmark-services/terminal-bench:pretrain-shard-corruption-environment-754d6171fa653e79@sha256:ff18338c6eeb85fc2dcc4b4d1f36d1946d8b328953318de7671943319fed8be7",
+      "verifier_image": "harborframework/terminal-bench:pretrain-shard-corruption-verifier-63039e393d0ade2c@sha256:336d1e81ebfa73fc34df74663de0647530018f0514de573b5ef344cccf1ec456",
+      "workdir": "/app"
+    },
+    "production-planning": {
+      "image": "benchmark-services/terminal-bench:production-planning-environment-c5889431f3076fed@sha256:51110ff01e23ca0a0c96394f0d56dbc2e32c86569b6475f3c7a0a7641cedf828",
+      "verifier_image": "harborframework/terminal-bench:production-planning-verifier-5a4b6b63e4f179a7@sha256:0f3eb5e7365486466759aa62585f87fb1b07ef59acede90cfafc572b9adc11a3",
+      "workdir": "/app"
+    },
+    "protein-autointerp-disulfide": {
+      "image": "benchmark-services/terminal-bench:protein-autointerp-disulfide-environment-ec02f905e7534a93@sha256:1ea0589b24b8c40ab7747f931648bc5cfb280794d90fe823fcf15bf5da7911fa",
+      "verifier_image": "harborframework/terminal-bench:protein-autointerp-disulfide-verifier-6ead5d7c4d914fe9@sha256:76e90086c7a740b89ef4332731b527627942278d634fab1fa9d731b0b598a9d5",
+      "workdir": "/app"
+    },
+    "react-lead-form": {
+      "image": "benchmark-services/terminal-bench:react-lead-form-environment-0c310f9153d5acfe@sha256:df7f7d6faa482b2988767cfaa82a101ffbd7602ae33ee7a2ce505d46bb5362e0",
+      "verifier_image": "harborframework/terminal-bench:react-lead-form-verifier-4a2d2837e46d5e4d@sha256:22e73330a28cedde1da0a308b1003b0e922f1a51fa62ab27fb1d2d492cd894d1",
+      "workdir": "/app"
+    },
+    "retro-console-soc": {
+      "image": "benchmark-services/terminal-bench:retro-console-soc-environment-6ab33aade245cc0c@sha256:11b017483cf6fa17cc217940e75e121a63f17a5623fc963dc114b89c4a427ad0",
+      "verifier_image": "harborframework/terminal-bench:retro-console-soc-verifier-0d742888c434aa43@sha256:359a891415a23f45a852e36096fb2aa8f8dccb399cef27ff440ae73b6b70e81a",
+      "workdir": "/app"
+    },
+    "risk-scorer-replay": {
+      "image": "benchmark-services/terminal-bench:risk-scorer-replay-environment-cd0dcbe5bf9ff3b3@sha256:ea5d86271c4200460e6edd02b53f5c53fd50077c1c2664c9b12b2553e002b7b2",
+      "verifier_image": "harborframework/terminal-bench:risk-scorer-replay-verifier-f18aeea17bbcd6eb@sha256:3bd349d01bca272a09dad77fdc7d746d900cfa59beef42689736bc2ee2d3c308",
+      "workdir": "/app"
+    },
+    "roy-polymorph-cn": {
+      "image": "benchmark-services/terminal-bench:roy-polymorph-cn-environment-7505caee8b2d7b43@sha256:ec42a0858ef13b6da622e83e8e8c39610acd28d0045a3e462406a9a65fb93d0e",
+      "verifier_image": "harborframework/terminal-bench:roy-polymorph-cn-verifier-b68c10c0bc6f102f@sha256:4606480cae2b2681421d1787c3b877f01a3328db44a4ab6488e2065244bbb052",
+      "workdir": "/app"
+    },
+    "rs-archive-clone": {
+      "image": "benchmark-services/terminal-bench:rs-archive-clone-environment-98d75e09a2f0b502@sha256:396a2f9f0af2079eac7a61f38cec875b2002663e04c77bfee5b2252d0b8b5c1c",
+      "verifier_image": "harborframework/terminal-bench:rs-archive-clone-verifier-f7356117c1694f91@sha256:a890aca2de72a12ba5ed879fb79a72c27204c00513edcf9128f28e8679088190",
+      "workdir": "/app"
+    },
+    "satb-audio-transcription": {
+      "image": "benchmark-services/terminal-bench:satb-audio-transcription-environment-1969acbce1578437@sha256:35bf5a8f8866d53f796ac499418b3161938ef7be35352e53451ccbf3fd51df04",
+      "verifier_image": "harborframework/terminal-bench:satb-audio-transcription-verifier-e93cc5c459b1bd89@sha256:508d71ebef2fad5f7d36c98e4d1481cdea7533fcb458497158289dea10cda1c3",
+      "workdir": "/app"
+    },
+    "session-window-debug": {
+      "image": "benchmark-services/terminal-bench:session-window-debug-environment-1979e39a2d0785d9@sha256:62d159cb3a81205766c5560037802d4b951c15626d86e7a8aaf0e9912cc78b2a",
+      "verifier_image": "harborframework/terminal-bench:session-window-debug-verifier-b15c5820597dd33d@sha256:ae6248a5d486bbdf600f0133c8440910b437f1dc9b734e7b8240fe26e3f603d1",
+      "workdir": "/app"
+    },
+    "sglang-qwen-burst": {
+      "image": "benchmark-services/terminal-bench:sglang-qwen-burst-environment-2103437a7ed9d16f@sha256:c0c17ded98e27d5bc2a044347989ed091c053601a15b795fc71bf4b30b085e57",
+      "verifier_image": "harborframework/terminal-bench:sglang-qwen-burst-verifier-fa92051685db8e32@sha256:8927007eb2b4c48d81009d30952641ff7a20a27a9a848178878b14786f0ea020",
+      "workdir": "/app/sglang"
+    },
+    "shadow-relay": {
+      "image": "benchmark-services/terminal-bench:shadow-relay-environment-0d9ab3daf6e5bf73@sha256:584cd120342b153054ca2d87a420fe4ba987f46ed02f8f444354e75119cdb928",
+      "verifier_image": "harborframework/terminal-bench:shadow-relay-verifier-fd968360a09d7e0b@sha256:864d9d5dc76698a788ed746d370a4242709325573d7b185d519d3f093a2e8add",
+      "workdir": "/app"
+    },
+    "sound-change-cascade": {
+      "image": "benchmark-services/terminal-bench:sound-change-cascade-environment-a15c89a3496c7168@sha256:95bd365954dfecf3cc661853b0576473a85cf8bdf44eb01af64995e7de6cecc0",
+      "verifier_image": "harborframework/terminal-bench:sound-change-cascade-verifier-198013e541645bef@sha256:8980723c9498d52e56a1f6d934924bb9e294f657961f4b5e5c81ddb6921aacf0",
+      "workdir": "/app"
+    },
+    "takens-embedding-lean": {
+      "image": "benchmark-services/terminal-bench:takens-embedding-lean-environment-fcb45ec9f5e257fc@sha256:ae08a40268fac519bbf81be7e38424ae3d8e8949c76c3430c8b68eec93a92a29",
+      "verifier_image": "harborframework/terminal-bench:takens-embedding-lean-verifier-5d73d07a692427e4@sha256:fe1b774eee23bfca24aaa1686c2e9b662ad6690d698a7bbcd054e59ed4e2beb4",
+      "workdir": "/task"
+    },
+    "telecom-entity-resolution": {
+      "image": "benchmark-services/terminal-bench:telecom-entity-resolution-environment-d7e4fd0de592a12c@sha256:f4991ac7deeccfe4aa814c1fff80f264650c40be823009934923d3e998eaa86c",
+      "verifier_image": "harborframework/terminal-bench:telecom-entity-resolution-verifier-9d00722c1a845f6e@sha256:ff732554b2fd40b655a08e7eaabedc1c5b2d6684e40921edaa1eba48d32cb6da",
+      "workdir": "/app"
+    },
+    "uefi-bootkit": {
+      "image": "benchmark-services/terminal-bench:uefi-bootkit-environment-f91c98379475fd48@sha256:1a69c2e0820fb25310c95a7074ccd605a27181bf43ef7aedbce2433111d82940",
+      "verifier_image": "harborframework/terminal-bench:uefi-bootkit-verifier-1957fc35810eb4b1@sha256:66b6bc52d81ab3d4e303a67f48de0df26e64896fdcc11af4d5dfb2e7465af90c",
+      "workdir": "/app"
+    },
+    "vba-userform-port": {
+      "image": "benchmark-services/terminal-bench:vba-userform-port-environment-bf930c7a5b5b812c@sha256:104fb670ee582f21fb4bb56814e25c4e846d099c3af765aeed7a04a038a5ed28",
+      "verifier_image": "harborframework/terminal-bench:vba-userform-port-verifier-2561c54d4ae37e58@sha256:ce013facbe7cdaf21cd60b1930282bcfc3cdb6b0543682bed253453952e82a28",
+      "workdir": "/workspace"
+    },
+    "vf2-speedup-networkx": {
+      "image": "benchmark-services/terminal-bench:vf2-speedup-networkx-environment-59eb15e45ae0d4f9@sha256:b90a9278109552c04b9d3535690ecd3dda8f3372992df445f9d47412e85cc608",
+      "verifier_image": "harborframework/terminal-bench:vf2-speedup-networkx-verifier-9ea5a1b9e0a033fa@sha256:a84e6fc87075ee3f62ff8479a1566731cc52b3231decca45b3c235c455b00ed4",
+      "workdir": "/app"
+    },
+    "vllm-deepseek-streaming": {
+      "image": "benchmark-services/terminal-bench:vllm-deepseek-streaming-environment-deec1257fc28c910@sha256:46fcd577d1d050070b8a1218eb0d66b7c1a87ba90d763728d98cbd823856346f",
+      "verifier_image": "harborframework/terminal-bench:vllm-deepseek-streaming-verifier-60c2a48fd96f8b87@sha256:92dfc8e4b244612b650344b190744606e0b80269e04e1be407befb5d5efffbf9",
+      "workdir": "/app/vllm"
+    },
+    "vpp-loss-divergence": {
+      "image": "benchmark-services/terminal-bench:vpp-loss-divergence-environment-02f6e588846fd410@sha256:81611f7fdd8d76366cd1f23145306b4fda4661d328d9eaeef81b8663c7b8dd7f",
+      "verifier_image": "harborframework/terminal-bench:vpp-loss-divergence-verifier-a08fd62ced625f45@sha256:460f7e2596897c3303791a72ae171841ca55231077f866180c771401a480fe99",
+      "workdir": "/app"
+    },
+    "wal-recovery-ordering": {
+      "image": "benchmark-services/terminal-bench:wal-recovery-ordering-environment-4b8e041ddc112263@sha256:71d215eab08bf95f60d828a5328d7bc1424b4a048ebf6551027267a651396657",
+      "verifier_image": "harborframework/terminal-bench:wal-recovery-ordering-verifier-19979e3c03f0c8db@sha256:627bc7812cd00b6e6ff30fec94e1adb413f0eb211adbb1bb11f7e288d75046ef",
+      "workdir": "/app"
+    },
+    "wdm-design": {
+      "image": "benchmark-services/terminal-bench:wdm-design-environment-2a24bf7c4d951c23@sha256:090e85641eb60bea147c52323818b8ec3593f0c101ad8a67c1510d807d3b52b3",
+      "verifier_image": "harborframework/terminal-bench:wdm-design-verifier-37b2e2d2f2df638a@sha256:154476d6f2e30109902699683fda3e59c21061f1dbbc585dea13dabde683ad90",
+      "workdir": "/app"
+    }
+  },
+  "unsupported_tasks": []
+}

@@ -24,11 +24,12 @@ def test_load_terminal_bench_datasets() -> None:
         "terminal-bench-2.0",
         "terminal-bench-2.1",
         "terminal-bench-4.0",
+        "terminal-bench-4.1",
     }
     assert datasets["default"] is datasets["terminal-bench-4.0"], "`default` must alias terminal-bench-4.0"
     assert len(datasets["default"]) == 66
 
-    for name in ("terminal-bench-2.0", "terminal-bench-2.1", "terminal-bench-4.0"):
+    for name in ("terminal-bench-2.0", "terminal-bench-2.1", "terminal-bench-4.0", "terminal-bench-4.1"):
         tasks = datasets[name]
         assert len(tasks) > 0, f"{name} loaded zero tasks"
         sample = next(iter(tasks.values()))
@@ -36,6 +37,9 @@ def test_load_terminal_bench_datasets() -> None:
         assert "task_definition" in sample
 
     assert len(datasets["terminal-bench-4.0"]) == 66
+    assert len(datasets["terminal-bench-4.1"]) == 66
+    assert set(datasets["terminal-bench-4.1"]) == set(datasets["terminal-bench-4.0"])
+    assert datasets["terminal-bench-4.1"]["fp8-rmsnorm-gemm"]["task_definition"]["agent"]["user"] == "agent"
 
 
 def test_tbench4_instruction_lists_the_tasks_mcp_servers_as_harbor_does() -> None:
@@ -106,13 +110,20 @@ def test_tbench4_does_not_silently_cap_non_daytona_resources(
         )
 
 
-def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features() -> None:
+@pytest.mark.parametrize("dataset", ["terminal-bench-4.0", "terminal-bench-4.1"])
+def test_terminal_bench_4_retrieves_every_task_and_preserves_runtime_features(dataset: str) -> None:
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
 
-    task_ids = sorted(benchmark.datasets["terminal-bench-4.0"])
-    responses = [asyncio.run(benchmark.retrieve_task(task_id, dataset="terminal-bench-4.0")) for task_id in task_ids]
+    task_ids = sorted(benchmark.datasets[dataset])
+    responses = [asyncio.run(benchmark.retrieve_task(task_id, dataset=dataset)) for task_id in task_ids]
     assert len(responses) == 66
-    assert all(response.source is not None for response in responses)
+    assert all(isinstance(response.source, ComposeSource) for response in responses)
+    manifest = benchmark._image_manifest(dataset)  # pyright: ignore[reportPrivateUsage]
+    assert manifest["dataset"] == dataset
+    assert all(
+        benchmark._task_image(task_id, dataset).startswith(f"{ECR_REPOSITORY}:")  # pyright: ignore[reportPrivateUsage]
+        for task_id in task_ids
+    )
 
     compose_response = asyncio.run(benchmark.retrieve_task("ctr-optimization", dataset="terminal-bench-4.0"))
     assert isinstance(compose_response.source, ComposeSource)
@@ -148,12 +159,18 @@ def test_list_tasks_exposes_all_tbench4_tasks_through_the_v1_contract() -> None:
     assert all(set(task.model_dump()) == {"id", "question", "timeout"} for task in tasks)
 
 
-def test_terminal_bench_4_manifest_is_reproducible() -> None:
-    source_manifest = Path("datasets/images/terminal-bench-4-prebuilt.json")
-    generated_manifest = Path("datasets/images/terminal-bench-4.json")
+@pytest.mark.parametrize(
+    ("dataset", "source", "tasks_root", "generated"),
+    [
+        ("terminal-bench-4.0", "terminal-bench-4-prebuilt.json", "terminal-bench-4", "terminal-bench-4.json"),
+        ("terminal-bench-4.1", "terminal-bench-4.1-prebuilt.json", "terminal-bench-4.1", "terminal-bench-4.1.json"),
+    ],
+)
+def test_terminal_bench_4_manifest_is_reproducible(dataset: str, source: str, tasks_root: str, generated: str) -> None:
+    images = Path("datasets/images")
 
-    assert build_manifest(source_manifest, Path("datasets/terminal-bench-4/tasks")) == json.loads(
-        generated_manifest.read_text()
+    assert build_manifest(images / source, Path("datasets") / tasks_root / "tasks", dataset) == json.loads(
+        (images / generated).read_text()
     )
 
 
