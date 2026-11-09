@@ -413,3 +413,108 @@ def _first(chunks: list[StreamChunk], kind: type[StreamChunk]) -> StreamChunk:
 
 async def _drain(stream: AsyncGenerator[StreamChunk, None]) -> list[StreamChunk]:
     return [chunk async for chunk in stream]
+
+
+# --- regrade with a newer dataset's verifiers ------------------------------
+
+REGRADE = "terminal-bench-4.1"
+
+
+def _regrade(
+    benchmark: TerminalBenchBenchmark, provider: FakeProvider, state: dict[str, Any], dataset: str = REGRADE
+) -> list[StreamChunk]:
+    request = EvaluateResponseRequest(task_id=TASK, eval_resume_state=state, dataset=dataset)
+    object.__setattr__(request, "sandbox_provider", FakeProviderConfig(provider))
+    return asyncio.run(_drain(benchmark.stream_evaluate_response(request, dataset=dataset)))
+
+
+def test_regrade_grades_source_state_with_the_new_verifier_and_streams_it_rebased(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(eval_resume.LOCAL_DIR_ENV, raising=False)
+    monkeypatch.setenv(eval_resume.BUCKET_ENV, "tb-bucket")
+    s3 = FakeS3()
+    monkeypatch.setattr(eval_resume, "_s3_client", lambda: s3)
+    log: list[str] = []
+
+    async def first_evaluation() -> list[StreamChunk]:
+        with sandbox_provider_scope(FakeProvider(log)):
+            return await _drain(
+                benchmark._evaluate_in_isolated_verifier(  # pyright: ignore[reportPrivateUsage]
+                    TASK, LoggingAgentSandbox(log), DATASET
+                )
+            )
+
+    source = _first(asyncio.run(first_evaluation()), StreamEvalResumeStateChunk).data
+    persisted = list(s3.puts)
+    provider = FakeProvider(log)
+    chunks = _regrade(benchmark, provider, source)
+
+    rebased = _first(chunks, StreamEvalResumeStateChunk).data
+    contract = benchmark._task_contract_sha256(TASK, REGRADE)  # pyright: ignore[reportPrivateUsage]
+    assert rebased == {**source, "dataset": REGRADE, "task_contract_sha256": contract}
+    assert contract != source["task_contract_sha256"]
+    assert _result(chunks)["verifier_result"] == {"rewards": {"score": 1.0}, "output": ""}
+    (verifier,) = provider.created
+    assert verifier.source.image == benchmark._verifier_image(TASK, REGRADE)  # pyright: ignore[reportPrivateUsage]
+    assert verifier.source.image != benchmark._verifier_image(TASK, DATASET)  # pyright: ignore[reportPrivateUsage]
+    assert verifier.name.startswith("tb-verifier-wdm-design-run-123-")
+    assert verifier.labels == {"Id": "run-123", "Benchmark": "terminal-bench", "Role": "verifier"}
+    assert [key for _, key in s3.objects] == [eval_resume.artifact_key("run-123", TASK, ARCHIVE_SHA)]
+    assert s3.puts == persisted
+
+    retried = _regrade(benchmark, FakeProvider([]), rebased)
+    assert _first(retried, StreamEvalResumeStateChunk).data == rebased
+    assert s3.puts == persisted
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"dataset": "default"}, "dataset mismatch"),
+        ({"dataset": "terminal-bench-2.1"}, "dataset mismatch"),
+        ({"task_contract_sha256": "0" * 64}, "task contract"),
+        ({"artifacts": [{"source": "/app/meta.json"}]}, "declared artifacts"),
+    ],
+)
+def test_regrade_rejects_source_state_that_does_not_fit(
+    benchmark: TerminalBenchBenchmark, local_store: Path, overrides: dict[str, Any], message: str
+) -> None:
+    provider = FakeProvider([])
+    with pytest.raises(ValueError, match=message):
+        _regrade(benchmark, provider, _state(benchmark, **overrides))
+    assert not provider.created
+
+
+def test_regrade_requires_the_genuine_source_contract(benchmark: TerminalBenchBenchmark, local_store: Path) -> None:
+    provider = FakeProvider([])
+    newer_contract = benchmark._task_contract_sha256(TASK, REGRADE)  # pyright: ignore[reportPrivateUsage]
+    with pytest.raises(ValueError, match="task contract"):
+        _regrade(benchmark, provider, _state(benchmark, task_contract_sha256=newer_contract))
+    with pytest.raises(ValueError, match="task contract"):
+        _regrade(benchmark, provider, _state(benchmark, dataset=REGRADE))
+    assert not provider.created
+
+
+def test_regrade_requires_the_task_in_both_datasets(
+    benchmark: TerminalBenchBenchmark, local_store: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = _state(benchmark)
+    monkeypatch.delitem(benchmark.datasets[DATASET], TASK)
+    provider = FakeProvider([])
+    with pytest.raises(ValueError, match=f"Unknown task '{TASK}' in dataset '{DATASET}'"):
+        _regrade(benchmark, provider, state)
+    assert not provider.created
+
+
+def test_only_the_declared_source_dataset_is_regraded(benchmark: TerminalBenchBenchmark, local_store: Path) -> None:
+    newer = _state(
+        benchmark,
+        dataset=REGRADE,
+        task_contract_sha256=benchmark._task_contract_sha256(TASK, REGRADE),  # pyright: ignore[reportPrivateUsage]
+    )
+    for dataset in (DATASET, "default"):
+        provider = FakeProvider([])
+        with pytest.raises(ValueError, match="dataset mismatch"):
+            _regrade(benchmark, provider, newer, dataset=dataset)
+        assert not provider.created
