@@ -672,6 +672,7 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                     self._compose_sidecar_images(task_id, dataset),
                     environment,
                     sandbox,
+                    task.get("task_definition", {}).get("agent", {}).get("user"),
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
 
