@@ -79,7 +79,11 @@ local directory for tests and `make dev`.
 own verifiers. A 4.0 state is accepted for a task in both datasets when its
 contract digest is the 4.0 task's and its artifacts are the ones 4.1 declares.
 It is graded from the same S3 objects, under its original run id, and streamed
-back as 4.1 state, so a later retry is an ordinary 4.1 resume.
+back as 4.1 state, so a later retry is an ordinary 4.1 resume. The eval
+request carries no run labels, so the regrade's verifier sandboxes take their
+name and `Id` label from the source run, not the run that requested the
+regrade: stopping that run by its labels does not find them. The service still
+deletes each verifier when grading ends.
 
 ## Development
 
