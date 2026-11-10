@@ -52,7 +52,7 @@ from terminal_bench_benchmark_service.compose_runtime import (
     thread_limit,
 )
 from terminal_bench_benchmark_service.score_metadata import build_vals_format_metadata
-from terminal_bench_benchmark_service.utils import with_retry
+from terminal_bench_benchmark_service.utils import KEEPALIVE_SECONDS, lines_or_keepalive, with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -874,14 +874,18 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             # if the connection drops after the test completes, a retry would re-run the
             # test and could overwrite a passing reward.txt with a failing result.
             try:
-                async for line in self._stream_command_with_retry(
+                tests = self._stream_command_with_retry(
                     sandbox,
                     test_script,
                     self._task_cwd(task_id, dataset),
                     verifier_timeout,
                     retries=1,
-                ):
-                    test_output += line + "\n"
+                )
+                async for line in lines_or_keepalive(tests, KEEPALIVE_SECONDS):
+                    if line is None:
+                        line = f"Tests for {task_id} are still running..."
+                    else:
+                        test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
             except TimeoutError as e:
                 is_success = False
@@ -1421,10 +1425,12 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                 # From `/`: most verifier images define no WORKDIR, and every grader
                 # addresses its inputs absolutely. No pinned-tools prefix either --
                 # the grader runs in its own image.
-                async for line in self._stream_command_with_retry(
-                    verifier, test_script, "/", verifier_timeout, retries=1
-                ):
-                    test_output += line + "\n"
+                tests = self._stream_command_with_retry(verifier, test_script, "/", verifier_timeout, retries=1)
+                async for line in lines_or_keepalive(tests, KEEPALIVE_SECONDS):
+                    if line is None:
+                        line = f"Isolated tests for {task_id} are still running..."
+                    else:
+                        test_output += line + "\n"
                     yield StreamMessageChunk(type="message", data=line)
 
                 reward = await with_retry(verifier, lambda: verifier.exec(isolated_verifier.read_reward_command()))
