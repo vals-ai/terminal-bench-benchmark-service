@@ -30,34 +30,33 @@ KEEPALIVE_SECONDS = 600.0
 async def lines_or_keepalive(lines: AsyncGenerator[str, None], interval: float) -> AsyncGenerator[str | None, None]:
     """Yield each line, and None whenever `interval` passes without one.
 
-    A grader can run quietly for longer than the client waits, so the caller needs a
-    moment to say it is still alive. `lines` is drained by one task of its own: a timeout
-    it holds stays in a single task and keeps counting between lines.
+    `lines` is drained by a task of its own, so a timeout it holds stays in one task and
+    keeps counting while nothing arrives. The queue is unbounded so that task only ever
+    waits inside `lines`, where that timeout can reach it.
     """
-    queue: asyncio.Queue[tuple[str | None, BaseException | None]] = asyncio.Queue(maxsize=1024)
+    queue: asyncio.Queue[str | Exception | None] = asyncio.Queue()
 
     async def drain() -> None:
         try:
             async for line in lines:
-                await queue.put((line, None))
+                queue.put_nowait(line)
+            queue.put_nowait(None)
         except Exception as error:
-            await queue.put((None, error))
-        else:
-            await queue.put((None, None))
+            queue.put_nowait(error)
 
     task = asyncio.create_task(drain())
     try:
         while True:
             try:
-                line, error = await asyncio.wait_for(queue.get(), interval)
+                item = await asyncio.wait_for(queue.get(), interval)
             except TimeoutError:
                 yield None
                 continue
-            if error is not None:
-                raise error
-            if line is None:
+            if isinstance(item, Exception):
+                raise item
+            if item is None:
                 return
-            yield line
+            yield item
     finally:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):

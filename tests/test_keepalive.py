@@ -40,13 +40,18 @@ def test_a_timeout_held_by_the_stream_still_fires_between_lines() -> None:
     async def lines() -> AsyncGenerator[str, None]:
         try:
             async with asyncio.timeout(0.1):
-                yield "a"
+                for _ in range(5000):
+                    yield "a"
                 await asyncio.sleep(5)
         except asyncio.TimeoutError:
             raise TimeoutError("grader timed out")
 
+    async def read_slowly() -> None:
+        async for _ in lines_or_keepalive(lines(), 0.02):
+            await asyncio.sleep(0.0001)
+
     with pytest.raises(TimeoutError, match="grader timed out"):
-        _ = asyncio.run(_collect(lines(), 0.02))
+        asyncio.run(read_slowly())
 
 
 def test_closing_the_consumer_stops_the_stream() -> None:
