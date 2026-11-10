@@ -124,6 +124,7 @@ async def start_compose_runtime(
     sidecar_images: Mapping[str, str],
     resources: Mapping[str, Any],
     sandbox: Sandbox,
+    user: str | None = None,
 ) -> None:
     """Stage a task and start its main and sidecar services.
 
@@ -142,7 +143,7 @@ async def start_compose_runtime(
     sidecar_images = {service: f"{registry}/{image}" for service, image in sidecar_images.items()}
     await _docker_login(sandbox, registry, password)
     main_image = await _pull_task_image(sandbox, task_image, timeout)
-    await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox)
+    await _stage_files(task_dir / "environment", main_image, sidecar_images, resources, sandbox, user)
 
     compose = compose_runtime_source(task_id, task_image, sidecar_images).compose_command
     services = await _run(sandbox, f"{compose} config --services", timeout=60)
@@ -278,12 +279,13 @@ async def _stage_files(
     sidecar_images: Mapping[str, str],
     resources: Mapping[str, Any],
     sandbox: Sandbox,
+    user: str | None = None,
 ) -> None:
     await _run(sandbox, f"mkdir -p {shlex.quote(_ENVIRONMENT_ROOT)}", timeout=30)
     driver_files = await _gpu_driver_files(sandbox) if _gpu_count(resources) else ()
     image_env = await _image_env(sandbox, task_image)
     runtime = runtime_compose_definition(
-        task_image, sidecar_images, resources, driver_files, thread_limit_env(resources, image_env)
+        task_image, sidecar_images, resources, driver_files, thread_limit_env(resources, image_env), user
     )
     compose_file = environment_dir / "docker-compose.yaml"
     compose_content = compose_file.read_bytes() if compose_file.is_file() else _EMPTY_COMPOSE_FILE
@@ -335,6 +337,7 @@ def runtime_compose_definition(
     resources: Mapping[str, Any],
     gpu_driver_files: Sequence[str] = (),
     environment: Mapping[str, str] | None = None,
+    user: str | None = None,
 ) -> dict[str, Any]:
     """Return the JSON Compose overlay used to run one pinned task."""
     main: dict[str, Any] = {
@@ -362,6 +365,8 @@ def runtime_compose_definition(
         main["privileged"] = True
     if environment:
         main["environment"] = dict(environment)
+    if user:
+        main["user"] = user
 
     npm_before = (datetime.now(UTC) - _NPM_MIN_RELEASE_AGE).strftime("%Y-%m-%dT%H:%M:%SZ")
     sidecars = {

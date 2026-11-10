@@ -159,6 +159,8 @@ class DatasetSpec:
     # Grade in a separate sandbox rather than the agent's own,
     # for datasets whose tasks declare verifier.environment_mode = "separate".
     grades_in_separate_sandbox: bool = False
+    # A dataset whose resume state this one grades again with its own verifiers.
+    regrades_from: str | None = None
 
 
 class TerminalBenchBenchmark(ValsBenchmarkService):
@@ -182,6 +184,12 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             Path("datasets/terminal-bench-4/tasks"),
             image_manifest=Path("datasets/images/terminal-bench-4.json"),
             grades_in_separate_sandbox=True,
+        ),
+        "terminal-bench-4.1": DatasetSpec(
+            Path("datasets/terminal-bench-4.1/tasks"),
+            image_manifest=Path("datasets/images/terminal-bench-4.1.json"),
+            grades_in_separate_sandbox=True,
+            regrades_from="terminal-bench-4.0",
         ),
     }
 
@@ -664,6 +672,7 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                     self._compose_sidecar_images(task_id, dataset),
                     environment,
                     sandbox,
+                    task.get("task_definition", {}).get("agent", {}).get("user"),
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
 
@@ -768,26 +777,33 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
         The state comes back from the caller, so nothing in it is trusted
         until it is checked against the deployed task: the artifact set must be
         the one the task declares and the contract digest must match, and each
-        key is canonical by construction of the model.
+        key is canonical by construction of the model. State from the dataset
+        this one regrades is checked against that dataset's contract and
+        returned rebased onto this one, keeping its run and artifacts.
         """
         try:
             state = eval_resume.EvalResumeState.model_validate(request.eval_resume_state)
         except ValidationError as error:
             raise ValueError(f"eval_resume_state is not a terminal-bench resume state: {error}") from error
+        name = dataset or "default"
+        spec = self._dataset_spec(dataset)
         if state.task_id != request.task_id:
             raise ValueError(f"eval_resume_state task_id mismatch: {state.task_id} != {request.task_id}")
-        if state.dataset != (dataset or "default"):
-            raise ValueError(f"eval_resume_state dataset mismatch: {state.dataset} != {dataset or 'default'}")
-        if not self._dataset_spec(dataset).grades_in_separate_sandbox:
+        if state.dataset not in (name, spec.regrades_from):
+            raise ValueError(f"eval_resume_state dataset mismatch: {state.dataset} != {name}")
+        if not spec.grades_in_separate_sandbox:
             raise ValueError(f"Dataset `{state.dataset}` grades in the agent's sandbox and cannot resume evaluation")
-        if request.task_id not in self.get_dataset(dataset):
-            raise ValueError(f"Unknown task '{request.task_id}' in dataset '{state.dataset}'")
-        if state.task_contract_sha256 != self._task_contract_sha256(request.task_id, dataset):
+        for source in {name, state.dataset}:
+            if request.task_id not in self.get_dataset(source):
+                raise ValueError(f"Unknown task '{request.task_id}' in dataset '{source}'")
+        if state.task_contract_sha256 != self._task_contract_sha256(request.task_id, state.dataset):
             raise ValueError("eval_resume_state task contract does not match the deployed task")
         declared = [artifact.source for artifact in self._gradeable_artifacts(request.task_id, dataset)]
         if sorted(artifact.source for artifact in state.artifacts) != sorted(declared):
             raise ValueError("eval_resume_state artifacts do not match the task's declared artifacts")
-        return state
+        return state.model_copy(
+            update={"dataset": name, "task_contract_sha256": self._task_contract_sha256(request.task_id, dataset)}
+        )
 
     def _task_contract_sha256(self, task_id: str, dataset: str | None) -> str:
         task_def = self.get_dataset(dataset)[task_id].get("task_definition", {})

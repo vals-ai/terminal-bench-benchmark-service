@@ -88,10 +88,33 @@ async def _test_compose_setup_starts_runtime_before_using_main_service(
 
     chunks = [chunk async for chunk in benchmark.setup_task("ctr-optimization", outer, dataset="terminal-bench-4.0")]
 
-    assert isinstance(started["args"][-1], FakeSandbox)
+    assert isinstance(started["args"][5], FakeSandbox)
     assert isinstance(started["args"][4], dict)
+    assert started["args"][6] is None
     assert any(isinstance(chunk, StreamResultChunk) for chunk in chunks)
     assert any("docker compose" in command and "main" in command for command in outer.commands)
+
+
+def test_compose_setup_passes_the_task_agent_user_to_the_runtime(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    users: dict[str, Any] = {}
+
+    async def fake_start(*args: Any) -> None:
+        users[args[1]] = args[6]
+
+    monkeypatch.setattr(service_module, "start_compose_runtime", fake_start)
+    for dataset in ("terminal-bench-4.0", "terminal-bench-4.1"):
+        _ = asyncio.run(_drain(benchmark.setup_task("fp8-rmsnorm-gemm", FakeSandbox(), dataset=dataset)))
+        _ = asyncio.run(_drain(benchmark.setup_task("ctr-optimization", FakeSandbox(), dataset=dataset)))
+        assert users == {
+            "fp8-rmsnorm-gemm": "agent" if dataset == "terminal-bench-4.1" else None,
+            "ctr-optimization": None,
+        }
+
+
+async def _drain(stream: AsyncGenerator[Any, None]) -> list[Any]:
+    return [chunk async for chunk in stream]
 
 
 def test_failed_compose_setup_cleans_up_runtime(

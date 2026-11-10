@@ -17,15 +17,26 @@ import re
 from pathlib import Path
 from typing import Any, cast
 
-PINNED_COMPOSE_IMAGES: dict[str, dict[str, str]] = {
+PINNED_COMPOSE_IMAGES: dict[str, dict[str, dict[str, str]]] = {
     # These services use upstream images rather than Harbor-built release
     # sidecars. Keep their exact task-provided versions, but pin the resolved
     # multi-platform image so Compose cannot silently move them between runs.
-    "live-database-cutover": {
-        "redis": "redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+    "v4.0.0": {
+        "live-database-cutover": {
+            "redis": "redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf",
+        },
+        "payments-pipeline-fix": {
+            "kafka": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+        },
     },
-    "payments-pipeline-fix": {
-        "kafka": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+    # v4.1.0 pins these digests in the task compose files themselves.
+    "v4.1.0": {
+        "live-database-cutover": {
+            "redis": "redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+        },
+        "payments-pipeline-fix": {
+            "kafka": "apache/kafka-native:4.3.1@sha256:2885898ba17065023f1bd605f3a81efcfa986014f062b73b91ef5462485f9060",
+        },
     },
 }
 
@@ -74,8 +85,9 @@ def _image(images: list[dict[str, Any]], kind: str, task_id: str) -> dict[str, A
     return image
 
 
-def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, Any]:
+def build_manifest(source_manifest_path: Path, tasks_root: Path, dataset: str) -> dict[str, Any]:
     source_manifest = cast(dict[str, Any], json.loads(source_manifest_path.read_text()))
+    pinned_compose_images = PINNED_COMPOSE_IMAGES[source_manifest["release_tag"]]
     raw_tasks_value = source_manifest.get("tasks")
     if not isinstance(raw_tasks_value, list):
         raise ValueError("TBench4 release manifest must contain a task list")
@@ -130,7 +142,7 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
                     )
         sidecar_entries.extend(
             {"service": service, "image": ecr_image(image)}
-            for service, image in PINNED_COMPOSE_IMAGES.get(task_id, {}).items()
+            for service, image in pinned_compose_images.get(task_id, {}).items()
         )
         if sidecar_entries:
             entry["sidecars"] = sorted(sidecar_entries, key=lambda value: value["service"])
@@ -138,7 +150,7 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
 
     return {
         "schema_version": 1,
-        "dataset": "terminal-bench-4.0",
+        "dataset": dataset,
         "dataset_package": source_manifest.get("dataset_package"),
         "release_tag": source_manifest.get("release_tag"),
         "source_repository": "https://github.com/harbor-framework/terminal-bench",
@@ -155,11 +167,12 @@ def build_manifest(source_manifest_path: Path, tasks_root: Path) -> dict[str, An
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-manifest", type=Path, required=True)
-    parser.add_argument("--tasks-root", type=Path, default=Path("datasets/terminal-bench-4/tasks"))
+    parser.add_argument("--tasks-root", type=Path, required=True)
+    parser.add_argument("--dataset", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-    manifest = build_manifest(args.source_manifest, args.tasks_root)
+    manifest = build_manifest(args.source_manifest, args.tasks_root, args.dataset)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     print(f"wrote {args.output}: {manifest['task_count']} tasks, {len(manifest['unsupported_tasks'])} unsupported")

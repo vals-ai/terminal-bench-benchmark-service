@@ -21,14 +21,16 @@ def _digest(image: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-manifest", type=Path, default=Path("datasets/images/terminal-bench-4-prebuilt.json"))
+    parser.add_argument("--source-manifest", type=Path, required=True)
     args = parser.parse_args()
 
     release = json.loads(args.source_manifest.read_text())
     images = {
         image["pinned_ref"] for task in release["tasks"] for image in task["images"] if image["kind"] != "verifier"
     }
-    images |= {image for services in PINNED_COMPOSE_IMAGES.values() for image in services.values()}
+    images |= {
+        image for services in PINNED_COMPOSE_IMAGES[release["release_tag"]].values() for image in services.values()
+    }
 
     token = subprocess.run(
         ["aws", "ecr", "get-authorization-token", "--region", "us-east-1"],

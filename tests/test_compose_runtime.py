@@ -453,9 +453,12 @@ def test_startup_installs_terminal_tools_as_root_before_the_agent_user_runs(tmp_
             {},
             {"cpus": 1, "memory_mb": 1024},
             sandbox,  # type: ignore[arg-type]
+            "agent",
         )
     )
 
+    assert json.loads(sandbox.uploads["/terminal-bench/runtime.json"])["services"]["main"]["user"] == "agent"
+    assert all(" exec -T -u 0 main " in c for c in sandbox.commands if " exec " in c and not c.endswith("main true"))
     install = next(c for c in sandbox.commands if "tmux asciinema" in c)
     assert "exec -T -u 0 main" in install
     assert shlex.quote(INSTALL_TERMINAL_TOOLS) in install
@@ -602,3 +605,9 @@ def test_ecr_credentials_are_this_accounts_registry_and_token(monkeypatch: pytes
 
     monkeypatch.setattr(compose_runtime, "Session", Session)
     assert ecr_credentials() == ("123456789012.dkr.ecr.us-east-1.amazonaws.com", "secret")
+
+
+def test_runtime_overlay_runs_main_as_the_task_agent_user_only_when_declared() -> None:
+    image = "example/main@sha256:" + "a" * 64
+    assert runtime_compose_definition(image, {}, {"cpus": 1}, user="agent")["services"]["main"]["user"] == "agent"
+    assert "user" not in runtime_compose_definition(image, {}, {"cpus": 1})["services"]["main"]
