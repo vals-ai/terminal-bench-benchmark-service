@@ -196,6 +196,23 @@ def prepare_logs_command() -> str:
     )
 
 
+# These graders run the submission as a random UID up to about 2**30. A sandbox in a
+# user namespace maps far fewer (0-65535 on Daytona), so their chown fails with EINVAL
+# and no reward is written. Only the range the UID is drawn from changes.
+_UID_RANGE_FIXES = {
+    "cumulative-layout-shift": ("/tests/worker.py", r"2\*\*30"),
+    "vba-userform-port": ("/tests/app_worker.py", "1000000000"),
+}
+
+
+def uid_range_fix_command(task_id: str) -> str | None:
+    """Keep a grader's random worker UID inside the sandbox's ID map; a no-op where the grader has no such line."""
+    if task_id not in _UID_RANGE_FIXES:
+        return None
+    grader, bound = _UID_RANGE_FIXES[task_id]
+    return f"[ ! -f {grader} ] || sed -i '/secrets\\.randbelow/s/{bound}/50000/' {grader}"
+
+
 def reject_irregular_members_command(stage: str) -> str:
     """Fail when a staged archive holds anything the submission has no business carrying.
 
