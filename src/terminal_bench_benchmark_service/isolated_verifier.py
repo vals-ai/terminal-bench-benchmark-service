@@ -405,20 +405,22 @@ def unpack_command(source: str, archive: str) -> str:
     The parent directory is opened up (``chmod 777``, as Harbor's artifact
     upload does): graders that drop to an unprivileged user to run the agent's
     submission still need to write next to it, e.g. ``sage`` preparsing
-    ``/app/solve.sage`` into ``/app/solve.sage.py``.
+    ``/app/solve.sage`` into ``/app/solve.sage.py``. ``/`` is left alone:
+    rewardkit refuses to grade once the root is writable by others.
     """
     quoted_source = shlex.quote(source)
     relative = shlex.quote(source.lstrip("/"))
     quoted_archive = shlex.quote(archive)
     stage = shlex.quote(f"{archive}.stage")
-    parent = shlex.quote(dirname(source) or "/")
+    parent = dirname(source) or "/"
+    open_parent = "" if parent == "/" else f"mkdir -p {shlex.quote(parent)} && chmod 777 {shlex.quote(parent)} && "
     return (
         f"rm -rf {stage} && mkdir -p {stage} && "
         f"tar -xzf {quoted_archive} -C {stage} --no-same-owner --no-same-permissions && "
         f"{reject_irregular_members_command(f'{archive}.stage')} && "
         f"{strip_privileged_bits_command(f'{archive}.stage')} && "
         f"test -e {stage}/{relative} && "
-        f"mkdir -p {parent} && chmod 777 {parent} && rm -rf {quoted_source} && "
+        f"{open_parent}rm -rf {quoted_source} && "
         f"cp -a {stage}/{relative} {quoted_source} && "
         f"rm -rf {stage} {quoted_archive}"
     )

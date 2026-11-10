@@ -306,6 +306,14 @@ def test_unpack_opens_the_parent_dir_to_unprivileged_graders(tmp_path: Path) -> 
     assert source.parent.stat().st_mode & 0o777 == 0o777
 
 
+def test_unpack_leaves_the_filesystem_root_closed() -> None:
+    """rewardkit refuses to grade under a world-writable `/`, the parent of an artifact like /app."""
+    command = isolated_verifier.unpack_command("/app", "/tmp/a.tar.gz")
+
+    assert "chmod 777" not in command
+    assert "cp -a /tmp/a.tar.gz.stage/app /app" in command
+
+
 def test_verifier_env_is_exported_to_the_grader() -> None:
     """live-database-cutover's grader boots the app with the task's [verifier.env]."""
     command = isolated_verifier.with_verifier_env(
