@@ -1401,6 +1401,12 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                 # /tests is the image's: uploading ours over it would delete data
                 # generated at build time and undo its permission hardening.
                 await with_retry(verifier, lambda: verifier.exec(isolated_verifier.prepare_logs_command()))
+                if uid_fix := isolated_verifier.uid_range_fix_command(task_id):
+                    fixed = await with_retry(verifier, lambda: verifier.exec(uid_fix))
+                    if fixed.exit_code != 0:
+                        raise isolated_verifier.VerifierEnvironmentError(
+                            f"Could not prepare the grader for `{task_id}`: {fixed.output.strip()[-500:]}"
+                        )
                 test_script = isolated_verifier.with_verifier_env(
                     isolated_verifier.GRADE_COMMAND, self._verifier_env(task_id, dataset)
                 )

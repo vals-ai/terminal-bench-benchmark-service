@@ -314,6 +314,39 @@ def test_unpack_leaves_the_filesystem_root_closed() -> None:
     assert "cp -a /tmp/a.tar.gz.stage/app /app" in command
 
 
+@pytest.mark.parametrize(
+    ("task", "line", "fixed"),
+    [
+        (
+            "cumulative-layout-shift",
+            "            uid = secrets.randbelow(2**30) + 10000\n",
+            "            uid = secrets.randbelow(50000) + 10000\n",
+        ),
+        (
+            "vba-userform-port",
+            "        uid = 10000 + secrets.randbelow(1000000000)\n",
+            "        uid = 10000 + secrets.randbelow(50000)\n",
+        ),
+    ],
+)
+def test_uid_range_fix_keeps_the_worker_uid_inside_the_sandbox_id_map(
+    tmp_path: Path, task: str, line: str, fixed: str
+) -> None:
+    """A user-namespaced sandbox maps UIDs 0-65535; chown to anything above fails with EINVAL."""
+    command = isolated_verifier.uid_range_fix_command(task)
+    assert command is not None
+    grader = tmp_path / "worker.py"
+    grader.write_text(f"import secrets\n{line}")
+    path = command.rsplit(" ", 1)[1]
+
+    subprocess.run(["sh", "-c", command.replace(path, str(grader))], check=True)
+    assert grader.read_text() == f"import secrets\n{fixed}"
+
+    grader.unlink()
+    subprocess.run(["sh", "-c", command.replace(path, str(grader))], check=True)
+    assert isolated_verifier.uid_range_fix_command("formal-crypto") is None
+
+
 def test_verifier_env_is_exported_to_the_grader() -> None:
     """live-database-cutover's grader boots the app with the task's [verifier.env]."""
     command = isolated_verifier.with_verifier_env(
