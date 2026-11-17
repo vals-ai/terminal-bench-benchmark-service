@@ -95,3 +95,12 @@ make lint      # run lint checks
 make typecheck # run type checks
 make install-submodules # Install the datasets
 ```
+
+## Task tools
+
+`retrieve_task` reports the tools of a task. It does not write them into the sandbox.
+
+- `mcp_servers` lists the `[[environment.mcp_servers]]` of the upstream `task.toml`, with the fields `name`, `transport`, `url`, `command`, `args`, and `headers`.
+- `skills_dir` is the `[environment].skills_dir` of the upstream `task.toml`.
+
+Both fields are left out of the response when the task has no value. The Tracker gives them to the agent package in the launch command (`{mcp_config_path}` and `{skills_dir}`). The service writes no configuration for one agent, and it adds no note about MCP servers to the problem statement. The problem statement is the upstream `instruction.md`.

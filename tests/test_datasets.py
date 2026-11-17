@@ -42,17 +42,6 @@ def test_load_terminal_bench_datasets() -> None:
     assert datasets["terminal-bench-4.1"]["fp8-rmsnorm-gemm"]["task_definition"]["agent"]["user"] == "agent"
 
 
-def test_tbench4_instruction_lists_the_tasks_mcp_servers_as_harbor_does() -> None:
-    tasks = asyncio.run(TerminalBenchBenchmark.create()).datasets["terminal-bench-4.0"]
-
-    assert tasks["medical-claims-processing"]["problem_statement"].endswith(
-        "\n\nMCP Servers:\nThe following MCP servers are available for this task.\n"
-        "- playwright: sse transport, url: http://playwright-mcp:3080/sse\n"
-    )
-    with_note = [t for t, task in tasks.items() if "MCP Servers:" in task["problem_statement"]]
-    assert with_note == ["medical-claims-processing"]
-
-
 def test_terminal_bench_4_uses_pinned_images_and_preserves_resources() -> None:
     benchmark = asyncio.run(TerminalBenchBenchmark.create())
 

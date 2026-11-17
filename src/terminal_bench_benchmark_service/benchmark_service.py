@@ -26,6 +26,7 @@ from benchmark_service.sandbox.daytona import DaytonaSandboxProvider
 from benchmark_service.schemas import (
     EvaluateResponseRequest,
     FinalScoreResult,
+    MCPServer,
     Resources,
     RetrieveTaskResponse,
     StreamChunk,
@@ -40,7 +41,6 @@ from benchmark_service.vals import ValsBenchmarkService
 from pydantic import ValidationError, model_validator
 
 from terminal_bench_benchmark_service import eval_resume, isolated_verifier
-from terminal_bench_benchmark_service.codex_mcp import configure_codex_mcp_servers
 from terminal_bench_benchmark_service.egress import task_egress
 from terminal_bench_benchmark_service.compose_runtime import (
     THREAD_LIMIT_VARIABLE,
@@ -78,23 +78,21 @@ def with_pinned_image_tools(command: str) -> str:
     return f"PATH=/bin:$PATH {command}"
 
 
-def mcp_servers_note(mcp_servers: list[dict[str, Any]]) -> str:
-    """Tell the agent about the task's `[[environment.mcp_servers]]`, as Harbor does.
+def task_mcp_servers(task_id: str, environment: dict[str, Any]) -> list[MCPServer]:
+    """Return the task's `[[environment.mcp_servers]]` for the task response.
 
-    The sidecars run whether or not the agent knows about them; Harbor's
-    mini-swe-agent adapter appends this listing to the instruction so a
-    tool-less agent can still reach them. Same wording, so the prompts match.
+    The Tracker hands them to the agent package, which registers them. The service
+    writes no agent configuration and adds no note to the prompt. A key that
+    `MCPServer` does not have is an error: dropping it would give the agent a tool
+    that does not work.
     """
-    if not mcp_servers:
-        return ""
-    note = "\n\nMCP Servers:\nThe following MCP servers are available for this task.\n"
-    for s in mcp_servers:
-        if s["transport"] == "stdio":
-            args_str = " ".join(s.get("args", []))
-            note += f"- {s['name']}: stdio transport, command: {s['command']} {args_str}\n"
-        else:
-            note += f"- {s['name']}: {s['transport']} transport, url: {s['url']}\n"
-    return note
+    servers: list[MCPServer] = []
+    for server in environment.get("mcp_servers", []):
+        unknown = sorted(set(server) - set(MCPServer.model_fields))
+        if unknown:
+            raise ValueError(f"MCP server `{server.get('name')}` of `{task_id}` has unsupported keys: {unknown}")
+        servers.append(MCPServer.model_validate(server))
+    return servers
 
 
 class OverrideResources(Resources):
@@ -451,10 +449,6 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             with open(task_toml_path, "rb") as f:
                 task["task_definition"] = tomllib.load(f)
 
-            task["problem_statement"] += mcp_servers_note(
-                task["task_definition"].get("environment", {}).get("mcp_servers", [])
-            )
-
             dataset[task_id] = task
 
         return dataset, task_paths
@@ -641,6 +635,8 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
             agent_timeout=agent_timeout,
             resources=resources,
             egress=task_egress(task_id, separate_verifier=self._dataset_spec(dataset).grades_in_separate_sandbox),
+            mcp_servers=task_mcp_servers(task_id, environment),
+            skills_dir=environment.get("skills_dir"),
         )
 
     async def setup_task(
@@ -675,12 +671,6 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                     task.get("task_definition", {}).get("agent", {}).get("user"),
                 )
                 sandbox = ComposeSandbox(sandbox, runtime_source)
-
-            mcp_servers = task.get("task_definition", {}).get("environment", {}).get("mcp_servers", [])
-            if await configure_codex_mcp_servers(sandbox, mcp_servers):
-                yield StreamMessageChunk(
-                    type="message", data=f"Registered task MCP servers with Codex: {[s['name'] for s in mcp_servers]}"
-                )
 
             # Prevent interactive prompts (e.g. tzdata timezone selection during apt-get install).
             # TBench4 images may run as non-root, so only update system files when writable and
