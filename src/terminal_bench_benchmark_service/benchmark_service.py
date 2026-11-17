@@ -715,13 +715,18 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
 
             # The task folder is an addition. The problem statement file above is unchanged,
             # and nothing reads the folder yet.
-            folder = build_task_folder(
-                task_id=task_id,
-                instruction=(self._task_dir(task_id, dataset) / "instruction.md").read_bytes(),
-                timeout_sec=task.get("task_definition", {}).get("agent", {}).get("timeout_sec"),
-                mcp_servers=mcp_servers,
-            )
-            yield StreamMessageChunk(type="message", data=await write_task_folder(sandbox, folder))
+            try:
+                folder = build_task_folder(
+                    task_id=task_id,
+                    instruction=(self._task_dir(task_id, dataset) / "instruction.md").read_bytes(),
+                    timeout_sec=task.get("task_definition", {}).get("agent", {}).get("timeout_sec"),
+                    mcp_servers=mcp_servers,
+                )
+                folder_message = await write_task_folder(sandbox, folder)
+            except Exception as error:
+                logger.warning("Could not build the task folder for %s", task_id, exc_info=True)
+                folder_message = f"Task folder not written: {error}"
+            yield StreamMessageChunk(type="message", data=folder_message)
 
             # Set this before yielding the terminal setup chunk so a consumer
             # that stops after receiving it does not tear down a healthy runtime.

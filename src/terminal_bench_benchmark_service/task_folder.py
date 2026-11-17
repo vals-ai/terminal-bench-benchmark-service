@@ -121,10 +121,12 @@ async def write_task_folder(sandbox: Sandbox, files: Mapping[str, bytes]) -> str
     problem statement file still holds the task, and a folder without `task.toml`
     is not read.
     """
-    present = await with_retry(sandbox, lambda: sandbox.exec(f"test -e {TASK_DIR} || test -L {TASK_DIR}", timeout=30))
-    if present.exit_code == 0:
-        return f"Task folder skipped: {TASK_DIR} already exists in the sandbox."
     try:
+        present = await with_retry(
+            sandbox, lambda: sandbox.exec(f"test -e {TASK_DIR} || test -L {TASK_DIR}", timeout=30)
+        )
+        if present.exit_code == 0:
+            return f"Task folder skipped: {TASK_DIR} already exists in the sandbox."
         made = await with_retry(sandbox, lambda: sandbox.exec(f"mkdir -p {TASK_DIR}", timeout=30))
         if made.exit_code != 0:
             raise RuntimeError(f"mkdir {TASK_DIR} failed: {made.output[-500:]}")

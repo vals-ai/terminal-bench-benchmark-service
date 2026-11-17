@@ -3,7 +3,6 @@
 import asyncio
 import tomllib
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -134,7 +133,7 @@ def test_instruction_is_the_upstream_file_byte_for_byte(benchmark: TerminalBench
         assert _folder(benchmark, dataset, task_id)["instruction.md"] == upstream
 
 
-def test_instruction_keeps_crlf_and_non_ascii_bytes(tmp_path: Path) -> None:
+def test_instruction_keeps_crlf_and_non_ascii_bytes() -> None:
     text = "Line one\r\nJosé Núñez\r\n".encode()
     assert build_task_folder(task_id="t", instruction=text, timeout_sec=60, mcp_servers=[])["instruction.md"] == text
 
@@ -314,4 +313,21 @@ def test_takens_embedding_lean_skips_the_folder_because_it_uses_the_path(
     assert not any("mkdir -p /task" in c or "cat > /task" in c for c in outer.commands)
     assert not any(path.startswith(TASK_DIR) for path in outer.uploads)
     assert f"Task folder skipped: {TASK_DIR} already exists in the sandbox." in _messages(chunks)
+    assert isinstance(chunks[-1], StreamResultChunk) and chunks[-1].data == {"status": "ok"}
+
+
+def test_setup_task_still_succeeds_when_the_folder_cannot_be_built(
+    benchmark: TerminalBenchBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(**_: Any) -> dict[str, bytes]:
+        raise ValueError("bad value")
+
+    monkeypatch.setattr(service_module, "build_task_folder", broken)
+    dataset = "terminal-bench-2.0"
+    task_id = _plain_task(benchmark, dataset)
+    sandbox = FolderSandbox()
+    chunks = _setup(benchmark, task_id, dataset, sandbox)
+
+    assert "Task folder not written: bad value" in _messages(chunks)
+    assert not any(path.startswith(TASK_DIR) for path in sandbox.uploads)
     assert isinstance(chunks[-1], StreamResultChunk) and chunks[-1].data == {"status": "ok"}
