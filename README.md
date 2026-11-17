@@ -95,3 +95,15 @@ make lint      # run lint checks
 make typecheck # run type checks
 make install-submodules # Install the datasets
 ```
+
+## Task folder
+
+`setup_task` also writes `/task/instruction.md` and `/task/task.toml` in the sandbox. The folder uses Harbor's file names, so an agent package can read it without benchmark code.
+
+- `instruction.md` is the upstream file, byte for byte. It has no MCP note.
+- `task.toml` is built by the service. It holds `schema_version`, `[metadata]` (`benchmark`, `task_id`), `[agent].timeout_sec`, and the task's `[[environment.mcp_servers]]`. It never holds `[verifier]`, `[solution]`, the upstream `[metadata]`, or resource keys.
+- `task.toml` is written last. A folder that has it is complete.
+- If `/task` already exists in the sandbox, nothing is written and the setup stream says so. `takens-embedding-lean` uses `/task` as its project directory.
+- If the folder cannot be written, setup still succeeds and the setup stream says why.
+
+`/tmp/problem_statement.md` and `problem_path` are unchanged. The path is the constant `TASK_DIR` in `task_folder.py`.

@@ -52,6 +52,7 @@ from terminal_bench_benchmark_service.compose_runtime import (
     thread_limit,
 )
 from terminal_bench_benchmark_service.score_metadata import build_vals_format_metadata
+from terminal_bench_benchmark_service.task_folder import build_task_folder, write_task_folder
 from terminal_bench_benchmark_service.utils import KEEPALIVE_SECONDS, lines_or_keepalive, with_retry
 
 logger = logging.getLogger(__name__)
@@ -711,6 +712,16 @@ class TerminalBenchBenchmark(ValsBenchmarkService):
                 )
             else:
                 yield StreamErrorChunk(type="error", data=f"Missing problem statement for task {task_id}")
+
+            # The task folder is an addition. The problem statement file above is unchanged,
+            # and nothing reads the folder yet.
+            folder = build_task_folder(
+                task_id=task_id,
+                instruction=(self._task_dir(task_id, dataset) / "instruction.md").read_bytes(),
+                timeout_sec=task.get("task_definition", {}).get("agent", {}).get("timeout_sec"),
+                mcp_servers=mcp_servers,
+            )
+            yield StreamMessageChunk(type="message", data=await write_task_folder(sandbox, folder))
 
             # Set this before yielding the terminal setup chunk so a consumer
             # that stops after receiving it does not tear down a healthy runtime.
